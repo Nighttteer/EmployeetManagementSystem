@@ -1,0 +1,34 @@
+# 忽略 Python 虚拟环境
+venv/
+__pycache__/
+
+# 忽略系统文件
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 忽略 IDE/编辑器的配置文件
+.vscode/
+.idea/
+*.sublime-workspace
+
+# 忽略临时文件
+*.log
+*.tmp
+*.bak
+*.swp
+
+# 忽略 PDF、PPT、Word 文档（如果不想提交）
+*.pdf
+*.docx
+*.pptx
+
+# 忽略 Windows 目录
+Downloads/
+Music/
+Videos/
+Pictures/
+
+# 忽略 OneDrive 自动同步文件
+OneDrive/
+OneDrive - University of Glasgow/
