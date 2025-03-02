@@ -1,0 +1,39 @@
+.profile-container {
+  padding: 24px;
+}
+
+.profile-card {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.profile-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.profile-info {
+  flex: 1;
+}
+
+.profile-picture {
+  flex: 0 0 auto;
+  padding: 24px;
+}
+
+.avatar-uploader {
+  width: 200px;
+  height: 200px;
+}
+
+.avatar-uploader .ant-upload {
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0;
+}
+
+.avatar-uploader img {
+  object-fit: cover;
+}
