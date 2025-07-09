@@ -13,7 +13,7 @@ const LoginScreen = ({ navigation }) => {
   const { loading, error } = useSelector((state) => state.auth);
 
   const [formData, setFormData] = useState({
-    username: '',
+    phone: '',
     password: '',
     userType: 'patient', // 'patient' 或 'doctor'
   });
@@ -28,8 +28,8 @@ const LoginScreen = ({ navigation }) => {
 
   const handleLogin = async () => {
     // 验证输入
-    if (!formData.username.trim()) {
-      Alert.alert('提示', '请输入用户名');
+    if (!formData.phone.trim()) {
+      Alert.alert('提示', '请输入手机号');
       return;
     }
     if (!formData.password.trim()) {
@@ -39,7 +39,7 @@ const LoginScreen = ({ navigation }) => {
 
     try {
       const result = await dispatch(loginUser({
-        username: formData.username,
+        phone: formData.phone,
         password: formData.password,
         userType: formData.userType
       }));
@@ -48,7 +48,7 @@ const LoginScreen = ({ navigation }) => {
         // 登录成功，导航会由AppNavigator自动处理
       } else {
         // 登录失败
-        Alert.alert('登录失败', result.payload || '请检查用户名和密码');
+        Alert.alert('登录失败', result.payload || '请检查手机号和密码');
       }
     } catch (error) {
       Alert.alert('登录失败', '网络连接异常，请稍后重试');
@@ -96,17 +96,19 @@ const LoginScreen = ({ navigation }) => {
               />
             </View>
 
-            {/* 用户名输入 */}
+            {/* 手机号输入 */}
             <View style={styles.inputContainer}>
               <TextInput
-                label="用户名"
-                value={formData.username}
-                onChangeText={(text) => handleInputChange('username', text)}
+                label="手机号"
+                value={formData.phone}
+                onChangeText={(text) => handleInputChange('phone', text)}
                 mode="outlined"
                 style={styles.input}
                 autoCapitalize="none"
                 autoCorrect={false}
-                left={<TextInput.Icon icon="account" />}
+                keyboardType="phone-pad"
+                placeholder="请输入包含国家区号的手机号（如：+8613800138000）"
+                left={<TextInput.Icon icon="phone" />}
               />
             </View>
 

@@ -13,7 +13,11 @@ import ProfileScreen from '../screens/patient/ProfileScreen';
 // 详情页面
 import DataEntryScreen from '../screens/patient/DataEntryScreen';
 import HealthTrendsScreen from '../screens/patient/HealthTrendsScreen';
-import ChatScreen from '../screens/patient/ChatScreen';
+
+// 聊天相关屏幕
+import ConversationListScreen from '../screens/common/ConversationListScreen';
+import ChatScreen from '../screens/common/ChatScreen';
+import UserSearchScreen from '../screens/common/UserSearchScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -46,14 +50,19 @@ const MessagesStack = () => {
   return (
     <Stack.Navigator>
       <Stack.Screen 
-        name="MessagesMain" 
-        component={MessagesScreen}
-        options={{ title: '消息' }}
+        name="ConversationList" 
+        component={ConversationListScreen}
+        options={{ title: '消息', headerShown: false }}
       />
       <Stack.Screen 
         name="Chat" 
         component={ChatScreen}
-        options={{ title: '与医生对话' }}
+        options={{ title: '聊天', headerShown: false }}
+      />
+      <Stack.Screen 
+        name="UserSearch" 
+        component={UserSearchScreen}
+        options={{ title: '选择医生', headerShown: false }}
       />
     </Stack.Navigator>
   );

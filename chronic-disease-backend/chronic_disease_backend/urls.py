@@ -49,9 +49,9 @@ urlpatterns = [
     
     # 各应用API路由
     path('api/auth/', include('accounts.urls')),
-    # path('api/health/', include('health.urls')),
+    path('api/health/', include('health.urls')),
+    path('api/communication/', include('communication.urls')),
     # path('api/medication/', include('medication.urls')),
-    # path('api/communication/', include('communication.urls')),
 ]
 
 # 开发环境静态文件和媒体文件服务
