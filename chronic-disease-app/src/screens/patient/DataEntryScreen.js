@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Alert, SafeAreaView } from 'react-native';
-import { Text, TextInput, Button, Card, Divider, SegmentedButtons, Chip } from 'react-native-paper';
+import { View, StyleSheet, ScrollView, Alert, SafeAreaView, Platform } from 'react-native';
+import { Text, TextInput, Button, Card, Divider, SegmentedButtons, Chip, IconButton } from 'react-native-paper';
 import { useDispatch } from 'react-redux';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { addHealthData } from '../../store/slices/userSlice';
 import { 
   HealthMetric, 
@@ -17,6 +18,11 @@ const DataEntryScreen = ({ navigation }) => {
   const [selectedMetricType, setSelectedMetricType] = useState(METRIC_TYPES.BLOOD_PRESSURE);
   const [metricData, setMetricData] = useState({});
   const [notes, setNotes] = useState('');
+  
+  // 时间选择相关状态
+  const [measurementTime, setMeasurementTime] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
   // 获取当前选中指标的配置
   const currentConfig = HEALTH_METRIC_FIELDS[selectedMetricType];
@@ -45,6 +51,51 @@ const DataEntryScreen = ({ navigation }) => {
     setMetricData({});
   };
 
+  // 处理日期选择
+  const handleDateChange = (event, selectedDate) => {
+    const currentDate = selectedDate || measurementTime;
+    setShowDatePicker(Platform.OS === 'ios');
+    
+    if (selectedDate) {
+      // 保持时间部分不变，只更新日期
+      const newDateTime = new Date(measurementTime);
+      newDateTime.setFullYear(currentDate.getFullYear());
+      newDateTime.setMonth(currentDate.getMonth());
+      newDateTime.setDate(currentDate.getDate());
+      setMeasurementTime(newDateTime);
+    }
+  };
+
+  // 处理时间选择
+  const handleTimeChange = (event, selectedTime) => {
+    const currentTime = selectedTime || measurementTime;
+    setShowTimePicker(Platform.OS === 'ios');
+    
+    if (selectedTime) {
+      // 保持日期部分不变，只更新时间
+      const newDateTime = new Date(measurementTime);
+      newDateTime.setHours(currentTime.getHours());
+      newDateTime.setMinutes(currentTime.getMinutes());
+      setMeasurementTime(newDateTime);
+    }
+  };
+
+  // 格式化显示时间
+  const formatDate = (date) => {
+    return date.toLocaleDateString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+  };
+
+  const formatTime = (date) => {
+    return date.toLocaleTimeString('zh-CN', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   // 提交数据
   const handleSubmit = () => {
     // 检查是否有数据输入
@@ -59,6 +110,7 @@ const DataEntryScreen = ({ navigation }) => {
       metric_type: selectedMetricType,
       ...metricData,
       note: notes,
+      measured_at: measurementTime.toISOString(), // 添加测量时间
       measured_by: 1, // 当前用户ID，实际应从认证状态获取
       patient_id: 1   // 患者ID，实际应从认证状态获取
     });
@@ -77,7 +129,7 @@ const DataEntryScreen = ({ navigation }) => {
     // 显示状态提示
     Alert.alert(
       '数据已保存',
-      `当前指标状态：${statusText}`,
+      `测量时间：${formatDate(measurementTime)} ${formatTime(measurementTime)}\n当前指标状态：${statusText}`,
       [
         {
           text: '确定',
@@ -136,6 +188,64 @@ const DataEntryScreen = ({ navigation }) => {
     );
   };
 
+  // 渲染时间选择器
+  const renderTimeSelector = () => {
+    return (
+      <Card style={styles.card}>
+        <Card.Content>
+          <Text style={styles.cardTitle}>测量时间</Text>
+          <View style={styles.timeContainer}>
+            <View style={styles.timeRow}>
+              <Text style={styles.timeLabel}>日期：</Text>
+              <Button
+                mode="outlined"
+                onPress={() => setShowDatePicker(true)}
+                style={styles.timeButton}
+                contentStyle={styles.timeButtonContent}
+              >
+                {formatDate(measurementTime)}
+              </Button>
+              <IconButton
+                icon="calendar"
+                size={20}
+                onPress={() => setShowDatePicker(true)}
+              />
+            </View>
+            
+            <View style={styles.timeRow}>
+              <Text style={styles.timeLabel}>时间：</Text>
+              <Button
+                mode="outlined"
+                onPress={() => setShowTimePicker(true)}
+                style={styles.timeButton}
+                contentStyle={styles.timeButtonContent}
+              >
+                {formatTime(measurementTime)}
+              </Button>
+              <IconButton
+                icon="clock"
+                size={20}
+                onPress={() => setShowTimePicker(true)}
+              />
+            </View>
+          </View>
+          
+          {/* 快速选择按钮 */}
+          <View style={styles.quickSelectContainer}>
+            <Text style={styles.quickSelectLabel}>快速选择：</Text>
+            <Button
+              mode="text"
+              onPress={() => setMeasurementTime(new Date())}
+              style={styles.quickSelectButton}
+            >
+              现在
+            </Button>
+          </View>
+        </Card.Content>
+      </Card>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
@@ -178,6 +288,9 @@ const DataEntryScreen = ({ navigation }) => {
           </Card.Content>
         </Card>
 
+        {/* 时间选择器 */}
+        {renderTimeSelector()}
+
         {/* 提交按钮 */}
         <Button
           mode="contained"
@@ -198,6 +311,26 @@ const DataEntryScreen = ({ navigation }) => {
           取消
         </Button>
       </ScrollView>
+
+      {/* 日期选择器 */}
+      {showDatePicker && (
+        <DateTimePicker
+          value={measurementTime}
+          mode="date"
+          display="default"
+          onChange={handleDateChange}
+        />
+      )}
+
+      {/* 时间选择器 */}
+      {showTimePicker && (
+        <DateTimePicker
+          value={measurementTime}
+          mode="time"
+          display="default"
+          onChange={handleTimeChange}
+        />
+      )}
     </SafeAreaView>
   );
 };
@@ -287,6 +420,43 @@ const styles = StyleSheet.create({
   },
   cancelButtonContent: {
     paddingVertical: 8,
+  },
+  timeContainer: {
+    marginTop: 16,
+    marginBottom: 16,
+  },
+  timeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  timeLabel: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginRight: 10,
+    color: '#333',
+  },
+  timeButton: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  timeButtonContent: {
+    paddingVertical: 8,
+  },
+  quickSelectContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  quickSelectLabel: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginRight: 10,
+    color: '#333',
+  },
+  quickSelectButton: {
+    fontSize: 18,
+    color: '#6200ea',
   },
 });
 

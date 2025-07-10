@@ -76,22 +76,46 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
 
 class UserLoginSerializer(serializers.Serializer):
-    """用户登录序列化器"""
-    email = serializers.EmailField(required=True)
+    """用户登录序列化器 - 支持手机号登录"""
+    phone = serializers.CharField(required=True, help_text="手机号（包含国家区号）")
     password = serializers.CharField(required=True, write_only=True)
     role = serializers.ChoiceField(choices=[('patient', '患者'), ('doctor', '医生')], required=False)
     
+    def validate_phone(self, value):
+        """验证手机号格式"""
+        if not value:
+            raise serializers.ValidationError("手机号不能为空")
+        
+        # 基本格式检查：应该以+开头，后面跟数字
+        if not value.startswith('+'):
+            raise serializers.ValidationError("手机号应包含国家区号（以+开头）")
+        
+        # 移除+号后应该都是数字
+        phone_digits = value[1:]
+        if not phone_digits.isdigit():
+            raise serializers.ValidationError("手机号格式无效")
+        
+        # 长度检查（国际手机号通常在7-15位之间）
+        if len(phone_digits) < 7 or len(phone_digits) > 15:
+            raise serializers.ValidationError("手机号长度无效")
+        
+        return value
+    
     def validate(self, attrs):
-        email = attrs.get('email')
+        phone = attrs.get('phone')
         password = attrs.get('password')
         role = attrs.get('role')
         
-        if email and password:
-            # 使用邮箱认证
-            user = authenticate(username=email, password=password)
+        if phone and password:
+            # 使用手机号查找用户
+            try:
+                user = User.objects.get(phone=phone)
+            except User.DoesNotExist:
+                raise serializers.ValidationError('手机号或密码错误')
             
-            if not user:
-                raise serializers.ValidationError('邮箱或密码错误')
+            # 验证密码
+            if not user.check_password(password):
+                raise serializers.ValidationError('手机号或密码错误')
             
             if not user.is_active:
                 raise serializers.ValidationError('账户已被禁用')
@@ -103,7 +127,7 @@ class UserLoginSerializer(serializers.Serializer):
             attrs['user'] = user
             return attrs
         else:
-            raise serializers.ValidationError('必须提供邮箱和密码')
+            raise serializers.ValidationError('必须提供手机号和密码')
 
 
 class UserProfileSerializer(serializers.ModelSerializer):

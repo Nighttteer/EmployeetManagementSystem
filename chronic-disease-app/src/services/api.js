@@ -63,10 +63,11 @@ apiClient.interceptors.response.use(
 // 认证相关API
 export const authAPI = {
   // 用户登录
-  login: (username, password) => {
+  login: (phone, password, role) => {
     return apiClient.post('/auth/login/', {
-      username,
+      phone,
       password,
+      role,
     });
   },
 
@@ -204,33 +205,84 @@ export const alertsAPI = {
 export const messagesAPI = {
   // 获取对话列表
   getConversations: () => {
-    return apiClient.get('/messages/conversations/');
+    return apiClient.get('/communication/conversations/');
   },
 
   // 获取特定对话的消息
-  getMessages: (conversationId, page = 1) => {
-    return apiClient.get(`/messages/conversations/${conversationId}/messages/?page=${page}`);
+  getMessages: (conversationId, page = 1, pageSize = 20) => {
+    return apiClient.get('/communication/messages/', {
+      params: {
+        conversation_id: conversationId,
+        page,
+        page_size: pageSize,
+      },
+    });
   },
 
   // 发送消息
-  sendMessage: (conversationId, message, messageType = 'text') => {
-    return apiClient.post(`/messages/conversations/${conversationId}/messages/`, {
-      message,
-      message_type: messageType,
-      timestamp: new Date().toISOString(),
-    });
+  sendMessage: (messageData) => {
+    return apiClient.post('/communication/messages/', messageData);
   },
 
   // 标记消息为已读
-  markAsRead: (conversationId) => {
-    return apiClient.patch(`/messages/conversations/${conversationId}/mark-read/`);
+  markMessageAsRead: (messageId) => {
+    return apiClient.post(`/communication/messages/${messageId}/mark-read/`);
   },
 
-  // 创建新对话 (医生与患者)
-  createConversation: (participantId) => {
-    return apiClient.post('/messages/conversations/', {
-      participant_id: participantId,
+  // 标记会话为已读
+  markConversationAsRead: (conversationId) => {
+    return apiClient.post(`/communication/conversations/${conversationId}/mark-read/`);
+  },
+
+  // 获取与特定用户的会话
+  getConversationWithUser: (userId) => {
+    return apiClient.get(`/communication/conversations/with-user/${userId}/`);
+  },
+
+  // 与特定用户开始新会话
+  startConversationWithUser: (userId) => {
+    return apiClient.post(`/communication/conversations/start-with-user/${userId}/`);
+  },
+
+  // 搜索用户
+  searchUsers: (searchQuery) => {
+    return apiClient.get('/communication/users/search/', {
+      params: { search: searchQuery },
     });
+  },
+
+  // 获取消息模板
+  getMessageTemplates: () => {
+    return apiClient.get('/communication/templates/');
+  },
+
+  // 发送快速消息（使用模板）
+  sendQuickMessage: (templateId, recipientId, context = {}) => {
+    return apiClient.post('/communication/quick-message/', {
+      template_id: templateId,
+      recipient_id: recipientId,
+      context,
+    });
+  },
+
+  // 获取聊天统计信息
+  getChatStats: () => {
+    return apiClient.get('/communication/stats/');
+  },
+
+  // 获取会话详情
+  getConversationDetails: (conversationId) => {
+    return apiClient.get(`/communication/conversations/${conversationId}/`);
+  },
+
+  // 更新会话信息
+  updateConversation: (conversationId, updates) => {
+    return apiClient.patch(`/communication/conversations/${conversationId}/`, updates);
+  },
+
+  // 删除会话
+  deleteConversation: (conversationId) => {
+    return apiClient.delete(`/communication/conversations/${conversationId}/`);
   },
 };
 
@@ -256,4 +308,7 @@ export const notificationsAPI = {
 };
 
 // 导出默认配置
-export default apiClient; 
+export default apiClient;
+
+// 导出api别名，用于聊天组件
+export { apiClient as api }; 

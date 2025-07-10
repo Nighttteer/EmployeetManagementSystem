@@ -64,7 +64,7 @@ def test_user_login():
     print("\n🔍 测试用户登录...")
     
     login_data = {
-        "email": "patient@test.com",
+        "phone": "13800138000",
         "password": "testpass123",
         "role": "patient"
     }

@@ -5,13 +5,17 @@ import { authAPI } from '../../services/api';
 // 异步action：登录
 export const loginUser = createAsyncThunk(
   'auth/login',
-  async ({ username, password }, { rejectWithValue }) => {
+  async ({ phone, password, userType }, { rejectWithValue }) => {
     try {
-      const response = await authAPI.login(username, password);
+      const response = await authAPI.login(phone, password, userType);
       // 保存token到安全存储
-      await SecureStore.setItemAsync('authToken', response.data.token);
-      await SecureStore.setItemAsync('userRole', response.data.role);
-      return response.data;
+      await SecureStore.setItemAsync('authToken', response.data.tokens.access);
+      await SecureStore.setItemAsync('userRole', response.data.user.role);
+      return {
+        token: response.data.tokens.access,
+        user: response.data.user,
+        role: response.data.user.role
+      };
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || '登录失败');
     }
