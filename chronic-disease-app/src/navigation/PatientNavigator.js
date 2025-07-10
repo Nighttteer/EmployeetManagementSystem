@@ -19,6 +19,11 @@ import ConversationListScreen from '../screens/common/ConversationListScreen';
 import ChatScreen from '../screens/common/ChatScreen';
 import UserSearchScreen from '../screens/common/UserSearchScreen';
 
+// 设置相关屏幕
+import EditProfileScreen from '../screens/common/EditProfileScreen';
+import AboutScreen from '../screens/common/AboutScreen';
+import ComingSoonScreen from '../screens/common/ComingSoonScreen';
+
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
@@ -68,6 +73,84 @@ const MessagesStack = () => {
   );
 };
 
+// 设置堆栈导航
+const ProfileStack = () => {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen 
+        name="ProfileMain" 
+        component={ProfileScreen}
+        options={{ title: '个人中心', headerShown: false }}
+      />
+      <Stack.Screen 
+        name="EditProfile" 
+        component={EditProfileScreen}
+        options={{ title: '编辑个人信息', headerShown: false }}
+      />
+      <Stack.Screen 
+        name="About" 
+        component={AboutScreen}
+        options={{ title: '关于应用', headerShown: false }}
+      />
+      {/* 占位页面 */}
+      <Stack.Screen 
+        name="ChangePassword" 
+        component={ComingSoonScreen}
+        options={{ title: '修改密码', headerShown: false }}
+        initialParams={{ title: '修改密码' }}
+      />
+      <Stack.Screen 
+        name="PrivacySettings" 
+        component={ComingSoonScreen}
+        options={{ title: '隐私设置', headerShown: false }}
+        initialParams={{ title: '隐私设置' }}
+      />
+      <Stack.Screen 
+        name="LanguageSettings" 
+        component={ComingSoonScreen}
+        options={{ title: '语言设置', headerShown: false }}
+        initialParams={{ title: '语言设置' }}
+      />
+      <Stack.Screen 
+        name="DataSync" 
+        component={ComingSoonScreen}
+        options={{ title: '数据同步', headerShown: false }}
+        initialParams={{ title: '数据同步' }}
+      />
+      <Stack.Screen 
+        name="HealthGoals" 
+        component={ComingSoonScreen}
+        options={{ title: '健康目标', headerShown: false }}
+        initialParams={{ title: '健康目标' }}
+      />
+      <Stack.Screen 
+        name="ReminderSettings" 
+        component={ComingSoonScreen}
+        options={{ title: '提醒设置', headerShown: false }}
+        initialParams={{ title: '提醒设置' }}
+      />
+      <Stack.Screen 
+        name="DataExport" 
+        component={ComingSoonScreen}
+        options={{ title: '数据导出', headerShown: false }}
+        initialParams={{ title: '数据导出' }}
+      />
+      <Stack.Screen 
+        name="FAQ" 
+        component={ComingSoonScreen}
+        options={{ title: '常见问题', headerShown: false }}
+        initialParams={{ title: '常见问题' }}
+      />
+      <Stack.Screen 
+        name="Feedback" 
+        component={ComingSoonScreen}
+        options={{ title: '意见反馈', headerShown: false }}
+        initialParams={{ title: '意见反馈' }}
+      />
+    </Stack.Navigator>
+  );
+};
+
 const PatientNavigator = () => {
   return (
     <Tab.Navigator
@@ -89,7 +172,7 @@ const PatientNavigator = () => {
               iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
               break;
             case 'Profile':
-              iconName = focused ? 'person' : 'person-outline';
+              iconName = focused ? 'settings' : 'settings-outline';
               break;
             default:
               iconName = 'help-outline';
@@ -132,8 +215,8 @@ const PatientNavigator = () => {
       />
       <Tab.Screen 
         name="Profile" 
-        component={ProfileScreen}
-        options={{ tabBarLabel: '个人档案' }}
+        component={ProfileStack}
+        options={{ tabBarLabel: '设置' }}
       />
     </Tab.Navigator>
   );

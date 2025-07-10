@@ -214,14 +214,132 @@ class PasswordChangeSerializer(serializers.Serializer):
         return user
 
 
-class PasswordResetSerializer(serializers.Serializer):
-    """密码重置序列化器"""
-    email = serializers.EmailField(required=True)
+class PasswordResetRequestSerializer(serializers.Serializer):
+    """密码重置请求序列化器（发送验证码）"""
+    phone = serializers.CharField(required=True, max_length=20)
     
-    def validate_email(self, value):
-        if not User.objects.filter(email=value).exists():
-            raise serializers.ValidationError("邮箱不存在")
+    def validate_phone(self, value):
+        """验证手机号格式"""
+        if not value:
+            raise serializers.ValidationError("手机号不能为空")
+        
+        # 基本格式检查：应该以+开头，后面跟数字
+        if not value.startswith('+'):
+            raise serializers.ValidationError("手机号应包含国家区号（以+开头）")
+        
+        # 移除+号后应该都是数字
+        phone_digits = value[1:]
+        if not phone_digits.isdigit():
+            raise serializers.ValidationError("手机号格式无效")
+        
+        # 长度检查（国际手机号通常在7-15位之间）
+        if len(phone_digits) < 7 or len(phone_digits) > 15:
+            raise serializers.ValidationError("手机号长度无效")
+        
+        # 检查用户是否存在
+        if not User.objects.filter(phone=value).exists():
+            raise serializers.ValidationError("该手机号未注册")
+        
         return value
+
+
+class PasswordResetSerializer(serializers.Serializer):
+    """密码重置序列化器（基于SMS验证码）"""
+    phone = serializers.CharField(required=True, max_length=20)
+    code = serializers.CharField(required=True, max_length=6)
+    new_password = serializers.CharField(required=True, write_only=True, validators=[validate_password])
+    new_password_confirm = serializers.CharField(required=True, write_only=True)
+    
+    def validate_phone(self, value):
+        """验证手机号格式"""
+        if not value:
+            raise serializers.ValidationError("手机号不能为空")
+        
+        # 基本格式检查：应该以+开头，后面跟数字
+        if not value.startswith('+'):
+            raise serializers.ValidationError("手机号应包含国家区号（以+开头）")
+        
+        # 移除+号后应该都是数字
+        phone_digits = value[1:]
+        if not phone_digits.isdigit():
+            raise serializers.ValidationError("手机号格式无效")
+        
+        # 长度检查（国际手机号通常在7-15位之间）
+        if len(phone_digits) < 7 or len(phone_digits) > 15:
+            raise serializers.ValidationError("手机号长度无效")
+        
+        # 检查用户是否存在
+        if not User.objects.filter(phone=value).exists():
+            raise serializers.ValidationError("该手机号未注册")
+        
+        return value
+    
+    def validate_code(self, value):
+        """验证验证码格式"""
+        if not value or len(value) != 6:
+            raise serializers.ValidationError("验证码必须是6位数字")
+        
+        if not value.isdigit():
+            raise serializers.ValidationError("验证码必须是数字")
+        
+        return value
+    
+    def validate(self, attrs):
+        # 验证密码确认
+        if attrs['new_password'] != attrs['new_password_confirm']:
+            raise serializers.ValidationError("密码确认不匹配")
+        
+        # 验证SMS验证码
+        phone = attrs.get('phone')
+        code = attrs.get('code')
+        
+        if phone and code:
+            try:
+                verification = SMSVerificationCode.objects.get(
+                    phone=phone,
+                    code=code,
+                    purpose='reset_password',
+                    is_used=False
+                )
+                
+                if verification.is_expired:
+                    raise serializers.ValidationError("验证码已过期")
+                
+                if verification.attempt_count >= 3:
+                    raise serializers.ValidationError("验证失败次数过多，请重新获取")
+                
+                attrs['_verification_code'] = verification
+                
+            except SMSVerificationCode.DoesNotExist:
+                # 增加尝试次数
+                try:
+                    verification = SMSVerificationCode.objects.get(
+                        phone=phone,
+                        purpose='reset_password',
+                        is_used=False
+                    )
+                    verification.increment_attempt()
+                except SMSVerificationCode.DoesNotExist:
+                    pass
+                
+                raise serializers.ValidationError("验证码错误或已失效")
+        
+        return attrs
+    
+    def save(self):
+        phone = self.validated_data['phone']
+        new_password = self.validated_data['new_password']
+        verification_code = self.validated_data['_verification_code']
+        
+        # 获取用户并更新密码
+        user = User.objects.get(phone=phone)
+        user.set_password(new_password)
+        user.save()
+        
+        # 标记验证码为已使用
+        verification_code.mark_as_used()
+        
+        return user
 
 
 class UserListSerializer(serializers.ModelSerializer):

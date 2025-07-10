@@ -5,12 +5,13 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.contrib.auth import get_user_model
+from django.db.models import Q
 
 from .models import User, UserProfile, SMSVerificationCode
 from .serializers import (
     UserRegistrationSerializer, UserLoginSerializer, UserProfileSerializer,
     UserProfileUpdateSerializer, UserExtendedProfileSerializer,
-    PasswordChangeSerializer, PasswordResetSerializer, UserListSerializer,
+    PasswordChangeSerializer, PasswordResetRequestSerializer, PasswordResetSerializer, UserListSerializer,
     SendSMSCodeSerializer, VerifySMSCodeSerializer, UserRegistrationWithSMSSerializer
 )
 from .sms_service import send_verification_code_sms
@@ -118,22 +119,64 @@ class PasswordChangeView(generics.CreateAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class PasswordResetRequestView(generics.CreateAPIView):
+    """密码重置请求（发送验证码）"""
+    serializer_class = PasswordResetRequestSerializer
+    permission_classes = [permissions.AllowAny]
+    
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            phone = serializer.validated_data['phone']
+            
+            # 获取客户端IP
+            client_ip = get_client_ip(request)
+            
+            # 创建验证码
+            verification_code = SMSVerificationCode.create_verification_code(
+                phone=phone,
+                purpose='reset_password',
+                ip_address=client_ip
+            )
+            
+            # 发送短信
+            success, message = send_verification_code_sms(phone, verification_code.code, 'reset_password')
+            
+            if success:
+                return Response({
+                    'message': '验证码已发送，请查收短信',
+                    'expires_at': verification_code.expires_at.isoformat(),
+                    'phone': phone
+                }, status=status.HTTP_200_OK)
+            else:
+                return Response({
+                    'error': f'验证码发送失败: {message}'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 class PasswordResetView(generics.CreateAPIView):
-    """密码重置请求"""
+    """密码重置确认"""
     serializer_class = PasswordResetSerializer
     permission_classes = [permissions.AllowAny]
     
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            email = serializer.validated_data['email']
-            
-            # TODO: 发送重置邮件
-            # 这里应该生成重置令牌并发送邮件
+            # 保存新密码
+            user = serializer.save()
             
             return Response({
-                'message': '密码重置邮件已发送，请查收'
+                'message': '密码重置成功，请用新密码登录',
+                'user': {
+                    'id': user.id,
+                    'phone': user.phone,
+                    'name': user.name,
+                    'role': user.role
+                }
             }, status=status.HTTP_200_OK)
+        
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -158,9 +201,152 @@ class PatientListView(generics.ListAPIView):
         
         # 如果没有绑定关系，则返回所有患者（根据业务需求调整）
         if not patient_ids:
-            return User.objects.filter(role='patient', is_active=True)
+            return User.objects.filter(role='patient', is_active=True).order_by('-created_at')
         
-        return User.objects.filter(id__in=patient_ids, is_active=True)
+        return User.objects.filter(id__in=patient_ids, is_active=True).order_by('-created_at')
+
+
+class PatientCreateView(generics.CreateAPIView):
+    """创建患者（医生端使用）"""
+    serializer_class = UserRegistrationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def create(self, request, *args, **kwargs):
+        user = request.user
+        
+        if not user.is_doctor:
+            return Response({'error': '只有医生可以创建患者'}, status=status.HTTP_403_FORBIDDEN)
+        
+        # 确保创建的是患者角色
+        data = request.data.copy()
+        data['role'] = 'patient'
+        
+        # 创建患者
+        serializer = self.get_serializer(data=data)
+        if serializer.is_valid():
+            patient = serializer.save()
+            
+            # 自动建立医患关系
+            from health.models import DoctorPatientRelation
+            DoctorPatientRelation.objects.get_or_create(
+                doctor=user,
+                patient=patient,
+                defaults={
+                    'is_primary': True,
+                    'status': 'active',
+                    'notes': f'由医生 {user.name} 创建'
+                }
+            )
+            
+            return Response({
+                'message': '患者创建成功',
+                'patient': UserListSerializer(patient).data,
+                'doctor_patient_relation': True
+            }, status=status.HTTP_201_CREATED)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UnassignedPatientsView(generics.ListAPIView):
+    """获取未分配医生的患者列表"""
+    serializer_class = UserListSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        user = self.request.user
+        
+        if not user.is_doctor:
+            return User.objects.none()
+        
+        # 获取搜索参数
+        search_query = self.request.query_params.get('search', '')
+        
+        # 获取已分配医生的患者ID
+        from health.models import DoctorPatientRelation
+        assigned_patient_ids = DoctorPatientRelation.objects.filter(
+            status='active'
+        ).values_list('patient_id', flat=True)
+        
+        # 获取未分配的患者
+        queryset = User.objects.filter(
+            role='patient',
+            is_active=True
+        ).exclude(
+            id__in=assigned_patient_ids
+        )
+        
+        # 应用搜索过滤
+        if search_query:
+            queryset = queryset.filter(
+                Q(name__icontains=search_query) |
+                Q(phone__icontains=search_query) |
+                Q(email__icontains=search_query) |
+                Q(bio__icontains=search_query)
+            )
+        
+        return queryset.order_by('-created_at')
+
+
+class DoctorPatientBindView(generics.CreateAPIView):
+    """绑定医患关系"""
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def create(self, request, *args, **kwargs):
+        user = request.user
+        
+        if not user.is_doctor:
+            return Response({'error': '只有医生可以绑定患者'}, status=status.HTTP_403_FORBIDDEN)
+        
+        patient_id = request.data.get('patient_id')
+        doctor_id = request.data.get('doctor_id')
+        
+        if not patient_id:
+            return Response({'error': '患者ID不能为空'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # 验证患者存在
+        try:
+            patient = User.objects.get(id=patient_id, role='patient', is_active=True)
+        except User.DoesNotExist:
+            return Response({'error': '患者不存在'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # 验证医生权限（只能绑定自己）
+        if doctor_id and doctor_id != user.id:
+            return Response({'error': '只能绑定患者到自己'}, status=status.HTTP_403_FORBIDDEN)
+        
+        # 检查是否已经绑定
+        from health.models import DoctorPatientRelation
+        existing_relation = DoctorPatientRelation.objects.filter(
+            doctor=user,
+            patient=patient,
+            status='active'
+        ).first()
+        
+        if existing_relation:
+            return Response({'error': '该患者已经是您的患者'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # 创建或更新医患关系
+        relation, created = DoctorPatientRelation.objects.get_or_create(
+            doctor=user,
+            patient=patient,
+            defaults={
+                'is_primary': True,
+                'status': 'active',
+                'notes': f'患者由医生 {user.name} 添加'
+            }
+        )
+        
+        if not created:
+            # 如果关系已存在但状态不是active，更新状态
+            relation.status = 'active'
+            relation.is_primary = True
+            relation.notes = f'患者由医生 {user.name} 重新添加'
+            relation.save()
+        
+        return Response({
+            'message': '患者绑定成功',
+            'patient': UserListSerializer(patient).data,
+            'relation_id': relation.id
+        }, status=status.HTTP_201_CREATED)
 
 
 class DoctorListView(generics.ListAPIView):

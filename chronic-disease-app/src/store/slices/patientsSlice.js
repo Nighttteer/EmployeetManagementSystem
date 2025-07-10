@@ -53,8 +53,74 @@ export const sendAdviceToPatient = createAsyncThunk(
   }
 );
 
+// 异步action：创建新患者
+export const createPatient = createAsyncThunk(
+  'patients/create',
+  async (patientData, { rejectWithValue }) => {
+    try {
+      const response = await patientsAPI.createPatient(patientData);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || '创建患者失败');
+    }
+  }
+);
+
+// 异步action：更新患者信息
+export const updatePatient = createAsyncThunk(
+  'patients/update',
+  async ({ patientId, patientData }, { rejectWithValue }) => {
+    try {
+      const response = await patientsAPI.updatePatient(patientId, patientData);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || '更新患者失败');
+    }
+  }
+);
+
+// 异步action：删除患者
+export const deletePatient = createAsyncThunk(
+  'patients/delete',
+  async (patientId, { rejectWithValue }) => {
+    try {
+      await patientsAPI.deletePatient(patientId);
+      return patientId;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || '删除患者失败');
+    }
+  }
+);
+
+// 异步action：搜索未分配的患者
+export const searchUnassignedPatients = createAsyncThunk(
+  'patients/searchUnassigned',
+  async (searchQuery, { rejectWithValue }) => {
+    try {
+      const response = await patientsAPI.searchUnassignedPatients(searchQuery);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || '搜索患者失败');
+    }
+  }
+);
+
+// 异步action：绑定医患关系
+export const bindPatientToDoctor = createAsyncThunk(
+  'patients/bindToDoctor',
+  async ({ patientId, doctorId }, { rejectWithValue }) => {
+    try {
+      const response = await patientsAPI.bindPatientToDoctor(patientId, doctorId);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || '绑定患者失败');
+    }
+  }
+);
+
 const initialState = {
   patientsList: [],
+  unassignedPatients: [],
   currentPatient: null,
   patientDetails: {},
   searchQuery: '',
@@ -75,21 +141,30 @@ const patientsSlice = createSlice({
     },
     setSearchQuery: (state, action) => {
       state.searchQuery = action.payload;
+      // 确保 patientsList 是一个数组
+      const patientsList = Array.isArray(state.patientsList) ? state.patientsList : [];
+      
       // 过滤患者列表
       if (action.payload === '') {
-        state.filteredPatients = state.patientsList;
+        state.filteredPatients = patientsList;
       } else {
-        state.filteredPatients = state.patientsList.filter(patient => 
-          patient.name.toLowerCase().includes(action.payload.toLowerCase()) ||
-          patient.diagnosis.toLowerCase().includes(action.payload.toLowerCase())
+        const query = action.payload.toLowerCase();
+        state.filteredPatients = patientsList.filter(patient => 
+          patient?.name?.toLowerCase().includes(query) ||
+          patient?.bio?.toLowerCase().includes(query) ||
+          patient?.phone?.toLowerCase().includes(query) ||
+          patient?.email?.toLowerCase().includes(query)
         );
       }
     },
     updatePatientHealthData: (state, action) => {
       const { patientId, healthData } = action.payload;
       if (state.patientDetails[patientId]) {
+        const existingMetrics = Array.isArray(state.patientDetails[patientId].healthMetrics) 
+          ? state.patientDetails[patientId].healthMetrics 
+          : [];
         state.patientDetails[patientId].healthMetrics = [
-          ...state.patientDetails[patientId].healthMetrics,
+          ...existingMetrics,
           healthData
         ];
       }
@@ -140,6 +215,101 @@ const patientsSlice = createSlice({
       // 发送建议
       .addCase(sendAdviceToPatient.fulfilled, (state, action) => {
         // 可以在这里更新发送建议的状态
+      })
+      // 创建患者
+      .addCase(createPatient.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(createPatient.fulfilled, (state, action) => {
+        state.loading = false;
+        // 将新患者添加到列表开头
+        state.patientsList.unshift(action.payload);
+        state.filteredPatients.unshift(action.payload);
+      })
+      .addCase(createPatient.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // 更新患者
+      .addCase(updatePatient.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updatePatient.fulfilled, (state, action) => {
+        state.loading = false;
+        const updatedPatient = action.payload;
+        // 更新患者列表中的患者信息
+        const index = state.patientsList.findIndex(p => p.id === updatedPatient.id);
+        if (index !== -1) {
+          state.patientsList[index] = updatedPatient;
+        }
+        // 更新过滤列表
+        const filteredIndex = state.filteredPatients.findIndex(p => p.id === updatedPatient.id);
+        if (filteredIndex !== -1) {
+          state.filteredPatients[filteredIndex] = updatedPatient;
+        }
+        // 更新患者详情
+        state.patientDetails[updatedPatient.id] = updatedPatient;
+      })
+      .addCase(updatePatient.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // 删除患者
+      .addCase(deletePatient.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(deletePatient.fulfilled, (state, action) => {
+        state.loading = false;
+        const deletedPatientId = action.payload;
+        // 从患者列表中移除
+        state.patientsList = state.patientsList.filter(p => p.id !== deletedPatientId);
+        state.filteredPatients = state.filteredPatients.filter(p => p.id !== deletedPatientId);
+        // 清除患者详情
+        delete state.patientDetails[deletedPatientId];
+        // 如果当前选中的患者被删除，清除选中状态
+        if (state.currentPatient && state.currentPatient.id === deletedPatientId) {
+          state.currentPatient = null;
+        }
+      })
+      .addCase(deletePatient.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // 搜索未分配患者
+      .addCase(searchUnassignedPatients.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(searchUnassignedPatients.fulfilled, (state, action) => {
+        state.loading = false;
+        state.unassignedPatients = action.payload;
+      })
+      .addCase(searchUnassignedPatients.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // 绑定医患关系
+      .addCase(bindPatientToDoctor.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(bindPatientToDoctor.fulfilled, (state, action) => {
+        state.loading = false;
+        // 将患者从未分配列表中移除
+        const boundPatient = action.payload.patient;
+        state.unassignedPatients = state.unassignedPatients.filter(
+          p => p.id !== boundPatient.id
+        );
+        // 将患者添加到已分配列表中
+        state.patientsList.unshift(boundPatient);
+        state.filteredPatients.unshift(boundPatient);
+      })
+      .addCase(bindPatientToDoctor.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
       });
   },
 });

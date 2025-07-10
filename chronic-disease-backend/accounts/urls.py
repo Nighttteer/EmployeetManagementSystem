@@ -21,10 +21,14 @@ urlpatterns = [
     
     # 密码管理
     path('password/change/', views.PasswordChangeView.as_view(), name='password_change'),
-    path('password/reset/', views.PasswordResetView.as_view(), name='password_reset'),
+    path('password/reset/request/', views.PasswordResetRequestView.as_view(), name='password_reset_request'),
+    path('password/reset/confirm/', views.PasswordResetView.as_view(), name='password_reset_confirm'),
     
     # 用户列表
     path('patients/', views.PatientListView.as_view(), name='patient_list'),
+    path('patients/create/', views.PatientCreateView.as_view(), name='patient_create'),
+    path('patients/unassigned/', views.UnassignedPatientsView.as_view(), name='unassigned_patients'),
+    path('patients/bind-doctor/', views.DoctorPatientBindView.as_view(), name='bind_doctor'),
     path('doctors/', views.DoctorListView.as_view(), name='doctor_list'),
     
     # 仪表板
