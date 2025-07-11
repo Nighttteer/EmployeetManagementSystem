@@ -1,20 +1,24 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
-// 基础API配置
-// 根据您的测试设备选择合适的地址：
+// 基础API配置 - 根据你的运行环境选择正确的配置
 
-// Android模拟器
-//const BASE_URL = 'http://10.0.2.2:8000/api';
+// 🔧 请根据你的情况选择一个配置，注释掉其他的：
 
-// iOS模拟器 - 取消下面这行的注释并注释上面的行
+// 1. iOS模拟器
 // const BASE_URL = 'http://localhost:8000/api';
 
-// 实体设备 - 需要使用开发机器的实际IP地址
-// 获取IP地址：在Windows中运行 ipconfig，找到无线网络适配器的IPv4地址
-const BASE_URL = 'http://10.132.115.2:8000/api'; // 您的开发机器IP地址
+// 2. Android模拟器
+// const BASE_URL = 'http://10.0.2.2:8000/api';
 
-// Expo Go应用 - 有时需要使用Expo的tunneling
+// 3. 实体设备或Expo Go（当前配置）
+// ✅ 已配置为你的实际IP地址
+const BASE_URL = 'http://10.132.115.2:8000/api';
+
+// 导出API基础URL供其他组件使用
+export const API_BASE_URL = BASE_URL;
+
+// 4. Web浏览器
 // const BASE_URL = 'http://127.0.0.1:8000/api';
 
 // 创建axios实例
@@ -144,24 +148,45 @@ export const userAPI = {
 export const patientsAPI = {
   // 获取患者列表
   getPatientsList: () => {
-    return apiClient.get('/doctor/patients/');
+    return apiClient.get('/auth/patients/').then(response => {
+      // 处理分页响应，提取 results 字段
+      if (response.data && typeof response.data === 'object' && response.data.results) {
+        return { ...response, data: response.data.results };
+      }
+      return response;
+    });
   },
 
   // 获取特定患者详情
   getPatientDetails: (patientId) => {
-    return apiClient.get(`/doctor/patients/${patientId}/`);
+    return apiClient.get(`/auth/patients/${patientId}/`);
+  },
+
+  // 创建新患者
+  createPatient: (patientData) => {
+    return apiClient.post('/auth/patients/create/', patientData);
+  },
+
+  // 更新患者信息
+  updatePatient: (patientId, patientData) => {
+    return apiClient.put(`/auth/patients/${patientId}/`, patientData);
+  },
+
+  // 删除患者
+  deletePatient: (patientId) => {
+    return apiClient.delete(`/auth/patients/${patientId}/`);
   },
 
   // 更新患者用药计划
   updateMedicationPlan: (patientId, medicationPlan) => {
-    return apiClient.put(`/doctor/patients/${patientId}/medication-plan/`, {
+    return apiClient.put(`/auth/patients/${patientId}/medication-plan/`, {
       medication_plan: medicationPlan,
     });
   },
 
   // 发送建议给患者
   sendAdvice: (patientId, advice) => {
-    return apiClient.post(`/doctor/patients/${patientId}/advice/`, {
+    return apiClient.post(`/auth/patients/${patientId}/advice/`, {
       advice,
       timestamp: new Date().toISOString(),
     });
@@ -169,7 +194,40 @@ export const patientsAPI = {
 
   // 获取患者健康历史
   getPatientHealthHistory: (patientId, period) => {
-    return apiClient.get(`/doctor/patients/${patientId}/health-history/?period=${period}`);
+    return apiClient.get(`/auth/patients/${patientId}/health-history/?period=${period}`);
+  },
+
+  // 搜索未分配的患者
+  searchUnassignedPatients: (searchQuery) => {
+    return apiClient.get('/auth/patients/unassigned/', {
+      params: {
+        search: searchQuery,
+      },
+    }).then(response => {
+      // 处理分页响应，提取 results 字段
+      if (response.data && typeof response.data === 'object' && response.data.results) {
+        return { ...response, data: response.data.results };
+      }
+      return response;
+    });
+  },
+
+  // 绑定医患关系
+  bindPatientToDoctor: (patientId, doctorId) => {
+    return apiClient.post('/auth/patients/bind-doctor/', {
+      patient_id: patientId,
+      doctor_id: doctorId,
+    });
+  },
+
+  // 解绑医患关系
+  unbindPatientFromDoctor: (patientId, doctorId) => {
+    return apiClient.delete('/auth/patients/unbind-doctor/', {
+      data: {
+        patient_id: patientId,
+        doctor_id: doctorId,
+      },
+    });
   },
 };
 

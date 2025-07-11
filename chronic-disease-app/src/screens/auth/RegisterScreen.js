@@ -302,10 +302,6 @@ const RegisterScreen = ({ navigation }) => {
                 friendlyError = `${fieldName}已被使用，请更换`;
               } else if (error.includes('密码长度太短')) {
                 friendlyError = '密码至少需要8个字符';
-              } else if (error.includes('密码只包含数字')) {
-                friendlyError = '密码需要包含字母和数字';
-              } else if (error.includes('密码必须包含')) {
-                friendlyError = '密码需要包含字母、数字和特殊字符';
               } else if (error.includes('格式无效') || error.includes('invalid format')) {
                 friendlyError = `${fieldName}格式不正确`;
               }
