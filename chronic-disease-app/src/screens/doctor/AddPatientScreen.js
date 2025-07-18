@@ -167,6 +167,7 @@ const AddPatientScreen = () => {
               <Chip
                 style={[styles.riskChip, { backgroundColor: riskColor }]}
                 textStyle={styles.riskText}
+                compact={true}
               >
                 {riskText}
               </Chip>
@@ -331,10 +332,19 @@ const styles = StyleSheet.create({
   },
   riskChip: {
     marginBottom: 8,
+    height: 32,
+    minWidth: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   riskText: {
-    color: '#fff',
     fontSize: 12,
+    color: '#fff',
+    fontWeight: 'bold',
+    textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 16,
   },
   emptyState: {
     flex: 1,

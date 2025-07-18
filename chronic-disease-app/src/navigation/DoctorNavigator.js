@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
 // 医生端屏幕导入
+import DashboardScreen from '../screens/doctor/DashboardScreen';
 import PatientsListScreen from '../screens/doctor/PatientsListScreen';
 import AlertsScreen from '../screens/doctor/AlertsScreen';
 import DoctorMessagesScreen from '../screens/doctor/DoctorMessagesScreen';
@@ -14,6 +15,7 @@ import PatientDetailsScreen from '../screens/doctor/PatientDetailsScreen';
 import AlertDetailsScreen from '../screens/doctor/AlertDetailsScreen';
 import MedicationPlanScreen from '../screens/doctor/MedicationPlanScreen';
 import AddPatientScreen from '../screens/doctor/AddPatientScreen';
+import DiseaseDistributionScreen from '../screens/doctor/DiseaseDistributionScreen';
 
 // 聊天相关屏幕
 import ConversationListScreen from '../screens/common/ConversationListScreen';
@@ -27,6 +29,24 @@ import ComingSoonScreen from '../screens/common/ComingSoonScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
+
+// 仪表板堆栈导航
+const DashboardStack = () => {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen 
+        name="DashboardMain" 
+        component={DashboardScreen}
+        options={{ title: '仪表板', headerShown: false }}
+      />
+      <Stack.Screen 
+        name="DiseaseDistribution" 
+        component={DiseaseDistributionScreen}
+        options={{ title: '疾病分布统计', headerShown: false }}
+      />
+    </Stack.Navigator>
+  );
+};
 
 // 患者管理堆栈导航
 const PatientsStack = () => {
@@ -183,6 +203,9 @@ const DoctorNavigator = () => {
           let iconName;
 
           switch (route.name) {
+            case 'Dashboard':
+              iconName = focused ? 'analytics' : 'analytics-outline';
+              break;
             case 'Patients':
               iconName = focused ? 'people' : 'people-outline';
               break;
@@ -208,12 +231,17 @@ const DoctorNavigator = () => {
           height: 60,
         },
         tabBarLabelStyle: {
-          fontSize: 14,
+          fontSize: 12,
           fontWeight: '500',
         },
         headerShown: false,
       })}
     >
+      <Tab.Screen 
+        name="Dashboard" 
+        component={DashboardStack}
+        options={{ tabBarLabel: '仪表板' }}
+      />
       <Tab.Screen 
         name="Patients" 
         component={PatientsStack}

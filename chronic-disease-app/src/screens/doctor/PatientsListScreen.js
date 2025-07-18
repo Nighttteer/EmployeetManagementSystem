@@ -190,13 +190,15 @@ const PatientsListScreen = ({ navigation }) => {
                 {patient.phone || '未提供手机号'}
               </Text>
             </View>
-            <View 
-              style={[styles.riskBadge, { backgroundColor: getRiskLevelColor(patient.risk_level) }]}
+            <Chip 
+              style={[styles.riskChip, { 
+                backgroundColor: getRiskLevelColor(patient.risk_level) 
+              }]}
+              textStyle={styles.riskChipText}
+              compact={true}
             >
-              <Text style={styles.riskBadgeText}>
-                {getRiskLevelText(patient.risk_level)}
-              </Text>
-            </View>
+              {getRiskLevelText(patient.risk_level)}
+            </Chip>
           </View>
           
           <View style={styles.patientMeta}>
@@ -353,14 +355,19 @@ const PatientsListScreen = ({ navigation }) => {
             <Text style={styles.debugText}>认证状态: {isAuthenticated ? '已认证' : '未认证'}</Text>
             <Text style={styles.debugText}>用户: {user?.name || '未知'}</Text>
             <Text style={styles.debugText}>角色: {role || '未知'}</Text>
-            <Text style={styles.debugText}>Redux token: {token ? token.substring(0, 20) + '...' : '无'}</Text>
-            <Text style={styles.debugText}>存储的token: {debugToken ? debugToken.substring(0, 20) + '...' : '无'}</Text>
+            <Text style={styles.debugText} numberOfLines={2} ellipsizeMode="tail">
+              Redux token: {token ? token.substring(0, 20) + '...' : '无'}
+            </Text>
+            <Text style={styles.debugText} numberOfLines={2} ellipsizeMode="tail">
+              存储的token: {debugToken ? debugToken.substring(0, 20) + '...' : '无'}
+            </Text>
             <View style={styles.debugActions}>
               <Button 
                 mode="contained" 
                 onPress={quickLoginDoctor}
                 style={styles.debugActionButton}
                 compact
+                labelStyle={{ fontSize: 12 }}
               >
                 快速登录医生
               </Button>
@@ -369,6 +376,7 @@ const PatientsListScreen = ({ navigation }) => {
                 onPress={() => dispatch(fetchPatientsList())}
                 style={styles.debugActionButton}
                 compact
+                labelStyle={{ fontSize: 12 }}
               >
                 重新获取患者
               </Button>
@@ -420,6 +428,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 8,
+    backgroundColor: '#f8f9fa',
   },
   title: {
     fontSize: 28,
@@ -444,13 +453,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 16,
     paddingBottom: 16,
+    flexWrap: 'wrap',
   },
   filterChip: {
     marginRight: 8,
+    marginBottom: 8,
   },
   listContainer: {
     paddingHorizontal: 16,
-    paddingBottom: 100,
+    paddingBottom: 120, // 增加底部padding避免被FAB遮挡
   },
   patientCard: {
     marginBottom: 16,
@@ -460,6 +471,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    borderRadius: 12,
   },
   patientHeader: {
     flexDirection: 'row',
@@ -488,16 +500,21 @@ const styles = StyleSheet.create({
     color: '#666666',
     marginTop: 2,
   },
-  riskBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+  riskChip: {
     alignSelf: 'flex-start',
+    height: 32,
+    minWidth: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  riskBadgeText: {
-    color: '#ffffff',
-    fontWeight: 'bold',
+  riskChipText: {
     fontSize: 12,
+    color: '#fff',
+    fontWeight: 'bold',
+    textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 16,
   },
   patientMeta: {
     marginBottom: 16,
@@ -510,6 +527,7 @@ const styles = StyleSheet.create({
   patientActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
+    marginTop: 8,
   },
   actionButton: {
     marginLeft: 8,
@@ -527,12 +545,14 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: '#666666',
     marginTop: 16,
+    textAlign: 'center',
   },
   emptySubtitle: {
     fontSize: 16,
     color: '#999999',
     marginTop: 8,
     textAlign: 'center',
+    paddingHorizontal: 20,
   },
   loadingContainer: {
     flex: 1,
@@ -557,6 +577,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: '#f44336',
     marginTop: 16,
+    textAlign: 'center',
   },
   errorSubtitle: {
     fontSize: 16,
@@ -573,6 +594,11 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: '#2196F3',
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
   },
   debugButton: {
     marginTop: 8,
@@ -591,15 +617,25 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff3e0',
     borderLeftWidth: 4,
     borderLeftColor: '#ff9800',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    borderRadius: 8,
   },
   debugTitle: {
     color: '#e65100',
     marginBottom: 8,
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   debugText: {
     fontSize: 12,
     color: '#bf360c',
     marginBottom: 4,
+    lineHeight: 16,
+    flexWrap: 'wrap',
   },
   debugActions: {
     flexDirection: 'row',
@@ -609,6 +645,7 @@ const styles = StyleSheet.create({
   debugActionButton: {
     flex: 1,
     height: 32,
+    minWidth: 0,
   },
 });
 
