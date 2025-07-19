@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import PatientHomeScreen from '../screens/patient/PatientHomeScreen';
 import HealthDataScreen from '../screens/patient/HealthDataScreen';
 import MedicationScreen from '../screens/patient/MedicationScreen';
+import MedicationSettingsScreen from '../screens/patient/MedicationSettingsScreen';
 import MessagesScreen from '../screens/patient/MessagesScreen';
 import ProfileScreen from '../screens/patient/ProfileScreen';
 
@@ -125,9 +126,8 @@ const ProfileStack = () => {
       />
       <Stack.Screen 
         name="ReminderSettings" 
-        component={ComingSoonScreen}
-        options={{ title: '提醒设置', headerShown: false }}
-        initialParams={{ title: '提醒设置' }}
+        component={MedicationSettingsScreen}
+        options={{ title: '用药提醒设置', headerShown: false }}
       />
       <Stack.Screen 
         name="DataExport" 
