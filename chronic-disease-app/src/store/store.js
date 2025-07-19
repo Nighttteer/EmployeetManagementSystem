@@ -3,6 +3,7 @@ import authSlice from './slices/authSlice';
 import userSlice from './slices/userSlice';
 import patientsSlice from './slices/patientsSlice';
 import alertsSlice from './slices/alertsSlice';
+import medicationSlice from './slices/medicationSlice';
 
 export const store = configureStore({
   reducer: {
@@ -10,6 +11,7 @@ export const store = configureStore({
     user: userSlice,
     patients: patientsSlice,
     alerts: alertsSlice,
+    medication: medicationSlice,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
