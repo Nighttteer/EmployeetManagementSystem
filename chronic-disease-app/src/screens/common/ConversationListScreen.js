@@ -199,7 +199,7 @@ const ConversationListScreen = ({ navigation }) => {
       <FlatList
         data={conversations}
         renderItem={renderConversation}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={(item, index) => item?.id?.toString() || `conversation-${index}`}
         style={styles.conversationsList}
         contentContainerStyle={conversations.length === 0 ? styles.emptyContainer : null}
         refreshControl={

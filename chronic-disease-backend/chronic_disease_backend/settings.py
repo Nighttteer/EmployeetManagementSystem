@@ -134,6 +134,24 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# 确保音频文件的MIME类型正确
+import mimetypes
+mimetypes.add_type('audio/m4a', '.m4a')
+mimetypes.add_type('audio/mp4', '.m4a')
+mimetypes.add_type('audio/mpeg', '.mp3')
+mimetypes.add_type('audio/wav', '.wav')
+mimetypes.add_type('audio/aac', '.aac')
+mimetypes.add_type('audio/ogg', '.ogg')
+
+# 音频文件处理设置
+AUDIO_FILE_TYPES = {
+    'm4a': 'audio/mp4',
+    'mp3': 'audio/mpeg',
+    'wav': 'audio/wav',
+    'aac': 'audio/aac',
+    'ogg': 'audio/ogg',
+}
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
@@ -271,6 +289,7 @@ ALERT_STATUS_CHOICES = [
 MESSAGE_TYPES = [
     ('text', '文本'),
     ('image', '图片'),
+    ('audio', '语音'),
 ]
 
 # 日志配置

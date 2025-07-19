@@ -25,4 +25,7 @@ urlpatterns = [
     
     # 聊天统计
     path('stats/', views.ChatStatsView.as_view(), name='chat-stats'),
+    
+    # 音频文件服务
+    path('audio/<path:file_path>', views.serve_audio_file, name='serve-audio-file'),
 ] 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
 import { Text, TextInput, SegmentedButtons } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { loginUser } from '../../store/slices/authSlice';
 import CustomButton from '../../components/CustomButton';
+import { debugLogin, quickFixLogin, testAllAccounts } from '../../utils/debugLogin';
 
 const LoginScreen = ({ navigation }) => {
   const dispatch = useDispatch();
@@ -63,9 +64,14 @@ const LoginScreen = ({ navigation }) => {
       <SafeAreaView style={styles.container}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.header}>
-            <Text variant="headlineLarge" style={styles.title}>
-              登录
-            </Text>
+            <View style={styles.headerContent}>
+              <Text variant="headlineLarge" style={styles.title}>
+                登录
+              </Text>
+              <TouchableOpacity onPress={quickFixLogin} style={styles.debugButton}>
+                <Ionicons name="bug" size={24} color="#007AFF" />
+              </TouchableOpacity>
+            </View>
             <Text variant="bodyLarge" style={styles.subtitle}>
               欢迎回来，请登录您的账号
             </Text>
@@ -147,6 +153,37 @@ const LoginScreen = ({ navigation }) => {
               style={styles.loginButton}
             />
 
+            {/* 快速测试按钮 */}
+            <View style={styles.quickTestContainer}>
+              <Text style={styles.quickTestTitle}>快速测试</Text>
+              <View style={styles.quickTestButtons}>
+                <TouchableOpacity 
+                  style={styles.quickTestButton}
+                  onPress={() => {
+                    setFormData({
+                      phone: '+8613800138000',
+                      password: '123456',
+                      userType: 'patient'
+                    });
+                  }}
+                >
+                  <Text style={styles.quickTestButtonText}>患者登录</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.quickTestButton}
+                  onPress={() => {
+                    setFormData({
+                      phone: '+8613800138001',
+                      password: '123456',
+                      userType: 'doctor'
+                    });
+                  }}
+                >
+                  <Text style={styles.quickTestButtonText}>医生登录</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
             {/* 忘记密码链接 */}
             <CustomButton
               title="忘记密码？"
@@ -187,16 +224,27 @@ const styles = StyleSheet.create({
     marginBottom: 40,
     alignItems: 'center',
   },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
   title: {
     fontSize: 32,
     fontWeight: 'bold',
     color: '#333333',
     marginBottom: 8,
+    flex: 1,
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: 18,
     color: '#666666',
     textAlign: 'center',
+  },
+  debugButton: {
+    padding: 8,
   },
   form: {
     flex: 1,
@@ -246,6 +294,38 @@ const styles = StyleSheet.create({
   },
   registerLink: {
     marginLeft: 8,
+  },
+  quickTestContainer: {
+    marginTop: 24,
+    padding: 16,
+    backgroundColor: '#f0f8ff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  quickTestTitle: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  quickTestButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  quickTestButton: {
+    flex: 1,
+    backgroundColor: '#007AFF',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  quickTestButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '500',
   },
 });
 
