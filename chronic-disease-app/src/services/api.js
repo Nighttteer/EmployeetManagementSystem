@@ -15,6 +15,9 @@ import * as SecureStore from 'expo-secure-store';
 // ✅ 已配置为你的实际IP地址
 const BASE_URL = 'http://10.132.115.2:8000/api';
 
+// ✅ 已配置为你的实际IP地址（热点网络）
+//const BASE_URL = 'http://172.20.10.3:8000/api';
+
 // 导出API基础URL供其他组件使用
 export const API_BASE_URL = BASE_URL;
 

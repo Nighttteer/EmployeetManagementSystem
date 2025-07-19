@@ -127,6 +127,10 @@ class MessageCreateSerializer(serializers.ModelSerializer):
             )
             conversation.participants.set(participants)
         
+        # 关联消息到会话
+        message.conversation = conversation
+        message.save()
+        
         # 更新会话的最后消息时间
         conversation.last_message_at = message.sent_at
         conversation.save()

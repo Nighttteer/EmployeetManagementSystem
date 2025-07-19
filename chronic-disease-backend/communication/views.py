@@ -7,6 +7,19 @@ from django.shortcuts import get_object_or_404
 from django.db.models import Q, Count, Max
 from django.utils import timezone
 from django.contrib.auth import get_user_model
+from django.shortcuts import render, get_object_or_404
+from django.http import HttpResponse, Http404
+from django.conf import settings
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+from django.contrib.auth.decorators import login_required
+import os
+import re
+import mimetypes
+from pathlib import Path
 
 from .models import Message, Conversation, MessageTemplate, NotificationLog
 from .serializers import (
@@ -15,6 +28,7 @@ from .serializers import (
     ChatHistorySerializer, UserBasicSerializer
 )
 from accounts.models import User
+from accounts.serializers import UserListSerializer
 
 
 class MessagePagination(PageNumberPagination):
@@ -185,26 +199,39 @@ class UserSearchView(generics.ListAPIView):
         user = self.request.user
         search_query = self.request.query_params.get('search', '').strip()
         
+        print(f"[DEBUG] 搜索用户: 当前用户={user.name}({user.role}), 搜索词='{search_query}'")
+        
         if not search_query:
+            print("[DEBUG] 搜索词为空，返回空结果")
             return User.objects.none()
         
         # 根据用户角色过滤可以联系的用户
-        queryset = User.objects.exclude(id=user.id)
+        queryset = User.objects.exclude(id=user.id).filter(is_active=True)
         
         if user.is_patient:
             # 患者只能搜索医生
             queryset = queryset.filter(role='doctor')
+            print(f"[DEBUG] 患者搜索医生，医生总数: {queryset.count()}")
         elif user.is_doctor:
             # 医生可以搜索患者
             queryset = queryset.filter(role='patient')
+            print(f"[DEBUG] 医生搜索患者，患者总数: {queryset.count()}")
         
-        # 按姓名搜索
-        queryset = queryset.filter(
-            Q(name__icontains=search_query) | 
-            Q(phone__icontains=search_query)
-        )
+        # 按姓名和手机号搜索
+        search_filter = Q(name__icontains=search_query) | Q(phone__icontains=search_query)
+        queryset = queryset.filter(search_filter)
         
-        return queryset[:10]  # 限制返回10个结果
+        print(f"[DEBUG] 搜索结果数量: {queryset.count()}")
+        
+        # 添加排序，修复分页警告
+        queryset = queryset.order_by('name', 'id')
+        
+        # 打印搜索结果（仅用于调试）
+        results_preview = queryset[:10]
+        for result in results_preview:
+            print(f"[DEBUG] 搜索结果: {result.name} ({result.phone}) - {result.role}")
+        
+        return queryset
 
 
 class MessageTemplateListView(generics.ListAPIView):
@@ -394,3 +421,84 @@ def start_conversation_with_user(request, user_id):
         'message': '会话创建成功',
         'conversation': serializer.data
     }, status=status.HTTP_201_CREATED)
+
+# 音频文件服务视图
+@api_view(['GET'])
+@permission_classes([])  # 移除认证要求，允许匿名访问
+def serve_audio_file(request, file_path):
+    """
+    提供音频文件服务，确保正确的HTTP头设置，特别针对iOS AVFoundation
+    """
+    try:
+        # 构建完整的文件路径
+        full_path = os.path.join(settings.MEDIA_ROOT, file_path)
+        
+        # 检查文件是否存在
+        if not os.path.exists(full_path):
+            raise Http404("音频文件不存在")
+        
+        # 获取文件信息
+        file_size = os.path.getsize(full_path)
+        file_ext = Path(full_path).suffix.lower()
+        
+        # 设置正确的MIME类型
+        mime_type = settings.AUDIO_FILE_TYPES.get(file_ext[1:], 'audio/mpeg')
+        
+        # 处理Range请求（支持音频流式播放）
+        range_header = request.META.get('HTTP_RANGE', '').strip()
+        
+        if range_header:
+            # 解析Range头
+            range_match = re.match(r'bytes=(\d+)-(\d*)', range_header)
+            if range_match:
+                start = int(range_match.group(1))
+                end = int(range_match.group(2)) if range_match.group(2) else file_size - 1
+                
+                # 验证范围
+                if start >= file_size:
+                    return HttpResponse(status=416)  # Requested Range Not Satisfiable
+                
+                end = min(end, file_size - 1)
+                length = end - start + 1
+                
+                # 读取指定范围的数据
+                with open(full_path, 'rb') as f:
+                    f.seek(start)
+                    content = f.read(length)
+                
+                # 创建部分内容响应
+                response = HttpResponse(content, status=206, content_type=mime_type)
+                response['Content-Range'] = f'bytes {start}-{end}/{file_size}'
+                response['Content-Length'] = length
+            else:
+                return HttpResponse(status=400)  # Bad Request
+        else:
+            # 完整文件请求
+            with open(full_path, 'rb') as f:
+                content = f.read()
+            
+            response = HttpResponse(content, content_type=mime_type)
+            response['Content-Length'] = file_size
+        
+        # 设置必要的HTTP头（针对iOS AVFoundation优化）
+        response['Accept-Ranges'] = 'bytes'
+        response['Cache-Control'] = 'public, max-age=86400'  # 24小时缓存
+        response['Last-Modified'] = timezone.now().strftime('%a, %d %b %Y %H:%M:%S GMT')
+        
+        # 设置CORS头
+        response['Access-Control-Allow-Origin'] = '*'
+        response['Access-Control-Allow-Methods'] = 'GET, HEAD, OPTIONS'
+        response['Access-Control-Allow-Headers'] = 'Range, Accept-Ranges, Content-Range'
+        response['Access-Control-Expose-Headers'] = 'Content-Range, Accept-Ranges, Content-Length'
+        
+        # 设置额外的音频相关头
+        response['X-Content-Type-Options'] = 'nosniff'
+        response['X-Frame-Options'] = 'DENY'
+        
+        return response
+        
+    except Exception as e:
+        return Response(
+            {'error': f'音频文件访问失败: {str(e)}'}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

@@ -13,6 +13,7 @@ import {
 import { useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../services/api';
+import { debugAuthStatus } from '../../utils/debugAuth';
 
 const UserSearchScreen = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -20,6 +21,11 @@ const UserSearchScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [searchStarted, setSearchStarted] = useState(false);
   const { user } = useSelector(state => state.auth);
+
+  useEffect(() => {
+    // 组件加载时检查认证状态
+    debugAuthStatus();
+  }, []);
 
   useEffect(() => {
     if (searchQuery.trim().length >= 2) {
@@ -35,14 +41,32 @@ const UserSearchScreen = ({ navigation }) => {
     setSearchStarted(true);
     
     try {
+      // 添加调试信息
+      console.log('当前用户:', user);
+      console.log('搜索查询:', searchQuery.trim());
+      
       const response = await api.get('/communication/users/search/', {
         params: { search: searchQuery.trim() },
       });
       
-      setUsers(response.data);
+      console.log('搜索响应:', response.data);
+      console.log('搜索结果数量:', response.data.results?.length || 0);
+      console.log('搜索结果:', response.data.results);
+      
+      // 处理分页响应格式
+      const results = response.data.results || response.data;
+      setUsers(results);
     } catch (error) {
       console.error('搜索用户失败:', error);
-      Alert.alert('错误', '搜索用户失败');
+      console.error('错误详情:', error.response?.data);
+      console.error('错误状态:', error.response?.status);
+      
+      if (error.response?.status === 401) {
+        Alert.alert('认证失败', '请重新登录后再试');
+        // 可以在这里添加跳转到登录页的逻辑
+      } else {
+        Alert.alert('错误', '搜索用户失败');
+      }
     } finally {
       setLoading(false);
     }
@@ -161,7 +185,12 @@ const UserSearchScreen = ({ navigation }) => {
           <Ionicons name="chevron-back" size={24} color="#007AFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>新建聊天</Text>
+        <TouchableOpacity onPress={debugAuthStatus} style={styles.debugButton}>
+          <Ionicons name="bug" size={20} color="#007AFF" />
+        </TouchableOpacity>
       </View>
+
+
 
       <View style={styles.searchContainer}>
         <View style={styles.searchBar}>
@@ -179,12 +208,14 @@ const UserSearchScreen = ({ navigation }) => {
             </TouchableOpacity>
           )}
         </View>
+        
+
       </View>
 
       <FlatList
         data={users}
         renderItem={renderUser}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={(item, index) => item?.id?.toString() || `user-${index}`}
         style={styles.usersList}
         contentContainerStyle={users.length === 0 ? styles.emptyContainer : null}
         ListEmptyComponent={renderEmptyState}
@@ -211,10 +242,15 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   headerTitle: {
+    flex: 1,
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
   },
+  debugButton: {
+    padding: 8,
+  },
+
   searchContainer: {
     padding: 16,
     backgroundColor: '#fff',
@@ -302,6 +338,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: 'center',
   },
+
 });
 
 export default UserSearchScreen; 
