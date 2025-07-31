@@ -355,6 +355,11 @@ export const evaluateHealthStatus = (metric, userGender = 'male') => {
   // 特殊处理需要性别区分的指标
   let currentThresholds = thresholds;
   if (metric.metric_type === METRIC_TYPES.URIC_ACID) {
+    // 安全检查thresholds结构
+    if (!thresholds.normal || !thresholds.warning || !thresholds.danger ||
+        !thresholds.normal[userGender] || !thresholds.warning[userGender] || !thresholds.danger[userGender]) {
+      return 'unknown';
+    }
     currentThresholds = {
       normal: thresholds.normal[userGender],
       warning: thresholds.warning[userGender],
@@ -362,10 +367,21 @@ export const evaluateHealthStatus = (metric, userGender = 'male') => {
     };
   }
 
+  // 安全检查currentThresholds结构
+  if (!currentThresholds || !currentThresholds.normal || !currentThresholds.warning || !currentThresholds.danger) {
+    return 'unknown';
+  }
+
   // 判断状态
   if (metric.metric_type === METRIC_TYPES.BLOOD_PRESSURE) {
     const systolic = metric.systolic;
     const diastolic = metric.diastolic;
+    
+    // 安全检查血压阈值结构
+    if (!currentThresholds.danger.systolic || !currentThresholds.danger.diastolic ||
+        !currentThresholds.warning.systolic || !currentThresholds.warning.diastolic) {
+      return 'unknown';
+    }
     
     if (systolic >= currentThresholds.danger.systolic[0] || diastolic >= currentThresholds.danger.diastolic[0]) {
       return 'danger';
@@ -376,8 +392,18 @@ export const evaluateHealthStatus = (metric, userGender = 'male') => {
     return 'normal';
   } else {
     // 单一数值指标
-    const field = Object.keys(currentThresholds.normal)[0];
+    const normalKeys = Object.keys(currentThresholds.normal);
+    if (normalKeys.length === 0) return 'unknown';
+    
+    const field = normalKeys[0];
     const numValue = parseFloat(value);
+    
+    if (isNaN(numValue)) return 'unknown';
+    
+    // 安全检查字段存在
+    if (!currentThresholds.danger[field] || !currentThresholds.warning[field] || !currentThresholds.normal[field]) {
+      return 'unknown';
+    }
     
     const [dangerMin, dangerMax] = currentThresholds.danger[field];
     const [warningMin, warningMax] = currentThresholds.warning[field];

@@ -14,8 +14,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector, useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { fetchPatientsList, setSearchQuery } from '../../store/slices/patientsSlice';
-import { loginUser } from '../../store/slices/authSlice';
-import * as SecureStore from 'expo-secure-store';
 import { api } from '../../services/api';
 
 const PatientsListScreen = ({ navigation }) => {
@@ -34,48 +32,10 @@ const PatientsListScreen = ({ navigation }) => {
   
   const [refreshing, setRefreshing] = useState(false);
   const [filterType, setFilterType] = useState('all'); // all, critical, stable
-  const [debugMode, setDebugMode] = useState(false);
-  const [debugToken, setDebugToken] = useState(null);
+  const [chatLoading, setChatLoading] = useState(false);
   
-  // 检查token
-  useEffect(() => {
-    const checkToken = async () => {
-      try {
-        const storedToken = await SecureStore.getItemAsync('authToken');
-        const storedRole = await SecureStore.getItemAsync('userRole');
-        setDebugToken(storedToken);
-        console.log('🔐 存储的token:', storedToken ? storedToken.substring(0, 20) + '...' : '无');
-        console.log('🔐 存储的角色:', storedRole);
-      } catch (error) {
-        console.error('获取token失败:', error);
-      }
-    };
-    checkToken();
-  }, []);
-  
-  // 快速登录医生账号
-  const quickLoginDoctor = async () => {
-    try {
-      console.log('🔐 开始快速登录医生账号...');
-      const result = await dispatch(loginUser({
-        phone: '+8613800138001',
-        password: '123456',
-        userType: 'doctor'
-      }));
-      
-      if (result.type === 'auth/login/fulfilled') {
-        console.log('✓ 登录成功');
-        // 重新获取患者列表
-        dispatch(fetchPatientsList());
-      } else {
-        console.error('✗ 登录失败:', result.payload);
-        Alert.alert(t('auth.loginFailed'), result.payload || t('common.unknownError'));
-      }
-    } catch (error) {
-      console.error('登录错误:', error);
-      Alert.alert(t('auth.loginError'), error.message);
-    }
-  };
+
+
   
   useEffect(() => {
     // 组件加载时获取患者列表
@@ -110,7 +70,7 @@ const PatientsListScreen = ({ navigation }) => {
   // 开始与患者聊天
   const startChatWithPatient = async (patient) => {
     try {
-      setLoading(true);
+      setChatLoading(true);
       
       // 检查是否已存在会话
       const conversationResponse = await api.get(
@@ -118,13 +78,16 @@ const PatientsListScreen = ({ navigation }) => {
       );
       
       if (conversationResponse.data) {
-        // 已存在会话，直接打开
-        navigation.navigate('Chat', {
-          conversationId: conversationResponse.data.id,
-          otherUser: {
-            id: patient.id,
-            name: patient.name,
-            role: 'patient'
+        // 已存在会话，跳转到Messages tab并打开聊天
+        navigation.navigate('Messages', {
+          screen: 'Chat',
+          params: {
+            conversationId: conversationResponse.data.id,
+            otherUser: {
+              id: patient.id,
+              name: patient.name,
+              role: 'patient'
+            },
           },
         });
       }
@@ -137,12 +100,16 @@ const PatientsListScreen = ({ navigation }) => {
           );
           
           if (createResponse.data.conversation) {
-            navigation.navigate('Chat', {
-              conversationId: createResponse.data.conversation.id,
-              otherUser: {
-                id: patient.id,
-                name: patient.name,
-                role: 'patient'
+            // 创建成功，跳转到Messages tab并打开聊天
+            navigation.navigate('Messages', {
+              screen: 'Chat',
+              params: {
+                conversationId: createResponse.data.conversation.id,
+                otherUser: {
+                  id: patient.id,
+                  name: patient.name,
+                  role: 'patient'
+                },
               },
             });
           }
@@ -155,7 +122,7 @@ const PatientsListScreen = ({ navigation }) => {
         Alert.alert(t('common.error'), t('chat.checkConversationFailed'));
       }
     } finally {
-      setLoading(false);
+      setChatLoading(false);
     }
   };
   
@@ -274,8 +241,10 @@ const PatientsListScreen = ({ navigation }) => {
               compact 
               onPress={() => startChatWithPatient(patient)}
               style={styles.actionButton}
+              loading={chatLoading}
+              disabled={chatLoading}
             >
-              聊天
+              {chatLoading ? '连接中...' : '聊天'}
             </Button>
             <Button 
               mode="outlined" 
@@ -383,62 +352,7 @@ const PatientsListScreen = ({ navigation }) => {
         <Text variant="bodyMedium" style={styles.subtitle}>
           {t('patients.managePatientHealth')}
         </Text>
-        {/* 调试按钮 */}
-        <TouchableOpacity 
-          onPress={() => setDebugMode(!debugMode)}
-          style={styles.debugButton}
-        >
-          <Text style={styles.debugButtonText}>
-            {debugMode ? t('common.hideDebug') : t('common.showDebug')}
-          </Text>
-        </TouchableOpacity>
       </View>
-      
-      {/* 调试信息 */}
-      {debugMode && (
-        <Card style={styles.debugCard}>
-          <Card.Content>
-            <Text variant="titleMedium" style={styles.debugTitle}>{t('common.debugInfo')}</Text>
-            <Text style={styles.debugText}>{t('common.loadStatus')}: {loading ? t('common.loading') : t('common.completed')}</Text>
-            <Text style={styles.debugText}>{t('common.errorMessage')}: {error || t('common.noError')}</Text>
-            <Text style={styles.debugText}>{t('patients.originalList')}: {patientsList?.length || 0} {t('patients.patientsCount')}</Text>
-            <Text style={styles.debugText}>{t('patients.filteredList')}: {filteredPatients?.length || 0} {t('patients.patientsCount')}</Text>
-            <Text style={styles.debugText}>{t('common.searchQuery')}: {searchQuery || t('common.none')}</Text>
-            <Text style={styles.debugText}>{t('common.filterType')}: {filterType}</Text>
-            <Text style={styles.debugText}>{t('patients.finalData')}: {filteredData?.length || 0} {t('patients.patientsCount')}</Text>
-            <Text style={styles.debugText}>--- {t('auth.authInfo')} ---</Text>
-            <Text style={styles.debugText}>{t('auth.authStatus')}: {isAuthenticated ? t('auth.authenticated') : t('auth.unauthenticated')}</Text>
-            <Text style={styles.debugText}>{t('auth.user')}: {user?.name || t('auth.unknown')}</Text>
-            <Text style={styles.debugText}>{t('auth.role')}: {role || t('auth.unknown')}</Text>
-            <Text style={styles.debugText} numberOfLines={2} ellipsizeMode="tail">
-              Redux token: {token ? token.substring(0, 20) + '...' : t('common.none')}
-            </Text>
-            <Text style={styles.debugText} numberOfLines={2} ellipsizeMode="tail">
-              {t('auth.storedToken')}: {debugToken ? debugToken.substring(0, 20) + '...' : t('common.none')}
-            </Text>
-            <View style={styles.debugActions}>
-              <Button 
-                mode="contained" 
-                onPress={quickLoginDoctor}
-                style={styles.debugActionButton}
-                compact
-                labelStyle={{ fontSize: 12 }}
-              >
-                {t('auth.quickLoginDoctor')}
-              </Button>
-              <Button 
-                mode="outlined" 
-                onPress={() => dispatch(fetchPatientsList())}
-                style={styles.debugActionButton}
-                compact
-                labelStyle={{ fontSize: 12 }}
-              >
-                {t('patients.refetchPatients')}
-              </Button>
-            </View>
-          </Card.Content>
-        </Card>
-      )}
       
       <Searchbar
         placeholder={t('patients.searchPlaceholder')}
@@ -482,17 +396,17 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 24,
     paddingTop: 16,
-    paddingBottom: 8,
+    paddingBottom: 16,
     backgroundColor: '#f8f9fa',
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#333333',
+    color: '#333',
   },
   subtitle: {
     fontSize: 16,
-    color: '#666666',
+    color: '#666',
     marginTop: 4,
   },
   searchBar: {
@@ -503,11 +417,12 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    borderRadius: 8,
   },
   filtersContainer: {
     flexDirection: 'row',
     paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingBottom: 8,
     flexWrap: 'wrap',
   },
   filterChip: {
@@ -543,16 +458,16 @@ const styles = StyleSheet.create({
   patientName: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333333',
+    color: '#333',
   },
   patientDetails: {
     fontSize: 14,
-    color: '#666666',
+    color: '#666',
     marginTop: 2,
   },
   patientPhone: {
     fontSize: 14,
-    color: '#666666',
+    color: '#666',
     marginTop: 2,
   },
   riskChip: {
@@ -576,7 +491,7 @@ const styles = StyleSheet.create({
   },
   metaText: {
     fontSize: 14,
-    color: '#666666',
+    color: '#666',
     marginBottom: 4,
   },
   patientActions: {
@@ -598,13 +513,13 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 24,
-    color: '#666666',
+    color: '#666',
     marginTop: 16,
     textAlign: 'center',
   },
   emptySubtitle: {
     fontSize: 16,
-    color: '#999999',
+    color: '#999',
     marginTop: 8,
     textAlign: 'center',
     paddingHorizontal: 20,
@@ -616,7 +531,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#666666',
+    color: '#666',
     marginTop: 16,
   },
   errorContainer: {
@@ -636,7 +551,7 @@ const styles = StyleSheet.create({
   },
   errorSubtitle: {
     fontSize: 16,
-    color: '#666666',
+    color: '#666',
     marginTop: 8,
     textAlign: 'center',
   },
@@ -655,53 +570,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 6,
   },
-  debugButton: {
-    marginTop: 8,
-    padding: 8,
-    backgroundColor: '#ff9800',
-    borderRadius: 4,
-    alignSelf: 'flex-start',
-  },
-  debugButtonText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  debugCard: {
-    margin: 16,
-    backgroundColor: '#fff3e0',
-    borderLeftWidth: 4,
-    borderLeftColor: '#ff9800',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    borderRadius: 8,
-  },
-  debugTitle: {
-    color: '#e65100',
-    marginBottom: 8,
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  debugText: {
-    fontSize: 12,
-    color: '#bf360c',
-    marginBottom: 4,
-    lineHeight: 16,
-    flexWrap: 'wrap',
-  },
-  debugActions: {
-    flexDirection: 'row',
-    marginTop: 12,
-    gap: 8,
-  },
-  debugActionButton: {
-    flex: 1,
-    height: 32,
-    minWidth: 0,
-  },
+
 });
 
 export default PatientsListScreen; 

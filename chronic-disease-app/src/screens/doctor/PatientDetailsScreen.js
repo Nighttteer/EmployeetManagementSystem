@@ -32,7 +32,7 @@ import StatsCard from '../../components/StatsCard';
 import { api } from '../../services/api';
 
 const PatientDetailsScreen = ({ route, navigation }) => {
-  const { patient } = route.params;
+  const { patient } = route.params || {};
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('overview'); // overview, health, medication, history

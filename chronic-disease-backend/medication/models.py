@@ -73,7 +73,7 @@ class MedicationPlan(models.Model):
     # 用药方案
     dosage = models.FloatField('剂量')
     frequency = models.CharField('频次', max_length=10, choices=FREQUENCY_CHOICES)
-    time_of_day = models.CharField('服药时间', max_length=30, choices=TIME_CHOICES)
+    time_of_day = models.JSONField('服药时间', default=list, help_text='服药时间列表，如 ["08:00", "20:00"]')
     
     # 用药周期
     start_date = models.DateField('开始日期')
@@ -252,3 +252,43 @@ class MedicationStock(models.Model):
         from datetime import date
         delta = self.expiry_date - date.today()
         return delta.days if delta.days > 0 else 0
+
+
+class MedicationStatusHistory(models.Model):
+    """
+    用药状态变更历史记录
+    """
+    STATUS_CHOICES = [
+        ('active', '进行中'),
+        ('completed', '已完成'),
+        ('stopped', '已停药'),
+        ('paused', '已暂停'),
+    ]
+    
+    # 关联信息
+    plan = models.ForeignKey(MedicationPlan, on_delete=models.CASCADE, related_name='status_history', verbose_name='用药计划')
+    changed_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='操作人')
+    
+    # 状态变更信息
+    from_status = models.CharField('原状态', max_length=20, choices=STATUS_CHOICES)
+    to_status = models.CharField('新状态', max_length=20, choices=STATUS_CHOICES)
+    
+    # 变更原因和备注
+    reason = models.TextField('变更原因', blank=True, null=True)
+    notes = models.TextField('附加说明', blank=True, null=True)
+    
+    # 时间戳
+    created_at = models.DateTimeField('变更时间', auto_now_add=True)
+    
+    class Meta:
+        db_table = 'medication_status_history'
+        verbose_name = '用药状态变更历史'
+        verbose_name_plural = '用药状态变更历史'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['plan', 'created_at']),
+            models.Index(fields=['changed_by', 'created_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.plan.patient.name} - {self.plan.medication.name} - {self.get_from_status_display()} → {self.get_to_status_display()}"

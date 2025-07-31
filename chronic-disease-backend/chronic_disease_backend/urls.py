@@ -52,7 +52,7 @@ urlpatterns = [
     path('api/user/', include('accounts.user_urls')),  # 使用专门的user路由配置
     path('api/health/', include('health.urls')),
     path('api/communication/', include('communication.urls')),
-    # path('api/medication/', include('medication.urls')),
+    path('api/medication/', include('medication.urls')),
 ]
 
 # 开发环境静态文件和媒体文件服务

@@ -49,7 +49,7 @@ const LineChart = ({
         }))
     }))
     .filter(serie => serie.data.length > 0);
-    
+  
   if (!chartData || chartData.length === 0 || 
       (chartData.length === 1 && (!chartData[0].data || chartData[0].data.length === 0))) {
     return (
@@ -83,7 +83,7 @@ const LineChart = ({
       </View>
     );
   }
-
+  
   // 计算每条线的点坐标
   const seriesData = chartData.map((serie, seriesIndex) => {
     const points = serie.data.map((item, index) => {
@@ -188,18 +188,18 @@ const LineChart = ({
             
             // 只显示非空的标签
             if (label && label.trim() !== '') {
-              return (
-                <SvgText
-                  key={`x-label-${index}`}
-                  x={x}
-                  y={height - 10}
-                  fontSize="10"
-                  fill="#666"
-                  textAnchor="middle"
-                >
+            return (
+              <SvgText
+                key={`x-label-${index}`}
+                x={x}
+                y={height - 10}
+                fontSize="10"
+                fill="#666"
+                textAnchor="middle"
+              >
                   {label}
-                </SvgText>
-              );
+              </SvgText>
+            );
             }
           }
           return null;

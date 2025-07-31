@@ -274,10 +274,10 @@ class NotificationService {
   // 清理资源
   cleanup() {
     if (this.notificationSubscription) {
-      Notifications.removeNotificationSubscription(this.notificationSubscription);
+      this.notificationSubscription.remove();
     }
     if (this.responseSubscription) {
-      Notifications.removeNotificationSubscription(this.responseSubscription);
+      this.responseSubscription.remove();
     }
   }
 }

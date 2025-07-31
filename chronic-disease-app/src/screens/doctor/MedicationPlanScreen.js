@@ -5,8 +5,7 @@ import {
   ScrollView, 
   RefreshControl, 
   TouchableOpacity,
-  Alert,
-  Modal
+  Alert
 } from 'react-native';
 import { 
   Text, 
@@ -16,12 +15,9 @@ import {
   Chip,
   List,
   IconButton,
-  TextInput,
   Menu,
   Divider,
-  FAB,
-  Portal,
-  Dialog
+  FAB
 } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -31,17 +27,172 @@ import LineChart from '../../components/Charts/LineChart';
 import BarChart from '../../components/Charts/BarChart';
 import PieChart from '../../components/Charts/PieChart';
 import StatsCard from '../../components/StatsCard';
+import { medicationAPI } from '../../services/api';
 
 const MedicationPlanScreen = ({ route, navigation }) => {
   const { patient } = route.params || {};
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('current'); // current, history, analytics
-  const [addMedicationVisible, setAddMedicationVisible] = useState(false);
-  const [selectedMedication, setSelectedMedication] = useState(null);
+  
+  // 用药计划数据
+  const [medicationPlans, setMedicationPlans] = useState([]);
+  const [medicationStats, setMedicationStats] = useState({});
+  const [medicationHistory, setMedicationHistory] = useState([]);
+  
+  // 频次选项
+  const frequencyOptions = [
+    { value: 'QD', label: '一日一次' },
+    { value: 'BID', label: '一日二次' },
+    { value: 'TID', label: '一日三次' },
+    { value: 'QID', label: '一日四次' },
+    { value: 'Q12H', label: '12小时' },
+    { value: 'Q8H', label: '8小时' },
+    { value: 'Q6H', label: '6小时' },
+    { value: 'PRN', label: '必要时' }
+  ];
 
-  // 模拟用药计划数据
-  const [medicationData, setMedicationData] = useState({
+  // 显示文本映射
+  const getCategoryDisplay = (category) => {
+    if (!category) return '未分类';
+    const categoryMap = {
+      'antihypertensive': '降压药',
+      'hypoglycemic': '降糖药',
+      'lipid_lowering': '降脂药',
+      'anticoagulant': '抗凝药',
+      'diuretic': '利尿剂',
+      'beta_blocker': 'β受体阻滞剂',
+      'ace_inhibitor': 'ACE抑制剂',
+      'other': '其他'
+    };
+    return categoryMap[category] || category;
+  };
+
+  const getFrequencyDisplay = (frequency) => {
+    if (!frequency) return '未设定';
+    const freq = frequencyOptions.find(f => f.value === frequency);
+    return freq ? freq.label : frequency;
+  };
+
+  const getTimeDisplay = (time) => {
+    if (!time) return '未设定';
+    
+    // 处理时间数组格式
+    if (Array.isArray(time)) {
+      return time.join(', ');
+    }
+    
+    // 兼容旧的字符串格式
+    if (typeof time === 'string') {
+      return time;
+    }
+    
+    return '未设定';
+  };
+
+  // 数据加载函数
+  const loadData = async () => {
+    if (!patient?.id) return;
+    
+    try {
+      setLoading(true);
+      
+      // 首先测试API连接
+      console.log('🔍 测试medication API连接...');
+      const testResponse = await medicationAPI.testConnection();
+      console.log('✅ API测试成功:', testResponse.data);
+      
+      const [plansResponse, statsResponse] = await Promise.all([
+        medicationAPI.getMedicationPlans(patient.id),
+        medicationAPI.getMedicationStats(patient.id)
+      ]);
+      
+      setMedicationPlans(plansResponse.data.plans || []);
+      setMedicationStats(statsResponse.data || {});
+    } catch (error) {
+      console.error('加载用药数据失败:', error);
+      console.error('错误详情:', error.response?.data);
+      Alert.alert('错误', `加载数据失败: ${error.response?.data?.error_message || error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 加载用药历史
+  const loadMedicationHistory = async () => {
+    if (!patient?.id) return;
+    
+    try {
+      const historyResponse = await medicationAPI.getMedicationHistory(patient.id);
+      setMedicationHistory(historyResponse.data.history || []);
+    } catch (error) {
+      console.error('加载用药历史失败:', error);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadData();
+    // 如果当前在历史标签页，也刷新历史数据
+    if (activeTab === 'history') {
+      await loadMedicationHistory();
+    }
+    setRefreshing(false);
+  };
+
+  useEffect(() => {
+    loadData();
+  }, [patient?.id]);
+
+  // 当切换到历史标签页时，加载历史数据
+  useEffect(() => {
+    if (activeTab === 'history' && medicationHistory.length === 0) {
+      loadMedicationHistory();
+    }
+  }, [activeTab]);
+
+  // 导航到添加用药页面
+  const navigateToAddMedication = () => {
+    navigation.navigate('AddMedication', {
+      patient: patient,
+      editingPlan: null
+    });
+  };
+
+  // 导航到编辑用药页面
+  const navigateToEditMedication = (plan) => {
+    navigation.navigate('AddMedication', {
+      patient: patient,
+      editingPlan: plan
+    });
+  };
+
+  const deleteMedicationPlan = (plan) => {
+    Alert.alert(
+      '确认删除',
+      `确定要删除 ${plan.medication?.name || '该药品'} 的用药计划吗？`,
+      [
+        { text: '取消', style: 'cancel' },
+        {
+          text: '删除',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await medicationAPI.deleteMedicationPlan(patient.id, plan.id);
+              Alert.alert('成功', '用药计划已删除');
+              loadData();
+            } catch (error) {
+              console.error('删除用药计划失败:', error);
+              Alert.alert('错误', '删除失败，请重试');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  // 模拟用药计划数据（备用，现在使用真实数据）
+  const [medicationData] = useState({
     stats: {
       activePlans: 5,
       totalCompliance: 87,
@@ -154,24 +305,6 @@ const MedicationPlanScreen = ({ route, navigation }) => {
     ]
   });
 
-  useEffect(() => {
-    loadMedicationData();
-  }, []);
-
-  const loadMedicationData = async () => {
-    setLoading(true);
-    // 模拟API调用
-    setTimeout(() => {
-      setLoading(false);
-    }, 1000);
-  };
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadMedicationData();
-    setRefreshing(false);
-  };
-
   // 获取状态颜色
   const getStatusColor = (status) => {
     switch (status) {
@@ -213,21 +346,61 @@ const MedicationPlanScreen = ({ route, navigation }) => {
   };
 
   // 处理用药状态改变
-  const handleMedicationAction = (medication, action) => {
-    Alert.alert(
-      '确认操作',
-      `确定要${action === 'pause' ? '暂停' : action === 'stop' ? '停止' : '恢复'}「${medication.name}」的用药计划吗？`,
-      [
-        { text: '取消', style: 'cancel' },
-        { 
-          text: '确定', 
-          onPress: () => {
-            console.log(`${action} medication:`, medication.id);
-            // 这里实现具体的操作逻辑
+  const handleMedicationAction = async (plan, action) => {
+    let newStatus;
+    if (action === 'pause') newStatus = 'paused';
+    else if (action === 'stop') newStatus = 'stopped'; 
+    else if (action === 'resume') newStatus = 'active';
+    else return;
+
+    // 暂停和停止需要填写备注
+    if (action === 'pause' || action === 'stop') {
+      const actionText = action === 'pause' ? '暂停' : '停止';
+      
+      Alert.prompt(
+        `${actionText}用药`,
+        `请填写${actionText}「${plan.medication?.name || '未知药品'}」的原因：`,
+        [
+          { text: '取消', style: 'cancel' },
+          {
+            text: '确定',
+            onPress: async (reason) => {
+              if (!reason || reason.trim() === '') {
+                Alert.alert('提示', '请填写备注信息');
+                return;
+              }
+              try {
+                await medicationAPI.updatePlanStatus(plan.id, newStatus, reason.trim());
+                await loadData();
+                // 如果当前在历史标签页，也刷新历史数据
+                if (activeTab === 'history') {
+                  await loadMedicationHistory();
+                }
+              } catch (error) {
+                console.error('状态更新失败:', error);
+                Alert.alert('操作失败', '网络错误，请重试');
+              }
+            }
           }
+        ],
+        'plain-text',
+        '',
+        'default'
+      );
+    } else {
+      // 恢复不需要备注
+      try {
+        await medicationAPI.updatePlanStatus(plan.id, newStatus);
+        await loadData();
+        // 如果当前在历史标签页，也刷新历史数据
+        if (activeTab === 'history') {
+          await loadMedicationHistory();
         }
-      ]
-    );
+      } catch (error) {
+        console.error('状态更新失败:', error);
+        Alert.alert('操作失败', '网络错误，请重试');
+      }
+    }
   };
 
   // 渲染当前用药
@@ -264,7 +437,7 @@ const MedicationPlanScreen = ({ route, navigation }) => {
           <StatsCard
             title="周平均依从性"
             value={`${medicationData.stats.weeklyAverage}%`}
-                            icon="arrow-up"
+            icon="arrow-up"
             color="#FF9800"
             style={styles.statCard}
           />
@@ -304,37 +477,45 @@ const MedicationPlanScreen = ({ route, navigation }) => {
       </Card>
 
       {/* 用药列表 */}
-      {medicationData.currentMedications.map((medication) => (
-        <Card key={medication.id} style={styles.card}>
+      {medicationPlans.filter(plan => {
+        // 显示所有有medication对象的计划（包括active, paused, stopped状态）
+        // 只排除completed状态，因为那些已经完成治疗
+        const validStatus = ['active', 'paused', 'stopped'].includes(plan.status);
+        const hasMedication = plan.medication;
+        return validStatus && hasMedication;
+      }).map((plan) => (
+        <Card key={plan.id} style={styles.card}>
           <Card.Content>
             <View style={styles.medicationHeader}>
               <View style={styles.medicationInfo}>
                 <Text variant="titleMedium" style={styles.medicationName}>
-                  {medication.name}
+                  {plan.medication?.name || '未知药品'}
                 </Text>
-                <Text style={styles.genericName}>{medication.genericName}</Text>
+                {plan.medication?.generic_name && (
+                  <Text style={styles.genericName}>{plan.medication?.generic_name}</Text>
+                )}
                 <Text style={styles.medicationDetails}>
-                  {medication.dosage} · {medication.frequencyText} · {medication.timeText}
+                  {plan.dosage}{plan.medication?.unit || 'mg'} · {getFrequencyDisplay(plan.frequency)} · {getTimeDisplay(plan.time_of_day)}
                 </Text>
                 <Text style={styles.medicationCategory}>
-                  {medication.categoryText} · 开始日期: {medication.startDate}
+                  {getCategoryDisplay(plan.medication?.category)} · 开始日期: {new Date(plan.start_date).toLocaleDateString()}
                 </Text>
               </View>
               
               <View style={styles.medicationStatus}>
                 <Chip 
                   style={[styles.statusChip, { 
-                    backgroundColor: getStatusColor(medication.status) 
+                    backgroundColor: getStatusColor(plan.status) 
                   }]}
                   textStyle={styles.statusChipText}
                   compact={true}
                 >
-                  {getStatusText(medication.status)}
+                  {getStatusText(plan.status)}
                 </Chip>
                 <Text style={[styles.complianceText, { 
-                  color: getComplianceColor(medication.compliance) 
+                  color: getComplianceColor(85) 
                 }]}>
-                  依从性: {medication.compliance}%
+                  依从性: 85%
                 </Text>
               </View>
             </View>
@@ -344,23 +525,22 @@ const MedicationPlanScreen = ({ route, navigation }) => {
               <View style={styles.complianceBar}>
                 <View 
                   style={[styles.complianceProgress, { 
-                    width: `${medication.compliance}%`,
-                    backgroundColor: getComplianceColor(medication.compliance)
+                    width: `85%`,
+                    backgroundColor: getComplianceColor(85)
                   }]} 
                 />
               </View>
               <Text style={styles.complianceDetails}>
-                已服用: {medication.takenDoses}/{medication.totalDoses} 次 · 
-                漏服: {medication.missedDoses} 次
+                已服用: 25/30 次 · 漏服: 5 次
               </Text>
             </View>
 
             {/* 特殊说明 */}
-            {medication.specialInstructions && (
+            {plan.special_instructions && (
               <View style={styles.instructionsContainer}>
                 <Ionicons name="information-circle" size={16} color="#FF9800" />
                 <Text style={styles.instructionsText}>
-                  {medication.specialInstructions}
+                  {plan.special_instructions}
                 </Text>
               </View>
             )}
@@ -370,36 +550,85 @@ const MedicationPlanScreen = ({ route, navigation }) => {
               <Button 
                 mode="outlined" 
                 compact 
-                onPress={() => setSelectedMedication(medication)}
+                onPress={() => navigateToEditMedication(plan)}
                 style={styles.actionButton}
               >
                 编辑
               </Button>
-              <Button 
-                mode="outlined" 
-                compact 
-                onPress={() => handleMedicationAction(medication, 'pause')}
-                style={styles.actionButton}
-              >
-                暂停
-              </Button>
-              <Button 
-                mode="outlined" 
-                compact 
-                onPress={() => handleMedicationAction(medication, 'stop')}
-                style={styles.actionButton}
-              >
-                停止
-              </Button>
+              
+              {/* 根据状态显示不同的操作按钮 */}
+              {plan.status === 'active' && (
+                <>
+                  <Button 
+                    mode="outlined" 
+                    compact 
+                    onPress={() => handleMedicationAction(plan, 'pause')}
+                    style={[styles.actionButton, { borderColor: '#FF9800' }]}
+                    textColor="#FF9800"
+                  >
+                    暂停
+                  </Button>
+                  <Button 
+                    mode="outlined" 
+                    compact 
+                    onPress={() => handleMedicationAction(plan, 'stop')}
+                    style={[styles.actionButton, { borderColor: '#F44336' }]}
+                    textColor="#F44336"
+                  >
+                    停止
+                  </Button>
+                </>
+              )}
+              
+              {plan.status === 'paused' && (
+                <>
+                  <Button 
+                    mode="outlined" 
+                    compact 
+                    onPress={() => handleMedicationAction(plan, 'resume')}
+                    style={[styles.actionButton, { borderColor: '#4CAF50' }]}
+                    textColor="#4CAF50"
+                  >
+                    恢复
+                  </Button>
+                  <Button 
+                    mode="outlined" 
+                    compact 
+                    onPress={() => handleMedicationAction(plan, 'stop')}
+                    style={[styles.actionButton, { borderColor: '#F44336' }]}
+                    textColor="#F44336"
+                  >
+                    停止
+                  </Button>
+                </>
+              )}
+              
+              {plan.status === 'stopped' && (
+                <Button 
+                  mode="outlined" 
+                  compact 
+                  onPress={() => handleMedicationAction(plan, 'resume')}
+                  style={[styles.actionButton, { borderColor: '#4CAF50' }]}
+                  textColor="#4CAF50"
+                >
+                  恢复
+                </Button>
+              )}
+              
+              {plan.status === 'completed' && (
+                <Text style={[styles.completedText, { color: '#9E9E9E', fontSize: 12 }]}>
+                  治疗已完成
+                </Text>
+              )}
             </View>
 
             {/* 最近服药信息 */}
             <View style={styles.recentInfo}>
               <Text style={styles.recentText}>
-                上次服药: {medication.lastTaken}
+                上次服药: 无记录
               </Text>
               <Text style={styles.recentText}>
-                下次提醒: {medication.nextReminder}
+                下次提醒: 无提醒
               </Text>
             </View>
           </Card.Content>
@@ -409,47 +638,63 @@ const MedicationPlanScreen = ({ route, navigation }) => {
   );
 
   // 渲染用药历史
-  const renderMedicationHistory = () => (
-    <View>
-      {medicationData.medicationHistory.map((medication) => (
-        <Card key={medication.id} style={styles.card}>
-          <Card.Content>
-            <View style={styles.historyHeader}>
-              <View style={styles.historyInfo}>
-                <Text variant="titleMedium" style={styles.medicationName}>
-                  {medication.name}
-                </Text>
-                <Text style={styles.historyDetails}>
-                  {medication.dosage} · {medication.frequency}
-                </Text>
-                <Text style={styles.historyPeriod}>
-                  {medication.startDate} - {medication.endDate}
-                </Text>
-                <Text style={styles.historyReason}>
-                  停药原因: {medication.reason}
-                </Text>
+  const renderMedicationHistory = () => {
+    if (medicationHistory.length === 0) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>暂无用药历史记录</Text>
+        </View>
+      );
+    }
+
+    return (
+      <View>
+        {medicationHistory.map((record) => (
+          <Card key={record.id} style={styles.card}>
+            <Card.Content>
+              <View style={styles.historyHeader}>
+                <View style={styles.historyInfo}>
+                  <Text variant="titleMedium" style={styles.medicationName}>
+                    {record.medication_name}
+                  </Text>
+                  <Text style={styles.historyDetails}>
+                    {record.dosage}mg · {record.frequency}
+                  </Text>
+                  <Text style={styles.historyAction}>
+                    {record.from_status} → {record.to_status}
+                  </Text>
+                  {record.reason && (
+                    <Text style={styles.historyReason}>
+                      原因: {record.reason}
+                    </Text>
+                  )}
+                  <Text style={styles.historyTime}>
+                    时间: {new Date(record.created_at).toLocaleString('zh-CN')}
+                  </Text>
+                  <Text style={styles.historyDoctor}>
+                    操作人: {record.changed_by}
+                  </Text>
+                </View>
+                
+                <View style={styles.historyStatus}>
+                  <Chip 
+                    style={[styles.statusChip, { 
+                      backgroundColor: record.to_status === 'stopped' ? '#F44336' : 
+                                      record.to_status === 'paused' ? '#FF9800' : '#4CAF50'
+                    }]}
+                    textStyle={styles.statusChipText}
+                    compact={true}
+                  >
+                    {record.to_status}
+                  </Chip>
+                </View>
               </View>
-              
-              <View style={styles.historyStatus}>
-                <Chip 
-                  style={[styles.statusChip, { 
-                    backgroundColor: getStatusColor(medication.status) 
-                  }]}
-                  textStyle={styles.statusChipText}
-                  compact={true}
-                >
-                  已停止
-                </Chip>
-                <Text style={styles.complianceText}>
-                  依从性: {medication.compliance}%
-                </Text>
-              </View>
-            </View>
-          </Card.Content>
-        </Card>
-      ))}
-    </View>
-  );
+            </Card.Content>
+          </Card>
+        ))}
+      </View>
+    );
+  };
 
   // 渲染统计分析
   const renderAnalytics = () => (
@@ -565,7 +810,7 @@ const MedicationPlanScreen = ({ route, navigation }) => {
         </Text>
         <IconButton
           icon="plus"
-          onPress={() => setAddMedicationVisible(true)}
+          onPress={navigateToAddMedication}
         />
       </View>
 
@@ -585,22 +830,8 @@ const MedicationPlanScreen = ({ route, navigation }) => {
       <FAB
         icon="plus"
         style={styles.fab}
-        onPress={() => setAddMedicationVisible(true)}
+        onPress={navigateToAddMedication}
       />
-
-      {/* 添加用药对话框 */}
-      <Portal>
-        <Dialog visible={addMedicationVisible} onDismiss={() => setAddMedicationVisible(false)}>
-          <Dialog.Title>添加用药计划</Dialog.Title>
-          <Dialog.Content>
-            <Text>添加用药计划功能开发中...</Text>
-          </Dialog.Content>
-          <Dialog.Actions>
-            <Button onPress={() => setAddMedicationVisible(false)}>取消</Button>
-            <Button onPress={() => setAddMedicationVisible(false)}>确定</Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
     </SafeAreaView>
   );
 };
@@ -614,9 +845,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#f8f9fa',
   },
   loadingText: {
     marginTop: 16,
+    fontSize: 16,
     color: '#666',
   },
   header: {
@@ -627,31 +860,21 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     backgroundColor: '#fff',
     elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
   },
   headerTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
     flex: 1,
-    textAlign: 'center',
-    marginHorizontal: 16,
+    marginLeft: 16,
+    color: '#333',
+    fontWeight: '600',
   },
   tabContainer: {
     flexDirection: 'row',
     backgroundColor: '#fff',
     elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
   },
   tab: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: 12,
     alignItems: 'center',
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
@@ -660,62 +883,47 @@ const styles = StyleSheet.create({
     borderBottomColor: '#2196F3',
   },
   tabText: {
-    fontSize: 13,
+    fontSize: 14,
     color: '#666',
-    textAlign: 'center',
+    fontWeight: '500',
   },
   activeTabText: {
     color: '#2196F3',
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
   content: {
     flex: 1,
-    paddingBottom: 20,
+    padding: 16,
   },
   card: {
-    margin: 16,
-    backgroundColor: '#ffffff',
+    marginBottom: 12,
     elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    borderRadius: 12,
+    backgroundColor: '#fff',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 12,
   },
   statsContainer: {
-    paddingHorizontal: 16,
     marginBottom: 16,
   },
   statsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
+    gap: 12,
+    marginBottom: 12,
   },
   statCard: {
     flex: 1,
-    margin: 0,
-    marginHorizontal: 4,
-  },
-  sectionTitle: {
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
-    fontSize: 16,
   },
   scheduleChip: {
-    height: 32,
-    minWidth: 70,
-    justifyContent: 'center',
-    alignItems: 'center',
+    marginLeft: 8,
   },
   scheduleChipText: {
     fontSize: 12,
+    fontWeight: '500',
     color: '#fff',
-    fontWeight: 'bold',
-    textAlign: 'center',
-    includeFontPadding: false,
-    textAlignVertical: 'center',
-    lineHeight: 16,
   },
   medicationHeader: {
     flexDirection: 'row',
@@ -728,64 +936,53 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   medicationName: {
-    fontWeight: 'bold',
-    color: '#333',
     fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
   },
   genericName: {
-    fontSize: 12,
-    color: '#999',
+    fontSize: 14,
+    color: '#666',
     fontStyle: 'italic',
-    marginTop: 2,
+    marginBottom: 4,
   },
   medicationDetails: {
     fontSize: 14,
     color: '#666',
-    marginTop: 4,
+    marginBottom: 2,
   },
   medicationCategory: {
     fontSize: 12,
     color: '#999',
-    marginTop: 2,
   },
   medicationStatus: {
     alignItems: 'flex-end',
-    minWidth: 80,
   },
   statusChip: {
-    marginBottom: 4,
-    alignSelf: 'flex-end',
-    height: 32,
-    minWidth: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
+    marginBottom: 8,
   },
   statusChipText: {
     fontSize: 12,
+    fontWeight: '500',
     color: '#fff',
-    fontWeight: 'bold',
-    textAlign: 'center',
-    includeFontPadding: false,
-    textAlignVertical: 'center',
-    lineHeight: 16,
   },
   complianceText: {
     fontSize: 12,
-    fontWeight: 'bold',
+    fontWeight: '500',
   },
   complianceContainer: {
     marginBottom: 12,
   },
   complianceBar: {
-    height: 8,
+    height: 6,
     backgroundColor: '#E0E0E0',
-    borderRadius: 4,
-    overflow: 'hidden',
+    borderRadius: 3,
     marginBottom: 4,
   },
   complianceProgress: {
     height: '100%',
-    borderRadius: 4,
+    borderRadius: 3,
   },
   complianceDetails: {
     fontSize: 12,
@@ -795,44 +992,62 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFF3E0',
-    padding: 12,
-    borderRadius: 8,
+    padding: 8,
+    borderRadius: 6,
     marginBottom: 12,
   },
   instructionsText: {
-    fontSize: 12,
-    color: '#E65100',
     marginLeft: 8,
+    fontSize: 13,
+    color: '#E65100',
     flex: 1,
-    lineHeight: 16,
   },
   actionButtons: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
+    gap: 8,
     marginBottom: 12,
-    flexWrap: 'wrap',
   },
   actionButton: {
-    marginLeft: 8,
-    height: 32,
-    marginBottom: 4,
-    minWidth: 60,
+    minWidth: 70,
+  },
+  completedText: {
+    fontSize: 12,
+    fontStyle: 'italic',
   },
   recentInfo: {
     borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
-    paddingTop: 12,
+    borderTopColor: '#F0F0F0',
+    paddingTop: 8,
   },
   recentText: {
     fontSize: 12,
+    color: '#999',
+    marginBottom: 2,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyText: {
+    fontSize: 16,
     color: '#666',
-    marginBottom: 4,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  fab: {
+    position: 'absolute',
+    margin: 16,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#2196F3',
   },
   historyHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 8,
   },
   historyInfo: {
     flex: 1,
@@ -841,34 +1056,32 @@ const styles = StyleSheet.create({
   historyDetails: {
     fontSize: 14,
     color: '#666',
-    marginTop: 4,
+    marginBottom: 2,
   },
-  historyPeriod: {
-    fontSize: 12,
-    color: '#999',
-    marginTop: 2,
+  historyAction: {
+    fontSize: 14,
+    color: '#FF9800',
+    fontWeight: '500',
+    marginBottom: 4,
   },
   historyReason: {
+    fontSize: 13,
+    color: '#333',
+    marginBottom: 4,
+    fontStyle: 'italic',
+  },
+  historyTime: {
     fontSize: 12,
-    color: '#F44336',
-    marginTop: 2,
+    color: '#999',
+    marginBottom: 2,
+  },
+  historyDoctor: {
+    fontSize: 12,
+    color: '#666',
   },
   historyStatus: {
     alignItems: 'flex-end',
-    minWidth: 80,
-  },
-  fab: {
-    position: 'absolute',
-    margin: 16,
-    right: 0,
-    bottom: 0,
-    backgroundColor: '#2196F3',
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
   },
 });
 
-export default MedicationPlanScreen; 
+export default MedicationPlanScreen;

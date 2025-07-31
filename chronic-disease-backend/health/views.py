@@ -238,7 +238,7 @@ def health_trends(request):
                 'ldl': getattr(metric, 'ldl', None),
                 'triglyceride': getattr(metric, 'triglyceride', None),
             })
-        
+    
         # 计算统计信息
         if data_points:
             # 对于血压，使用收缩压作为主要值进行计算
@@ -251,7 +251,7 @@ def health_trends(request):
                 average_value = sum(values) / len(values)
                 min_value = min(values)
                 max_value = max(values)
-                
+            
                 # 趋势分析
                 if len(values) >= 2:
                     first_value = values[0]
@@ -280,7 +280,7 @@ def health_trends(request):
             max_value = None
             trend_direction = 'stable'
             percent_change = 0
-        
+    
         response_data['metrics'][metric_type] = {
             'data_points': data_points,
             'statistics': {

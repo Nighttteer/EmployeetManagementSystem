@@ -140,13 +140,13 @@ const DataEntryScreen = ({ navigation }) => {
         // 成功提交到后端后，也更新本地状态
         dispatch(addHealthData(result.payload));
         
-        Alert.alert(
+    Alert.alert(
           '数据已成功保存',
-          `测量时间：${formatDate(measurementTime)} ${formatTime(measurementTime)}\n当前指标状态：${statusText}`,
-          [
-            {
-              text: '确定',
-              onPress: () => {
+      `测量时间：${formatDate(measurementTime)} ${formatTime(measurementTime)}\n当前指标状态：${statusText}`,
+      [
+        {
+          text: '确定',
+          onPress: () => {
                 navigation.goBack();
               }
             }
@@ -173,7 +173,7 @@ const DataEntryScreen = ({ navigation }) => {
       console.error('数据提交错误:', error);
       
       // 提交失败时也保存到本地
-      dispatch(addHealthData(healthMetric.toSerializable()));
+            dispatch(addHealthData(healthMetric.toSerializable()));
       
       Alert.alert(
         '数据已保存到本地',
@@ -182,11 +182,11 @@ const DataEntryScreen = ({ navigation }) => {
           {
             text: '确定',
             onPress: () => {
-              navigation.goBack();
-            }
+            navigation.goBack();
           }
-        ]
-      );
+        }
+      ]
+    );
     }
   };
 

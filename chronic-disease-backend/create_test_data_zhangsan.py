@@ -3,7 +3,7 @@
 """
 为张三创建一年的健康测试数据
 包含所有健康指标：血压、血糖、心率、体重、尿酸、血脂
-每种指标每天最多2次记录，可以没有
+所有主要指标每天记录一次
 """
 
 import os
@@ -44,9 +44,9 @@ def create_zhangsan_yearly_data():
         HealthMetric.objects.filter(patient=zhangsan).delete()
         print(f"清除了 {old_count} 条旧数据")
     
-    # 生成最近10天的数据
+    # 生成最近4个月的数据（从当前日期往前推4个月）
     end_date = datetime.now()
-    start_date = end_date - timedelta(days=9)  # 10天数据
+    start_date = end_date - timedelta(days=120)  # 4个月前
     
     # 基础健康参数（会有轻微波动）
     base_systolic = 125      # 收缩压基准值
@@ -66,6 +66,13 @@ def create_zhangsan_yearly_data():
     print("开始生成数据...")
     
     while current_date <= end_date:
+        # 每天生成一次数据
+        # 随机选择测量时间（早上8-10点之间）
+        measure_hour = random.randint(8, 10)
+        measure_minute = random.randint(0, 59)
+        measure_time = time(measure_hour, measure_minute)
+        measure_datetime = datetime.combine(current_date.date(), measure_time)
+        
         # 添加一些季节性和趋势性变化
         days_from_start = (current_date - start_date).days
         
@@ -78,107 +85,69 @@ def create_zhangsan_yearly_data():
         # 模拟血糖控制改善趋势
         glucose_trend_factor = 1.0 - 0.002 * days_from_start  # 血糖控制改善
         
-        # 简化：每天只生成主要指标各1条数据
-        bp_times = 1      # 血压每天1次
-        glucose_times = 1 # 血糖每天1次  
-        heart_rate_times = 1 # 心率每天1次
-        weight_times = 1 # 体重每天1次
-        uric_acid_times = 0 # 暂时不生成尿酸数据
-        lipids_times = 0    # 暂时不生成血脂数据
+        # 生成血压数据（每天都有）
+        systolic = int(base_systolic * seasonal_factor + random.gauss(0, 8))
+        diastolic = int(base_diastolic * seasonal_factor + random.gauss(0, 5))
         
-        # 生成血压数据
-        for i in range(bp_times):
-            # 随机选择测量时间
-            measure_hour = random.randint(7, 21)
-            measure_minute = random.randint(0, 59)
-            measure_time = time(measure_hour, measure_minute)
-            measure_datetime = datetime.combine(current_date.date(), measure_time)
-            
-            systolic = int(base_systolic * seasonal_factor + random.gauss(0, 8))
-            diastolic = int(base_diastolic * seasonal_factor + random.gauss(0, 5))
-            
-            # 确保合理范围
-            systolic = max(100, min(160, systolic))
-            diastolic = max(60, min(100, diastolic))
-            
-            HealthMetric.objects.create(
-                patient=zhangsan,
-                measured_by=zhangsan,
-                metric_type='blood_pressure',
-                systolic=systolic,
-                diastolic=diastolic,
-                measured_at=measure_datetime,
-                note=f'自动生成测试数据 - 血压'
-            )
-            created_count += 1
+        # 确保合理范围
+        systolic = max(100, min(160, systolic))
+        diastolic = max(60, min(100, diastolic))
         
-        # 生成血糖数据
-        for i in range(glucose_times):
-            measure_hour = random.randint(7, 21)
-            measure_minute = random.randint(0, 59)
-            measure_time = time(measure_hour, measure_minute)
-            measure_datetime = datetime.combine(current_date.date(), measure_time)
-            
-            glucose = base_glucose * glucose_trend_factor + random.gauss(0, 0.8)
-            glucose = max(3.5, min(12.0, round(glucose, 1)))
-            
-            HealthMetric.objects.create(
-                patient=zhangsan,
-                measured_by=zhangsan,
-                metric_type='blood_glucose',
-                blood_glucose=glucose,
-                measured_at=measure_datetime,
-                note=f'自动生成测试数据 - 血糖'
-            )
-            created_count += 1
+        HealthMetric.objects.create(
+            patient=zhangsan,
+            measured_by=zhangsan,
+            metric_type='blood_pressure',
+            systolic=systolic,
+            diastolic=diastolic,
+            measured_at=measure_datetime,
+            note=f'自动生成测试数据 - 血压'
+        )
+        created_count += 1
         
-        # 生成心率数据
-        for i in range(heart_rate_times):
-            measure_hour = random.randint(7, 21)
-            measure_minute = random.randint(0, 59)
-            measure_time = time(measure_hour, measure_minute)
-            measure_datetime = datetime.combine(current_date.date(), measure_time)
-            
-            heart_rate = int(base_heart_rate + random.gauss(0, 8))
-            heart_rate = max(50, min(120, heart_rate))
-            
-            HealthMetric.objects.create(
-                patient=zhangsan,
-                measured_by=zhangsan,
-                metric_type='heart_rate',
-                heart_rate=heart_rate,
-                measured_at=measure_datetime,
-                note=f'自动生成测试数据 - 心率'
-            )
-            created_count += 1
+        # 生成血糖数据（每天都有）
+        glucose = base_glucose * glucose_trend_factor + random.gauss(0, 0.8)
+        glucose = max(3.5, min(12.0, round(glucose, 1)))
         
-        # 生成体重数据
-        for i in range(weight_times):
-            measure_hour = random.randint(7, 21)
-            measure_minute = random.randint(0, 59)
-            measure_time = time(measure_hour, measure_minute)
-            measure_datetime = datetime.combine(current_date.date(), measure_time)
-            
-            weight = base_weight * weight_trend_factor + random.gauss(0, 1.5)
-            weight = max(50.0, min(100.0, round(weight, 1)))
-            
-            HealthMetric.objects.create(
-                patient=zhangsan,
-                measured_by=zhangsan,
-                metric_type='weight',
-                weight=weight,
-                measured_at=measure_datetime,
-                note=f'自动生成测试数据 - 体重'
-            )
-            created_count += 1
+        HealthMetric.objects.create(
+            patient=zhangsan,
+            measured_by=zhangsan,
+            metric_type='blood_glucose',
+            blood_glucose=glucose,
+            measured_at=measure_datetime + timedelta(minutes=5),
+            note=f'自动生成测试数据 - 血糖'
+        )
+        created_count += 1
         
-        # 生成尿酸数据（每周最多1次）
-        for i in range(uric_acid_times):
-            measure_hour = random.randint(8, 17)  # 尿酸通常白天检查
-            measure_minute = random.randint(0, 59)
-            measure_time = time(measure_hour, measure_minute)
-            measure_datetime = datetime.combine(current_date.date(), measure_time)
-            
+        # 生成心率数据（每天都有）
+        heart_rate = int(base_heart_rate + random.gauss(0, 8))
+        heart_rate = max(50, min(120, heart_rate))
+        
+        HealthMetric.objects.create(
+            patient=zhangsan,
+            measured_by=zhangsan,
+            metric_type='heart_rate',
+            heart_rate=heart_rate,
+            measured_at=measure_datetime + timedelta(minutes=10),
+            note=f'自动生成测试数据 - 心率'
+        )
+        created_count += 1
+        
+        # 生成体重数据（每天都有）
+        weight = base_weight * weight_trend_factor + random.gauss(0, 1.5)
+        weight = max(50.0, min(100.0, round(weight, 1)))
+        
+        HealthMetric.objects.create(
+            patient=zhangsan,
+            measured_by=zhangsan,
+            metric_type='weight',
+            weight=weight,
+            measured_at=measure_datetime + timedelta(minutes=15),
+            note=f'自动生成测试数据 - 体重'
+        )
+        created_count += 1
+        
+        # 生成尿酸数据（每周1次）
+        if current_date.weekday() == 0:  # 每周一生成尿酸数据
             uric_acid = base_uric_acid + random.gauss(0, 50)
             uric_acid = max(200, min(600, int(uric_acid)))
             
@@ -187,18 +156,13 @@ def create_zhangsan_yearly_data():
                 measured_by=zhangsan,
                 metric_type='uric_acid',
                 uric_acid=uric_acid,
-                measured_at=measure_datetime,
+                measured_at=measure_datetime + timedelta(minutes=20),
                 note=f'自动生成测试数据 - 尿酸'
             )
             created_count += 1
         
-        # 生成血脂数据（每月最多1次）
-        for i in range(lipids_times):
-            measure_hour = random.randint(8, 17)  # 血脂通常白天检查
-            measure_minute = random.randint(0, 59)
-            measure_time = time(measure_hour, measure_minute)
-            measure_datetime = datetime.combine(current_date.date(), measure_time)
-            
+        # 生成血脂数据（每月1次）
+        if current_date.day == 15:  # 每月15号生成血脂数据
             cholesterol = base_cholesterol + random.gauss(0, 0.5)
             hdl = base_hdl + random.gauss(0, 0.2)
             ldl = base_ldl + random.gauss(0, 0.4)
@@ -218,7 +182,7 @@ def create_zhangsan_yearly_data():
                 hdl=hdl,
                 ldl=ldl,
                 triglyceride=triglyceride,
-                measured_at=measure_datetime,
+                measured_at=measure_datetime + timedelta(minutes=25),
                 note=f'自动生成测试数据 - 血脂'
             )
             created_count += 1
@@ -247,9 +211,9 @@ def create_zhangsan_yearly_data():
     print(f"   血糖记录：{bg_count} 条（每天1次）")
     print(f"   心率记录：{hr_count} 条（每天1次）")
     print(f"   体重记录：{weight_count} 条（每天1次）")
-    print(f"   尿酸记录：{ua_count} 条（已禁用）")
-    print(f"   血脂记录：{lipids_count} 条（已禁用）")
-    print(f"   时间范围：{start_date.date()} 到 {end_date.date()}（最近10天）")
+    print(f"   尿酸记录：{ua_count} 条（每周1次）")
+    print(f"   血脂记录：{lipids_count} 条（每月1次）")
+    print(f"   时间范围：{start_date.date()} 到 {end_date.date()}（最近4个月）")
     
     print(f"\n🎯 现在可以在应用中查看张三的完整健康趋势图表了！")
 

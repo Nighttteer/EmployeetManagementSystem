@@ -317,11 +317,11 @@ const HealthTrendsScreen = ({ navigation }) => {
   };
 
   const getTrendIcon = (trend) => {
-          switch (trend) {
+    switch (trend) {
         case 'improving': return { name: 'arrow-down', color: '#4CAF50' };
         case 'stable': return { name: 'remove', color: '#2196F3' };
         case 'worsening': return { name: 'arrow-up', color: '#F44336' };
-        default: return { name: 'remove', color: '#9E9E9E' };
+      default: return { name: 'remove', color: '#9E9E9E' };
     }
   };
 

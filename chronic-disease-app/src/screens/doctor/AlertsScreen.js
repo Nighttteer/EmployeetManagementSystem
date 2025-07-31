@@ -633,20 +633,29 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    borderRadius: 8,
   },
   statsContainer: {
     paddingHorizontal: 16,
     marginBottom: 16,
+    marginTop: 8,
   },
   statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    gap: 8,
+    marginBottom: 16,
   },
   statCard: {
     flex: 1,
     margin: 0,
-    marginHorizontal: 4,
+    backgroundColor: '#ffffff',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    borderRadius: 12,
   },
   chartsContainer: {
     paddingHorizontal: 16,
@@ -673,7 +682,7 @@ const styles = StyleSheet.create({
   filtersContainer: {
     flexDirection: 'row',
     paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingBottom: 8,
     flexWrap: 'wrap',
   },
   filterChip: {

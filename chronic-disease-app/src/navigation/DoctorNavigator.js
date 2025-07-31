@@ -15,6 +15,7 @@ import DoctorProfileScreen from '../screens/doctor/DoctorProfileScreen';
 import PatientDetailsScreen from '../screens/doctor/PatientDetailsScreen';
 import AlertDetailsScreen from '../screens/doctor/AlertDetailsScreen';
 import MedicationPlanScreen from '../screens/doctor/MedicationPlanScreen';
+import AddMedicationScreen from '../screens/doctor/AddMedicationScreen';
 import AddPatientScreen from '../screens/doctor/AddPatientScreen';
 import DiseaseDistributionScreen from '../screens/doctor/DiseaseDistributionScreen';
 
@@ -61,7 +62,7 @@ const PatientsStack = () => {
       <Stack.Screen 
         name="PatientsListMain" 
         component={PatientsListScreen}
-        options={{ title: t('patients.patientList') }}
+        options={{ title: t('patients.patientList'), headerShown: false }}
       />
       <Stack.Screen 
         name="AddPatient" 
@@ -78,6 +79,11 @@ const PatientsStack = () => {
         component={MedicationPlanScreen}
         options={{ title: t('medication.medicationPlan') }}
       />
+      <Stack.Screen 
+        name="AddMedication" 
+        component={AddMedicationScreen}
+        options={{ headerShown: false }}
+      />
     </Stack.Navigator>
   );
 };
@@ -91,7 +97,7 @@ const AlertsStack = () => {
       <Stack.Screen 
         name="AlertsMain" 
         component={AlertsScreen}
-        options={{ title: t('navigation.alerts') }}
+        options={{ title: t('navigation.alerts'), headerShown: false }}
       />
       <Stack.Screen 
         name="AlertDetails" 

@@ -74,12 +74,37 @@ const PatientHomeScreen = ({ navigation }) => {
       };
     }
 
-    // 获取最近的健康数据
-    const sortedMetrics = [...healthMetrics].sort((a, b) => 
+    // 获取最近的健康数据，过滤无效数据
+    const validMetrics = healthMetrics.filter(metric => 
+      metric && 
+      typeof metric === 'object' && 
+      metric.metric_type && 
+      metric.measured_at
+    );
+
+    if (validMetrics.length === 0) {
+      return {
+        status: t('patient.noData'),
+        color: '#9E9E9E',
+        level: 'no_data'
+      };
+    }
+
+    const sortedMetrics = [...validMetrics].sort((a, b) => 
       new Date(b.measured_at) - new Date(a.measured_at)
     );
 
     const latestMetric = sortedMetrics[0];
+    
+    // 确保latestMetric有效后再调用evaluateHealthStatus
+    if (!latestMetric || !latestMetric.metric_type) {
+      return {
+        status: t('patient.noData'),
+        color: '#9E9E9E',
+        level: 'no_data'
+      };
+    }
+
     const healthLevel = evaluateHealthStatus(latestMetric);
     const statusText = getStatusText(healthLevel);
     const statusColor = getStatusColor(healthLevel);

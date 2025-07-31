@@ -369,6 +369,64 @@ export const notificationsAPI = {
   },
 };
 
+// 用药管理相关API
+export const medicationAPI = {
+  // 测试API连接
+  testConnection: () => {
+    return apiClient.get('/medication/test/');
+  },
+
+  // 获取药品列表
+  getMedications: (params = {}) => {
+    return apiClient.get('/medication/medications/', { params });
+  },
+
+  // 获取用药计划列表
+  getMedicationPlans: (patientId = null, params = {}) => {
+    const url = patientId 
+      ? `/medication/patients/${patientId}/plans/`
+      : '/medication/plans/';
+    return apiClient.get(url, { params });
+  },
+
+  // 创建用药计划
+  createMedicationPlan: (patientId, planData) => {
+    return apiClient.post(`/medication/patients/${patientId}/plans/`, planData);
+  },
+
+  // 更新用药计划
+  updateMedicationPlan: (patientId, planId, planData) => {
+    return apiClient.put(`/medication/patients/${patientId}/plans/${planId}/`, planData);
+  },
+
+  // 删除用药计划
+  deleteMedicationPlan: (patientId, planId) => {
+    return apiClient.delete(`/medication/patients/${patientId}/plans/${planId}/`);
+  },
+
+  // 更新用药计划状态
+  updatePlanStatus: (planId, status, reason = null) => {
+    const data = { status };
+    if (reason) {
+      data.reason = reason;
+    }
+    return apiClient.post(`/medication/plans/${planId}/status/`, data);
+  },
+
+  // 获取用药统计
+  getMedicationStats: (patientId = null) => {
+    const url = patientId 
+      ? `/medication/patients/${patientId}/plans/stats/`
+      : '/medication/plans/stats/';
+    return apiClient.get(url);
+  },
+
+  // 获取用药历史
+  getMedicationHistory: (patientId) => {
+    return apiClient.get(`/medication/patients/${patientId}/history/`);
+  },
+};
+
 // 导出默认配置
 export default apiClient;
 
