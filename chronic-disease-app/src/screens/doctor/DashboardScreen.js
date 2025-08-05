@@ -11,6 +11,7 @@ import {
 } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
 
 // 导入图表组件
@@ -18,12 +19,16 @@ import LineChart from '../../components/Charts/LineChart';
 import PieChart from '../../components/Charts/PieChart';
 import BarChart from '../../components/Charts/BarChart';
 import StatsCard from '../../components/StatsCard';
+import { api } from '../../services/api';
 
 const DashboardScreen = ({ navigation }) => {
   const { t } = useTranslation();
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState('year');
+  
+  // 获取认证信息
+  const { isAuthenticated, user, role, token } = useSelector(state => state.auth);
 
   // 模拟数据
   const [dashboardData, setDashboardData] = useState({
@@ -40,9 +45,11 @@ const DashboardScreen = ({ navigation }) => {
       complianceImprovement: 3,
     },
     patientRiskDistribution: [
-      { label: '高风险', value: 61, color: '#F44336' },
-      { label: '中风险', value: 28, color: '#FF9800' },
-      { label: '低风险', value: 11, color: '#4CAF50' }
+      { label: '未评估', value: 0, color: '#9E9E9E' },
+      { label: '健康', value: 0, color: '#00E676' },
+      { label: '低风险', value: 0, color: '#4CAF50' },
+      { label: '中风险', value: 0, color: '#FF9800' },
+      { label: '高风险', value: 0, color: '#F44336' }
     ],
     alertTypes: [
       { label: '血压异常', value: 5 },
@@ -65,32 +72,6 @@ const DashboardScreen = ({ navigation }) => {
       { label: '4月', value: 125 },
       { label: '5月', value: 130 },
       { label: '6月', value: 127 }
-    ],
-    recentPatients: [
-      {
-        id: 1,
-        name: '张三',
-        age: 65,
-        riskLevel: 'high',
-        lastVisit: '2小时前',
-        condition: '血压偏高'
-      },
-      {
-        id: 2,
-        name: '李四',
-        age: 58,
-        riskLevel: 'medium',
-        lastVisit: '5小时前',
-        condition: '血糖波动'
-      },
-      {
-        id: 3,
-        name: '王五',
-        age: 72,
-        riskLevel: 'low',
-        lastVisit: '1天前',
-        condition: '定期复查'
-      }
     ]
   });
 
@@ -100,10 +81,51 @@ const DashboardScreen = ({ navigation }) => {
 
   const loadDashboardData = async () => {
     setLoading(true);
-    // 模拟API调用
-    setTimeout(() => {
+    try {
+      // 检查认证状态
+      if (!isAuthenticated || !token || !user) {
+        console.error('用户未认证，使用模拟数据');
+        setLoading(false);
+        return;
+      }
+
+      console.log('🔐 用户认证信息:', { 
+        isAuthenticated, 
+        userId: user?.id, 
+        role, 
+        hasToken: !!token 
+      });
+      
+      // 调用真实的医生端仪表板API
+      const doctorId = user.id;
+      const response = await api.get(`/health/doctor/${doctorId}/dashboard/`);
+      
+      if (response.data.success) {
+        const apiData = response.data.data;
+        
+        setDashboardData(prev => ({
+          ...prev,
+          stats: apiData.stats,
+          trends: apiData.trends,
+          patientRiskDistribution: apiData.patientRiskDistribution,
+          // 保留一些模拟数据用于图表显示
+          alertTypes: prev.alertTypes,
+          weeklyConsultations: prev.weeklyConsultations,
+          bloodPressureTrend: prev.bloodPressureTrend
+        }));
+        
+        console.log('✅ 成功加载医生端仪表板真实数据:', apiData.summary.dataSource);
+        console.log('📊 数据摘要:', apiData.summary.analysisRange);
+      } else {
+        console.error('❌ API返回失败:', response.data);
+      }
+    } catch (error) {
+      console.error('❌ 加载仪表板数据失败:', error);
+      console.error('错误详情:', error.response?.data);
+      // 保持原有模拟数据作为后备
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   const onRefresh = async () => {
@@ -304,51 +326,7 @@ const DashboardScreen = ({ navigation }) => {
           </Card.Content>
         </Card>
 
-        {/* 最近患者活动 */}
-        <Card style={styles.listCard}>
-          <Card.Content>
-            <View style={styles.listHeader}>
-              <Text style={styles.listTitle}>{t('dashboard.recentPatientActivity')}</Text>
-              <Button 
-                mode="text" 
-                onPress={() => navigation.navigate('Patients')}
-                compact
-              >
-                {t('dashboard.viewAll')}
-              </Button>
-            </View>
-            
-            {dashboardData.recentPatients.map((patient) => (
-              <View key={patient.id} style={styles.patientItem}>
-                <Avatar.Text 
-                  size={45} 
-                  label={patient.name.charAt(0)} 
-                  style={[styles.patientAvatar, { 
-                    backgroundColor: getRiskLevelColor(patient.riskLevel) + '20' 
-                  }]}
-                />
-                <View style={styles.patientInfo}>
-                  <Text style={styles.patientName}>{patient.name}</Text>
-                  <Text style={styles.patientDescription}>
-                    {patient.age}岁 · {patient.condition}
-                  </Text>
-                </View>
-                <View style={styles.patientMeta}>
-                  <Chip 
-                    textStyle={styles.riskChipText}
-                    style={[styles.riskChip, { 
-                      backgroundColor: getRiskLevelColor(patient.riskLevel) 
-                    }]}
-                    compact={true}
-                  >
-                    {getRiskLevelText(patient.riskLevel)}
-                  </Chip>
-                  <Text style={styles.visitTime}>{patient.lastVisit}</Text>
-                </View>
-              </View>
-            ))}
-          </Card.Content>
-        </Card>
+
 
 
       </ScrollView>

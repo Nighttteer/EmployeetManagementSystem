@@ -23,10 +23,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useTranslation } from 'react-i18next';
 import { medicationAPI } from '../../services/api';
 
 const AddMedicationScreen = ({ route, navigation }) => {
   const { patient, editingPlan } = route.params || {};
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [medications, setMedications] = useState([]);
   const [medicationSearch, setMedicationSearch] = useState('');
@@ -57,15 +59,15 @@ const AddMedicationScreen = ({ route, navigation }) => {
 
   // 频次选项
   const frequencyOptions = [
-    { label: '每日一次', value: 'QD' },
-    { label: '每日两次', value: 'BID' },
-    { label: '每日三次', value: 'TID' },
-    { label: '每日四次', value: 'QID' },
-    { label: '每12小时', value: 'Q12H' },
-    { label: '每8小时', value: 'Q8H' },
-    { label: '每6小时', value: 'Q6H' },
-    { label: '需要时', value: 'PRN' },
-    { label: '其他', value: 'OTHER' }
+    { label: t('medication.frequency.onceDaily'), value: 'QD' },
+    { label: t('medication.frequency.twiceDaily'), value: 'BID' },
+    { label: t('medication.frequency.threeTimesDaily'), value: 'TID' },
+    { label: t('medication.frequency.fourTimesDaily'), value: 'QID' },
+    { label: t('medication.frequency.every12Hours'), value: 'Q12H' },
+    { label: t('medication.frequency.every8Hours'), value: 'Q8H' },
+    { label: t('medication.frequency.every6Hours'), value: 'Q6H' },
+    { label: t('medication.frequency.asNeeded'), value: 'PRN' },
+    { label: t('medication.frequency.other'), value: 'OTHER' }
   ];
   
   // 根据频次获取建议的服药时间
@@ -94,19 +96,19 @@ const AddMedicationScreen = ({ route, navigation }) => {
 
   // 显示文本映射
   const getCategoryDisplay = (category) => {
-    if (!category) return '未分类';
+    if (!category) return t('medication.uncategorized');
     const categoryMap = {
-      'antihypertensive': '降压药',
-      'hypoglycemic': '降糖药',
-      'lipid_lowering': '降脂药',
-      'anticoagulant': '抗凝药',
-      'diuretic': '利尿剂',
-      'beta_blocker': 'β受体阻滞剂',
-      'calcium_channel_blocker': '钙通道阻滞剂',
-      'ace_inhibitor': 'ACE抑制剂',
-      'antiplatelet': '抗血小板药',
-      'statin': '他汀类药物',
-      'other': '其他'
+      'antihypertensive': t('medication.category.antihypertensive'),
+      'hypoglycemic': t('medication.category.hypoglycemic'),
+      'lipid_lowering': t('medication.category.lipidLowering'),
+      'anticoagulant': t('medication.category.anticoagulant'),
+      'diuretic': t('medication.category.diuretic'),
+      'beta_blocker': t('medication.category.betaBlocker'),
+      'calcium_channel_blocker': t('medication.category.calciumChannelBlocker'),
+      'ace_inhibitor': t('medication.category.aceInhibitor'),
+      'antiplatelet': t('medication.category.antiplatelet'),
+      'statin': t('medication.category.statin'),
+      'other': t('medication.category.other')
     };
     return categoryMap[category] || category;
   };
@@ -117,8 +119,8 @@ const AddMedicationScreen = ({ route, navigation }) => {
       const response = await medicationAPI.getMedications();
       setMedications(response.data || []);
     } catch (error) {
-      console.error('加载药品列表失败:', error);
-      Alert.alert('错误', '加载药品列表失败');
+      console.error('Failed to load medications:', error);
+      Alert.alert(t('common.error'), t('medication.loadMedicationsFailed'));
     }
   };
 
@@ -153,23 +155,23 @@ const AddMedicationScreen = ({ route, navigation }) => {
     const errors = {};
     
     if (!formData.medication) {
-      errors.medication = '请选择药品';
+      errors.medication = t('medication.validation.selectMedication');
     }
     
     if (!formData.dosage || parseFloat(formData.dosage) <= 0) {
-      errors.dosage = '请输入有效的剂量';
+      errors.dosage = t('medication.validation.enterValidDosage');
     }
     
     if (!Array.isArray(formData.time_of_day) || formData.time_of_day.length === 0) {
-      errors.time_of_day = '请设置服药时间';
+      errors.time_of_day = t('medication.validation.setMedicationTime');
     }
     
     if (formData.duration_days && (isNaN(formData.duration_days) || parseInt(formData.duration_days) <= 0)) {
-      errors.duration_days = '请输入有效的天数';
+      errors.duration_days = t('medication.validation.enterValidDays');
     }
     
     if (formData.requires_monitoring && !formData.monitoring_notes.trim()) {
-      errors.monitoring_notes = '需要监测时请填写监测说明';
+      errors.monitoring_notes = t('medication.validation.monitoringRequired');
     }
     
     setFormErrors(errors);
@@ -179,14 +181,13 @@ const AddMedicationScreen = ({ route, navigation }) => {
   // 保存用药计划
   const saveMedicationPlan = async () => {
     if (!validateForm()) {
-      Alert.alert('表单错误', '请检查并填写所有必填项');
+      Alert.alert(t('common.error'), t('medication.validation.checkRequiredFields'));
       return;
     }
 
     setLoading(true);
     try {
       const planData = {
-        patient: patient.id,
         medication: formData.medication.id,
         dosage: parseFloat(formData.dosage),
         frequency: formData.frequency,
@@ -201,19 +202,19 @@ const AddMedicationScreen = ({ route, navigation }) => {
       };
 
       if (editingPlan) {
-        await medicationAPI.updatePlan(editingPlan.id, planData);
-        Alert.alert('成功', '用药计划已更新', [
-          { text: '确定', onPress: () => navigation.goBack() }
+        await medicationAPI.updatePlan(patient.id, editingPlan.id, planData);
+        Alert.alert(t('common.success'), t('medication.planUpdated'), [
+          { text: t('common.confirm'), onPress: () => navigation.goBack() }
         ]);
       } else {
-        await medicationAPI.createPlan(planData);
-        Alert.alert('成功', '用药计划已添加', [
-          { text: '确定', onPress: () => navigation.goBack() }
+        await medicationAPI.createPlan(patient.id, planData);
+        Alert.alert(t('common.success'), t('medication.planAdded'), [
+          { text: t('common.confirm'), onPress: () => navigation.goBack() }
         ]);
       }
     } catch (error) {
-      console.error('保存用药计划失败:', error);
-      Alert.alert('错误', error.response?.data?.error || '保存失败，请重试');
+      console.error('Failed to save medication plan:', error);
+      Alert.alert(t('common.error'), error.response?.data?.error || t('medication.saveFailed'));
     } finally {
       setLoading(false);
     }
@@ -229,7 +230,7 @@ const AddMedicationScreen = ({ route, navigation }) => {
     <SafeAreaView style={styles.container}>
       <Appbar.Header>
         <Appbar.BackAction onPress={() => navigation.goBack()} />
-        <Appbar.Content title={editingPlan ? '编辑用药计划' : '添加用药计划'} />
+        <Appbar.Content title={editingPlan ? t('medication.editPlan') : t('medication.addPlan')} />
         <Appbar.Action 
           icon="check" 
           onPress={saveMedicationPlan}
@@ -251,10 +252,10 @@ const AddMedicationScreen = ({ route, navigation }) => {
           <View style={styles.sectionContainer}>
             <View style={styles.sectionHeader}>
               <Ionicons name="search" size={20} color="#2196F3" />
-              <Text variant="labelLarge" style={styles.sectionTitle}>药品选择 *</Text>
+              <Text variant="labelLarge" style={styles.sectionTitle}>{t('medication.selectMedication')} *</Text>
             </View>
             <Searchbar
-              placeholder="搜索药品名称..."
+              placeholder={t('medication.searchMedicationName')}
               onChangeText={setMedicationSearch}
               value={medicationSearch}
               style={styles.searchBar}
@@ -280,7 +281,7 @@ const AddMedicationScreen = ({ route, navigation }) => {
                     </Text>
                   )}
                   <Text style={styles.selectedMedicationSpec}>
-                    {formData.medication?.specification || '规格未知'} • {getCategoryDisplay(formData.medication?.category)}
+                    {formData.medication?.specification || t('medication.unknownSpec')} • {getCategoryDisplay(formData.medication?.category)}
                   </Text>
                 </View>
                 <View style={styles.selectedCheckmark}>
@@ -315,7 +316,7 @@ const AddMedicationScreen = ({ route, navigation }) => {
                         <Text style={styles.medicationItemGeneric}>{medication.generic_name}</Text>
                       )}
                       <Text style={styles.medicationItemSpec}>
-                        {medication.specification || '规格未知'} • {getCategoryDisplay(medication.category)}
+                        {medication.specification || t('medication.unknownSpec')} • {getCategoryDisplay(medication.category)}
                       </Text>
                     </View>
                   </View>
@@ -334,13 +335,13 @@ const AddMedicationScreen = ({ route, navigation }) => {
           <View style={styles.sectionContainer}>
             <View style={styles.sectionHeader}>
               <Ionicons name="clipboard" size={20} color="#2196F3" />
-              <Text variant="labelLarge" style={styles.sectionTitle}>用药信息</Text>
+              <Text variant="labelLarge" style={styles.sectionTitle}>{t('medication.medicationInfo')}</Text>
             </View>
 
             {/* 剂量 */}
             <View style={styles.inputContainer}>
               <TextInput
-                label="剂量 (mg) *"
+                label={`${t('medication.dosageMg')} *`}
                 value={formData.dosage}
                 onChangeText={(text) => setFormData(prev => ({ ...prev, dosage: text }))}
                 keyboardType="numeric"
@@ -358,15 +359,15 @@ const AddMedicationScreen = ({ route, navigation }) => {
 
             {/* 服药频次 */}
             <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>服药频次 *</Text>
+              <Text style={styles.inputLabel}>{t('medication.frequency.title')} *</Text>
               <SegmentedButtons
                 value={formData.frequency}
                 onValueChange={handleFrequencyChange}
-                buttons={[
-                  { value: 'QD', label: '每日1次' },
-                  { value: 'BID', label: '每日2次' },
-                  { value: 'TID', label: '每日3次' },
-                  { value: 'QID', label: '每日4次' }
+                                  buttons={[
+                    { value: 'QD', label: t('medication.frequency.onceDaily') },
+                    { value: 'BID', label: t('medication.frequency.twiceDaily') },
+                    { value: 'TID', label: t('medication.frequency.threeTimesDaily') },
+                    { value: 'QID', label: t('medication.frequency.fourTimesDaily') }
                 ]}
                 style={styles.segmentedButtons}
               />
@@ -374,7 +375,7 @@ const AddMedicationScreen = ({ route, navigation }) => {
 
             {/* 服药时间 */}
             <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>服药时间 *</Text>
+              <Text style={styles.inputLabel}>{t('medication.medicationTime')} *</Text>
               <View style={styles.timeContainer}>
                 {(formData.time_of_day || ['08:00']).map((time, index) => (
                   <TouchableOpacity
@@ -387,7 +388,7 @@ const AddMedicationScreen = ({ route, navigation }) => {
                   >
                     <View style={styles.timeButtonContent}>
                       <Ionicons name="time" size={18} color="#FF5722" />
-                      <Text style={styles.timeButtonText}>第{index + 1}次</Text>
+                      <Text style={styles.timeButtonText}>{t('medication.timeSlot', { number: index + 1 })}</Text>
                       <Text style={styles.timeButtonValue}>{time}</Text>
                       <Ionicons name="chevron-forward" size={16} color="#999" />
                     </View>
@@ -408,7 +409,7 @@ const AddMedicationScreen = ({ route, navigation }) => {
                       style={styles.timeActionButton}
                       compact
                     >
-                      添加时间
+      {t('medication.addTime')}
                     </Button>
                   )}
 
@@ -424,7 +425,7 @@ const AddMedicationScreen = ({ route, navigation }) => {
                       style={styles.timeActionButton}
                       compact
                     >
-                      删除时间
+      {t('medication.removeTime')}
                     </Button>
                   )}
                 </View>
@@ -441,7 +442,7 @@ const AddMedicationScreen = ({ route, navigation }) => {
           <View style={styles.sectionContainer}>
             <View style={styles.sectionHeader}>
               <Ionicons name="calendar" size={20} color="#2196F3" />
-              <Text variant="labelLarge" style={styles.sectionTitle}>用药时间</Text>
+              <Text variant="labelLarge" style={styles.sectionTitle}>{t('medication.medicationTiming')}</Text>
             </View>
 
             {/* 开始日期 */}
@@ -456,9 +457,9 @@ const AddMedicationScreen = ({ route, navigation }) => {
                 <View style={styles.dateButtonContent}>
                   <Ionicons name="calendar-outline" size={20} color="#2196F3" />
                   <View>
-                    <Text style={styles.dateButtonLabel}>开始日期 *</Text>
+                    <Text style={styles.dateButtonLabel}>{t('medication.startDate')} *</Text>
                     <Text style={styles.dateButtonValue}>
-                      {formData.start_date.toLocaleDateString('zh-CN')}
+                      {formData.start_date.toLocaleDateString()}
                     </Text>
                   </View>
                   <Ionicons name="chevron-forward" size={20} color="#999" />
@@ -478,9 +479,9 @@ const AddMedicationScreen = ({ route, navigation }) => {
                 <View style={styles.dateButtonContent}>
                   <Ionicons name="calendar-outline" size={20} color="#2196F3" />
                   <View>
-                    <Text style={styles.dateButtonLabel}>结束日期</Text>
+                    <Text style={styles.dateButtonLabel}>{t('medication.endDate')}</Text>
                     <Text style={styles.dateButtonValue}>
-                      {formData.end_date ? formData.end_date.toLocaleDateString('zh-CN') : '长期用药'}
+        {formData.end_date ? formData.end_date.toLocaleDateString() : t('medication.longTerm')}
                     </Text>
                   </View>
                   <Ionicons name="chevron-forward" size={20} color="#999" />
@@ -491,7 +492,7 @@ const AddMedicationScreen = ({ route, navigation }) => {
             {/* 用药天数 */}
             <View style={styles.inputContainer}>
               <TextInput
-                label="用药天数"
+                label={t('medication.durationDays')}
                 value={formData.duration_days}
                 onChangeText={(text) => setFormData(prev => ({ ...prev, duration_days: text }))}
                 keyboardType="numeric"
@@ -499,7 +500,7 @@ const AddMedicationScreen = ({ route, navigation }) => {
                 style={styles.textInput}
                 error={!!formErrors.duration_days}
                 left={<TextInput.Icon icon="clock-outline" />}
-                placeholder="如：7、30（可选）"
+                placeholder={t('medication.durationPlaceholder')}
               />
               {formErrors.duration_days && (
                 <HelperText type="error" visible={true}>
@@ -513,13 +514,13 @@ const AddMedicationScreen = ({ route, navigation }) => {
           <View style={styles.sectionContainer}>
             <View style={styles.sectionHeader}>
               <Ionicons name="document-text" size={20} color="#2196F3" />
-              <Text variant="labelLarge" style={styles.sectionTitle}>特殊说明</Text>
+              <Text variant="labelLarge" style={styles.sectionTitle}>{t('medication.specialInstructions')}</Text>
             </View>
 
             {/* 用药说明 */}
             <View style={styles.inputContainer}>
               <TextInput
-                label="用药说明"
+                label={t('medication.instructions')}
                 value={formData.special_instructions}
                 onChangeText={(text) => setFormData(prev => ({ ...prev, special_instructions: text }))}
                 mode="outlined"
@@ -527,14 +528,14 @@ const AddMedicationScreen = ({ route, navigation }) => {
                 numberOfLines={3}
                 style={styles.textAreaInput}
                 left={<TextInput.Icon icon="note-text" />}
-                placeholder="如：饭后服用、避免饮酒等"
+                placeholder={t('medication.instructionsPlaceholder')}
               />
             </View>
 
             {/* 饮食要求 */}
             <View style={styles.inputContainer}>
               <TextInput
-                label="饮食要求"
+                label={t('medication.dietaryRequirements')}
                 value={formData.dietary_requirements}
                 onChangeText={(text) => setFormData(prev => ({ ...prev, dietary_requirements: text }))}
                 mode="outlined"
@@ -542,7 +543,7 @@ const AddMedicationScreen = ({ route, navigation }) => {
                 numberOfLines={3}
                 style={styles.textAreaInput}
                 left={<TextInput.Icon icon="nutrition" />}
-                placeholder="如：忌辛辣、多饮水等"
+                placeholder={t('medication.dietaryPlaceholder')}
               />
             </View>
 
@@ -555,14 +556,14 @@ const AddMedicationScreen = ({ route, navigation }) => {
                   requires_monitoring: !prev.requires_monitoring 
                 }))}
               />
-              <Text style={styles.checkboxLabel}>需要定期监测</Text>
+              <Text style={styles.checkboxLabel}>{t('medication.requiresMonitoring')}</Text>
             </View>
 
             {/* 监测说明 */}
             {formData.requires_monitoring && (
               <View style={styles.inputContainer}>
                 <TextInput
-                  label="监测说明 *"
+                  label={`${t('medication.monitoringNotes')} *`}
                   value={formData.monitoring_notes}
                   onChangeText={(text) => setFormData(prev => ({ ...prev, monitoring_notes: text }))}
                   mode="outlined"
@@ -571,7 +572,7 @@ const AddMedicationScreen = ({ route, navigation }) => {
                   style={styles.textAreaInput}
                   error={!!formErrors.monitoring_notes}
                   left={<TextInput.Icon icon="monitor-heart" />}
-                  placeholder="如：每周检查血压、定期复查血常规等"
+                  placeholder={t('medication.monitoringPlaceholder')}
                 />
                 {formErrors.monitoring_notes && (
                   <HelperText type="error" visible={true}>
@@ -590,7 +591,7 @@ const AddMedicationScreen = ({ route, navigation }) => {
               style={styles.cancelButton}
               disabled={loading}
             >
-              取消
+              {t('common.cancel')}
             </Button>
             <Button 
               mode="contained" 
@@ -599,7 +600,7 @@ const AddMedicationScreen = ({ route, navigation }) => {
               style={styles.saveButton}
               icon={editingPlan ? "check" : "plus"}
             >
-              {editingPlan ? '更新计划' : '添加计划'}
+  {editingPlan ? t('medication.updatePlan') : t('medication.addPlan')}
             </Button>
           </View>
         </ScrollView>

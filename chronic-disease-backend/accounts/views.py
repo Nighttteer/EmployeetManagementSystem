@@ -12,7 +12,8 @@ from .serializers import (
     UserRegistrationSerializer, UserLoginSerializer, UserProfileSerializer,
     UserProfileUpdateSerializer, UserExtendedProfileSerializer,
     PasswordChangeSerializer, PasswordResetRequestSerializer, PasswordResetSerializer, UserListSerializer,
-    SendSMSCodeSerializer, VerifySMSCodeSerializer, UserRegistrationWithSMSSerializer
+    SendSMSCodeSerializer, VerifySMSCodeSerializer, UserRegistrationWithSMSSerializer,
+    PatientUpdateSerializer
 )
 from .sms_service import send_verification_code_sms
 
@@ -639,3 +640,72 @@ def user_medication_confirmation(request):
         'message': '服药确认成功',
         'timestamp': request.data.get('timestamp')
     })
+
+
+class PatientUpdateView(generics.RetrieveUpdateAPIView):
+    """患者信息更新API（医生使用）"""
+    serializer_class = PatientUpdateSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        user = self.request.user
+        if not user.is_doctor:
+            return User.objects.none()
+        
+        # 只允许医生更新自己管理的患者
+        from health.models import DoctorPatientRelation
+        patient_ids = DoctorPatientRelation.objects.filter(
+            doctor=user,
+            status='active'
+        ).values_list('patient_id', flat=True)
+        
+        return User.objects.filter(id__in=patient_ids, role='patient')
+    
+    def update(self, request, *args, **kwargs):
+        """更新患者信息，特别处理chronic_diseases字段"""
+        try:
+            patient = self.get_object()
+            
+            # 记录更新前的状态
+            old_diseases = patient.chronic_diseases
+            old_risk = patient.get_disease_risk_level()
+            
+            # 执行更新
+            response = super().update(request, *args, **kwargs)
+            
+            # 重新获取更新后的患者信息
+            patient.refresh_from_db()
+            new_risk = patient.get_disease_risk_level()
+            
+            # 记录日志
+            print(f"🔄 患者疾病信息更新:")
+            print(f"   患者: {patient.name} (ID: {patient.id})")
+            print(f"   疾病: {old_diseases} → {patient.chronic_diseases}")
+            print(f"   风险: {old_risk} → {new_risk}")
+            
+            # 自定义响应
+            if response.status_code == 200:
+                return Response({
+                    'success': True,
+                    'message': '患者信息更新成功',
+                    'patient': {
+                        'id': patient.id,
+                        'name': patient.name,
+                        'chronic_diseases': patient.chronic_diseases,
+                        'risk_level': new_risk
+                    },
+                    'changes': {
+                        'diseases_changed': old_diseases != patient.chronic_diseases,
+                        'risk_changed': old_risk != new_risk,
+                        'old_risk': old_risk,
+                        'new_risk': new_risk
+                    }
+                })
+            
+            return response
+            
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': f'更新患者信息失败: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

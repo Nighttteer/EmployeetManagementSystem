@@ -29,6 +29,7 @@ import EditProfileScreen from '../screens/common/EditProfileScreen';
 import AboutScreen from '../screens/common/AboutScreen';
 import ComingSoonScreen from '../screens/common/ComingSoonScreen';
 import LanguageSettingsScreen from '../screens/common/LanguageSettingsScreen';
+import EditPatientScreen from '../screens/doctor/EditPatientScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -73,6 +74,11 @@ const PatientsStack = () => {
         name="PatientDetails" 
         component={PatientDetailsScreen}
         options={{ title: t('patients.patientDetails') }}
+      />
+      <Stack.Screen 
+        name="EditPatient" 
+        component={EditPatientScreen}
+        options={{ title: t('screen.editPatientInfo'), headerShown: false }}
       />
       <Stack.Screen 
         name="MedicationPlan" 
@@ -135,71 +141,73 @@ const MessagesStack = () => {
 
 // 设置堆栈导航
 const ProfileStack = () => {
+  const { t } = useTranslation();
+  
   return (
     <Stack.Navigator>
       <Stack.Screen 
         name="ProfileMain" 
         component={DoctorProfileScreen}
-        options={{ title: '个人中心', headerShown: false }}
+        options={{ title: t('navigation.profile'), headerShown: false }}
       />
       <Stack.Screen 
         name="EditProfile" 
         component={EditProfileScreen}
-        options={{ title: '编辑个人信息', headerShown: false }}
+        options={{ title: t('settings.editProfile'), headerShown: false }}
       />
       <Stack.Screen 
         name="About" 
         component={AboutScreen}
-        options={{ title: '关于应用', headerShown: false }}
+        options={{ title: t('settings.about'), headerShown: false }}
       />
       {/* 占位页面 */}
       <Stack.Screen 
         name="ChangePassword" 
         component={ComingSoonScreen}
-        options={{ title: '修改密码', headerShown: false }}
-        initialParams={{ title: '修改密码' }}
+        options={{ title: t('settings.changePassword'), headerShown: false }}
+        initialParams={{ title: t('settings.changePassword') }}
       />
       <Stack.Screen 
         name="PrivacySettings" 
         component={ComingSoonScreen}
-        options={{ title: '隐私设置', headerShown: false }}
-        initialParams={{ title: '隐私设置' }}
+        options={{ title: t('settings.privacySettings'), headerShown: false }}
+        initialParams={{ title: t('settings.privacySettings') }}
       />
       <Stack.Screen 
         name="LanguageSettings" 
         component={LanguageSettingsScreen}
-        options={{ title: '语言设置', headerShown: false }}
+        options={{ title: t('settings.languageSettings'), headerShown: false }}
       />
 
       <Stack.Screen 
         name="MedicalInfo" 
         component={ComingSoonScreen}
-        options={{ title: '执业信息', headerShown: false }}
-        initialParams={{ title: '执业信息' }}
+        options={{ title: t('doctor.medicalInfo'), headerShown: false }}
+        initialParams={{ title: t('doctor.medicalInfo') }}
       />
       <Stack.Screen 
         name="WorkingHours" 
         component={ComingSoonScreen}
-        options={{ title: '工作时间', headerShown: false }}
-        initialParams={{ title: '工作时间' }}
+        options={{ title: t('doctor.workingHours'), headerShown: false }}
+        initialParams={{ title: t('doctor.workingHours') }}
       />
       <Stack.Screen 
         name="AlertSettings" 
         component={ComingSoonScreen}
-        options={{ title: '告警设置', headerShown: false }}
-        initialParams={{ title: '告警设置' }}
+        options={{ title: t('doctor.alertSettings'), headerShown: false }}
+        initialParams={{ title: t('doctor.alertSettings') }}
       />
       <Stack.Screen 
         name="FAQ" 
         component={ComingSoonScreen}
-        options={{ title: '常见问题', headerShown: false }}
-        initialParams={{ title: '常见问题' }}
+        options={{ title: t('settings.faq'), headerShown: false }}
+        initialParams={{ title: t('settings.faq') }}
       />
       <Stack.Screen 
         name="Feedback" 
         component={ComingSoonScreen}
-        options={{ title: '意见反馈', headerShown: false }}
-        initialParams={{ title: '意见反馈' }}
+        options={{ title: t('settings.feedback'), headerShown: false }}
+        initialParams={{ title: t('settings.feedback') }}
       />
     </Stack.Navigator>
   );
@@ -216,7 +224,7 @@ const DoctorNavigator = () => {
 
           switch (route.name) {
             case 'Dashboard':
-              iconName = focused ? 'analytics' : 'analytics-outline';
+                              iconName = focused ? 'bar-chart' : 'bar-chart-outline';
               break;
             case 'Patients':
               iconName = focused ? 'people' : 'people-outline';

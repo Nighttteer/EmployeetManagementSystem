@@ -126,7 +126,7 @@ const SettingsScreen = ({ navigation }) => {
           
           <List.Item
             title={t('settings.changePassword')}
-            description="更改登录密码"
+            description={t('settings.changePasswordDesc')}
             left={(props) => <List.Icon {...props} icon="lock" />}
             right={(props) => <List.Icon {...props} icon="chevron-right" />}
             onPress={() => navigation.navigate('ChangePassword')}
@@ -151,7 +151,7 @@ const SettingsScreen = ({ navigation }) => {
           
           <List.Item
             title={t('settings.notifications')}
-            description="接收重要提醒和消息"
+            description={t('settings.notificationsDesc')}
             left={(props) => <List.Icon {...props} icon="bell" />}
             right={() => (
               <Switch
@@ -168,7 +168,7 @@ const SettingsScreen = ({ navigation }) => {
           
           <List.Item
             title={t('settings.languageSettings')}
-            description="选择应用语言"
+            description={t('settings.languageSettingsDesc')}
             left={(props) => <List.Icon {...props} icon="translate" />}
             right={(props) => <List.Icon {...props} icon="chevron-right" />}
             onPress={() => navigation.navigate('LanguageSettings')}
@@ -234,8 +234,8 @@ const SettingsScreen = ({ navigation }) => {
             <Divider />
             
             <List.Item
-              title="工作时间"
-              description="设置可接诊时间"
+              title={t('doctor.workingHours')}
+              description={t('doctor.workingHoursDesc')}
               left={(props) => <List.Icon {...props} icon="clock" />}
               right={(props) => <List.Icon {...props} icon="chevron-right" />}
               onPress={() => navigation.navigate('WorkingHours')}
@@ -244,8 +244,8 @@ const SettingsScreen = ({ navigation }) => {
             <Divider />
             
             <List.Item
-              title="告警设置"
-              description="配置患者告警规则"
+              title={t('doctor.alertSettings')}
+              description={t('doctor.alertSettingsDesc')}
               left={(props) => <List.Icon {...props} icon="alert-circle" />}
               right={(props) => <List.Icon {...props} icon="chevron-right" />}
               onPress={() => navigation.navigate('AlertSettings')}

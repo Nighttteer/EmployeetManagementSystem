@@ -7,17 +7,80 @@ export const loginUser = createAsyncThunk(
   'auth/login',
   async ({ phone, password, userType }, { rejectWithValue }) => {
     try {
+      console.log('🔐 AuthSlice: 开始执行登录...');
+      console.log('📊 登录参数:', { phone, userType });
+      
       const response = await authAPI.login(phone, password, userType);
+      
+      console.log('✅ AuthSlice: 登录API调用成功');
+      console.log('📦 响应数据结构:', {
+        hasTokens: !!response.data.tokens,
+        hasUser: !!response.data.user,
+        userRole: response.data.user?.role
+      });
+      
       // 保存token到安全存储
       await SecureStore.setItemAsync('authToken', response.data.tokens.access);
       await SecureStore.setItemAsync('userRole', response.data.user.role);
+      
+      console.log('💾 Token已保存到安全存储');
+      
       return {
         token: response.data.tokens.access,
         user: response.data.user,
         role: response.data.user.role
       };
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || '登录失败');
+      console.error('❌ AuthSlice: 登录失败');
+      console.error('🔍 错误详情:', {
+        name: error.name,
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        url: error.config?.url,
+        method: error.config?.method
+      });
+      
+      // 根据HTTP状态码提供具体错误信息
+      let errorMessage = '登录失败';
+      
+      if (error.response) {
+        const status = error.response.status;
+        const serverMessage = error.response.data?.message || error.response.data?.detail;
+        
+        switch (status) {
+          case 400:
+            errorMessage = `请求参数错误 (${status}): ${serverMessage || '请检查手机号和密码格式'}`;
+            break;
+          case 401:
+            errorMessage = `认证失败 (${status}): ${serverMessage || '手机号或密码错误'}`;
+            break;
+          case 403:
+            errorMessage = `访问被拒绝 (${status}): ${serverMessage || '账号可能被禁用'}`;
+            break;
+          case 404:
+            errorMessage = `API接口不存在 (${status}): 请检查后端服务配置`;
+            break;
+          case 500:
+            errorMessage = `服务器内部错误 (${status}): ${serverMessage || '请联系管理员'}`;
+            break;
+          case 502:
+          case 503:
+          case 504:
+            errorMessage = `服务器连接错误 (${status}): 后端服务可能未启动`;
+            break;
+          default:
+            errorMessage = `HTTP错误 (${status}): ${serverMessage || error.response.statusText}`;
+        }
+      } else if (error.request) {
+        errorMessage = '网络连接失败: 无法连接到服务器，请检查网络和后端服务状态';
+      } else {
+        errorMessage = `请求配置错误: ${error.message}`;
+      }
+      
+      console.error('💬 用户错误信息:', errorMessage);
+      return rejectWithValue(errorMessage);
     }
   }
 );

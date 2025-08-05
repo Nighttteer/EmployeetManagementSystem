@@ -12,8 +12,10 @@ import * as SecureStore from 'expo-secure-store';
 // const BASE_URL = 'http://10.0.2.2:8000/api';
 
 // 3. 实体设备或Expo Go（当前配置）
-// ✅ 已配置为你的实际IP地址
 const BASE_URL = 'http://10.132.115.2:8000/api';
+
+// 4. Web浏览器/localhost
+// const BASE_URL = 'http://localhost:8000/api';
 //const BASE_URL = 'http://10.56.205.246:8000/api';
 
 // ✅ 已配置为你的实际IP地址（热点网络）
@@ -22,7 +24,7 @@ const BASE_URL = 'http://10.132.115.2:8000/api';
 // 导出API基础URL供其他组件使用
 export const API_BASE_URL = BASE_URL;
 
-// 4. Web浏览器
+// 原来的Web浏览器配置
 // const BASE_URL = 'http://127.0.0.1:8000/api';
 
 // 创建axios实例
@@ -75,7 +77,7 @@ export const authAPI = {
     return apiClient.post('/auth/login/', {
       phone,
       password,
-      role,
+      user_type: role,  // 修正参数名：role -> user_type
     });
   },
 
@@ -163,7 +165,7 @@ export const patientsAPI = {
 
   // 获取特定患者详情
   getPatientDetails: (patientId) => {
-    return apiClient.get(`/auth/patients/${patientId}/`);
+    return apiClient.get(`/accounts/patients/${patientId}/update/`);
   },
 
   // 创建新患者
@@ -173,7 +175,7 @@ export const patientsAPI = {
 
   // 更新患者信息
   updatePatient: (patientId, patientData) => {
-    return apiClient.put(`/auth/patients/${patientId}/`, patientData);
+    return apiClient.put(`/accounts/patients/${patientId}/update/`, patientData);
   },
 
   // 删除患者
@@ -394,13 +396,28 @@ export const medicationAPI = {
     return apiClient.post(`/medication/patients/${patientId}/plans/`, planData);
   },
 
+  // 创建用药计划（别名）
+  createPlan: (patientId, planData) => {
+    return apiClient.post(`/medication/patients/${patientId}/plans/`, planData);
+  },
+
   // 更新用药计划
   updateMedicationPlan: (patientId, planId, planData) => {
     return apiClient.put(`/medication/patients/${patientId}/plans/${planId}/`, planData);
   },
 
+  // 更新用药计划（别名）
+  updatePlan: (patientId, planId, planData) => {
+    return apiClient.put(`/medication/patients/${patientId}/plans/${planId}/`, planData);
+  },
+
   // 删除用药计划
   deleteMedicationPlan: (patientId, planId) => {
+    return apiClient.delete(`/medication/patients/${patientId}/plans/${planId}/`);
+  },
+
+  // 删除用药计划（别名）
+  deletePlan: (patientId, planId) => {
     return apiClient.delete(`/medication/patients/${patientId}/plans/${planId}/`);
   },
 
@@ -426,6 +443,8 @@ export const medicationAPI = {
     return apiClient.get(`/medication/patients/${patientId}/history/`);
   },
 };
+
+
 
 // 导出默认配置
 export default apiClient;

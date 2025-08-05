@@ -192,10 +192,10 @@ const MedicationScreen = ({ navigation }) => {
 
   const getStatusText = (status) => {
     switch (status) {
-      case 'taken': return '已服用';
-      case 'pending': return '待服用';
-      case 'skipped': return '已跳过';
-      default: return '未知';
+      case 'taken': return t('medication.taken');
+      case 'pending': return t('medication.pending');
+      case 'skipped': return t('medication.skipped');
+      default: return t('common.unknown');
     }
   };
 
@@ -211,10 +211,10 @@ const MedicationScreen = ({ navigation }) => {
       <Card.Content>
         <View style={styles.cardHeader}>
           <Text variant="titleLarge" style={styles.cardTitle}>
-            今日用药
+            {t('medication.todayMedication')}
           </Text>
           <Chip mode="outlined" textStyle={styles.chipText}>
-            {medicationData.todayMedications.filter(m => m.status === 'pending').length} 个待服用
+            {medicationData.todayMedications.filter(m => m.status === 'pending').length} {t('medication.pending')}
           </Chip>
         </View>
         
@@ -255,7 +255,7 @@ const MedicationScreen = ({ navigation }) => {
                   style={[styles.actionButton, styles.takeButton]}
                   labelStyle={styles.actionButtonText}
                 >
-                  已服用
+                  {t('medication.taken')}
                 </Button>
                 <Button
                   mode="outlined"
@@ -281,7 +281,7 @@ const MedicationScreen = ({ navigation }) => {
             {t('medication.medicationPlan')}
           </Text>
           <Chip mode="outlined" textStyle={styles.chipText}>
-            由医生制定
+            {t('medication.planMadeByDoctor')}
           </Chip>
         </View>
         
@@ -297,7 +297,7 @@ const MedicationScreen = ({ navigation }) => {
                   {plan.dosage} · {plan.frequency} · {plan.timeOfDay}
                 </Text>
                 <Text style={styles.planDate}>
-                  {plan.startDate} - {plan.endDate || '持续服用'}
+                  {plan.startDate} - {plan.endDate || t('medication.longTerm')}
                 </Text>
               </View>
               
@@ -306,7 +306,7 @@ const MedicationScreen = ({ navigation }) => {
                 textStyle={styles.statusChipText}
                 compact={true}
               >
-                {plan.status === 'active' ? '进行中' : '已停止'}
+                {plan.status === 'active' ? t('medication.active') : t('medication.stopped')}
               </Chip>
             </View>
             
@@ -334,10 +334,10 @@ const MedicationScreen = ({ navigation }) => {
         ) : (
           <View style={styles.emptyState}>
             <Text style={styles.emptyStateText}>
-              暂无用药计划
+  {t('medication.noMedicationPlan')}
             </Text>
             <Text style={styles.emptyStateSubtext}>
-              请联系您的医生制定用药计划
+  {t('medication.contactDoctorForPlan')}
             </Text>
           </View>
         )}
@@ -399,10 +399,10 @@ const MedicationScreen = ({ navigation }) => {
       >
         <View style={styles.header}>
           <Text variant="headlineLarge" style={styles.title}>
-            用药提醒
+            {t('medication.medicationReminder')}
           </Text>
           <Text variant="bodyLarge" style={styles.subtitle}>
-            管理您的用药计划和提醒
+            {t('medication.managePlanAndReminder')}
           </Text>
         </View>
 

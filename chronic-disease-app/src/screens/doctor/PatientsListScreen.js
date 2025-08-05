@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { View, StyleSheet, FlatList, RefreshControl, Alert, TouchableOpacity } from 'react-native';
 import { 
   Text, 
@@ -43,6 +44,14 @@ const PatientsListScreen = ({ navigation }) => {
     console.log('🔐 认证状态:', { isAuthenticated, user: user?.name, role, hasToken: !!token });
     dispatch(fetchPatientsList());
   }, [dispatch]);
+
+  // 使用useFocusEffect在页面聚焦时刷新患者列表
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('🔄 PatientsListScreen 聚焦，刷新患者列表...');
+      dispatch(fetchPatientsList());
+    }, [dispatch])
+  );
   
   // 添加调试信息
   useEffect(() => {
@@ -126,37 +135,47 @@ const PatientsListScreen = ({ navigation }) => {
     }
   };
   
-  // 过滤患者
+  // 过滤患者（5级风险系统）
   const getFilteredPatients = () => {
     // 确保始终使用数组
     const sourceList = searchQuery ? filteredPatients : patientsList;
     const patients = Array.isArray(sourceList) ? sourceList : [];
     
     switch (filterType) {
-      case 'critical':
-        return patients.filter(patient => patient?.risk_level === 'high');
-      case 'stable':
+      case 'unassessed':
+        return patients.filter(patient => patient?.risk_level === 'unassessed');
+      case 'healthy':
+        return patients.filter(patient => patient?.risk_level === 'healthy');
+      case 'low':
         return patients.filter(patient => patient?.risk_level === 'low');
+      case 'medium':
+        return patients.filter(patient => patient?.risk_level === 'medium');
+      case 'high':
+        return patients.filter(patient => patient?.risk_level === 'high');
       default:
         return patients;
     }
   };
   
-  // 获取风险等级颜色
+  // 获取风险等级颜色（5级风险系统）
   const getRiskLevelColor = (riskLevel) => {
     switch (riskLevel) {
       case 'high':
-        return '#f44336';
+        return '#F44336';      // 高风险 - 红色
       case 'medium':
-        return '#ff9800';
+        return '#FF9800';      // 中风险 - 橙色  
       case 'low':
-        return '#4caf50';
+        return '#4CAF50';      // 低风险 - 绿色
+      case 'healthy':
+        return '#00E676';      // 健康 - 亮绿色
+      case 'unassessed':
+        return '#9E9E9E';      // 未评估 - 灰色
       default:
-        return '#9e9e9e';
+        return '#9E9E9E';
     }
   };
   
-  // 获取风险等级文本
+  // 获取风险等级文本（5级风险系统）
   const getRiskLevelText = (riskLevel) => {
     switch (riskLevel) {
       case 'high':
@@ -165,6 +184,10 @@ const PatientsListScreen = ({ navigation }) => {
         return '中风险';
       case 'low':
         return '低风险';
+      case 'healthy':
+        return '健康';
+      case 'unassessed':
+        return '未评估';
       default:
         return '未评估';
     }
@@ -172,7 +195,7 @@ const PatientsListScreen = ({ navigation }) => {
   
   // 格式化最后活跃时间
   const formatLastActive = (dateString) => {
-    if (!dateString) return '从未活跃';
+    if (!dateString) return t('patients.neverActive');
     
     const date = new Date(dateString);
     const now = new Date();
@@ -180,13 +203,13 @@ const PatientsListScreen = ({ navigation }) => {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
     if (diffDays === 1) {
-      return '昨天';
+      return t('patients.yesterday');
     } else if (diffDays < 7) {
-      return `${diffDays}天前`;
+      return t('patients.daysAgo', { days: diffDays });
     } else if (diffDays < 30) {
-      return `${Math.ceil(diffDays / 7)}周前`;
+      return t('patients.weeksAgo', { weeks: Math.ceil(diffDays / 7) });
     } else {
-      return `${Math.ceil(diffDays / 30)}个月前`;
+      return t('patients.monthsAgo', { months: Math.ceil(diffDays / 30) });
     }
   };
   
@@ -206,10 +229,10 @@ const PatientsListScreen = ({ navigation }) => {
                 {patient.name || t('patients.unknownPatient')}
               </Text>
               <Text variant="bodySmall" style={styles.patientDetails}>
-                {patient.age}岁 • {patient.gender === 'male' ? '男' : '女'}
+                {patient.age}{t('patients.yearsOld')} • {patient.gender === 'male' ? t('common.male') : t('common.female')}
               </Text>
               <Text variant="bodySmall" style={styles.patientPhone}>
-                {patient.phone || '未提供手机号'}
+                {patient.phone || t('patients.noPhoneProvided')}
               </Text>
             </View>
             <Chip 
@@ -244,7 +267,7 @@ const PatientsListScreen = ({ navigation }) => {
               loading={chatLoading}
               disabled={chatLoading}
             >
-              {chatLoading ? '连接中...' : '聊天'}
+              {chatLoading ? t('patients.connecting') : t('patients.chat')}
             </Button>
             <Button 
               mode="outlined" 
@@ -252,7 +275,7 @@ const PatientsListScreen = ({ navigation }) => {
               onPress={() => navigation.navigate('PatientDetails', { patient })}
               style={styles.actionButton}
             >
-              详情
+              {t('patients.details')}
             </Button>
           </View>
         </Card.Content>
@@ -260,7 +283,7 @@ const PatientsListScreen = ({ navigation }) => {
     </TouchableOpacity>
   );
   
-  // 渲染过滤器
+  // 渲染过滤器（5级风险系统）
   const renderFilters = () => {
     // 确保 patients 始终是一个数组
     const patients = Array.isArray(patientsList) ? patientsList : [];
@@ -268,25 +291,64 @@ const PatientsListScreen = ({ navigation }) => {
     return (
       <View style={styles.filtersContainer}>
         <Chip 
-          selected={filterType === 'all'} 
           onPress={() => setFilterType('all')}
-          style={styles.filterChip}
+          style={[
+            styles.filterChip, 
+            filterType === 'all' && styles.selectedFilterChip
+          ]}
+          textStyle={filterType === 'all' ? styles.selectedFilterText : {}}
         >
           全部 ({patients.length})
         </Chip>
         <Chip 
-          selected={filterType === 'critical'} 
-          onPress={() => setFilterType('critical')}
-          style={styles.filterChip}
+          onPress={() => setFilterType('unassessed')}
+          style={[
+            styles.filterChip, 
+            filterType === 'unassessed' && { ...styles.selectedFilterChip, backgroundColor: '#9E9E9E' }
+          ]}
+          textStyle={filterType === 'unassessed' ? styles.selectedFilterText : {}}
         >
-          高风险 ({patients.filter(p => p.risk_level === 'high').length})
+          未评估 ({patients.filter(p => p.risk_level === 'unassessed').length})
         </Chip>
         <Chip 
-          selected={filterType === 'stable'} 
-          onPress={() => setFilterType('stable')}
-          style={styles.filterChip}
+          onPress={() => setFilterType('healthy')}
+          style={[
+            styles.filterChip, 
+            filterType === 'healthy' && { ...styles.selectedFilterChip, backgroundColor: '#00E676' }
+          ]}
+          textStyle={filterType === 'healthy' ? styles.selectedFilterText : {}}
         >
-          稳定 ({patients.filter(p => p.risk_level === 'low').length})
+          健康 ({patients.filter(p => p.risk_level === 'healthy').length})
+        </Chip>
+        <Chip 
+          onPress={() => setFilterType('low')}
+          style={[
+            styles.filterChip, 
+            filterType === 'low' && { ...styles.selectedFilterChip, backgroundColor: '#4CAF50' }
+          ]}
+          textStyle={filterType === 'low' ? styles.selectedFilterText : {}}
+        >
+          低风险 ({patients.filter(p => p.risk_level === 'low').length})
+        </Chip>
+        <Chip 
+          onPress={() => setFilterType('medium')}
+          style={[
+            styles.filterChip, 
+            filterType === 'medium' && { ...styles.selectedFilterChip, backgroundColor: '#FF9800' }
+          ]}
+          textStyle={filterType === 'medium' ? styles.selectedFilterText : {}}
+        >
+          中风险 ({patients.filter(p => p.risk_level === 'medium').length})
+        </Chip>
+        <Chip 
+          onPress={() => setFilterType('high')}
+          style={[
+            styles.filterChip, 
+            filterType === 'high' && { ...styles.selectedFilterChip, backgroundColor: '#F44336' }
+          ]}
+          textStyle={filterType === 'high' ? styles.selectedFilterText : {}}
+        >
+          高风险 ({patients.filter(p => p.risk_level === 'high').length})
         </Chip>
       </View>
     );
@@ -428,6 +490,19 @@ const styles = StyleSheet.create({
   filterChip: {
     marginRight: 8,
     marginBottom: 8,
+  },
+  selectedFilterChip: {
+    marginRight: 8,
+    marginBottom: 8,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  selectedFilterText: {
+    color: '#fff',
+    fontWeight: '600',
   },
   listContainer: {
     paddingHorizontal: 16,

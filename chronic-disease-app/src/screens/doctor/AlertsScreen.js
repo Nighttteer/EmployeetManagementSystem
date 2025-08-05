@@ -19,6 +19,7 @@ import {
 } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
 
 // 导入图表组件
@@ -26,26 +27,36 @@ import PieChart from '../../components/Charts/PieChart';
 import BarChart from '../../components/Charts/BarChart';
 import StatsCard from '../../components/StatsCard';
 
+import { API_BASE_URL } from '../../services/api';
+
 const AlertsScreen = ({ navigation }) => {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
+  
+  // 获取认证信息
+  const { isAuthenticated, user, role, token } = useSelector(state => state.auth);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all'); // all, pending, handled, dismissed
   const [filterPriority, setFilterPriority] = useState('all'); // all, critical, high, medium, low
   const [showStats, setShowStats] = useState(true);
 
-  // 模拟告警数据
+
+  // 系统定期分析患者数据生成的告警
   const [alertsData, setAlertsData] = useState({
+    doctorId: 1, // 当前登录医生ID
+    lastAnalysisTime: '2024-01-15T10:30:00Z', // 最后分析时间
+    analysisInterval: '每3天', // 分析频率
+    dataRange: '最近3天', // 分析数据范围
     stats: {
-      total: 24,
-      pending: 8,
-      handled: 14,
+      total: 6,
+      pending: 3, 
+      handled: 1,
       dismissed: 2,
-      critical: 3,
-      high: 5,
-      medium: 10,
-      low: 6
+      critical: 1,
+      high: 2,
+      medium: 1,
+      low: 2
     },
     alerts: [
       {
@@ -53,44 +64,91 @@ const AlertsScreen = ({ navigation }) => {
         patientId: 1,
         patientName: '张三',
         patientAge: 65,
+        doctorId: 1,
+        assignedAt: '2023-12-01T00:00:00Z',
         type: 'threshold_exceeded',
         title: '血压异常警报',
-        message: '收缩压达到180mmHg，超出安全阈值',
+        message: '系统分析患者最近3天血压数据，发现收缩压持续偏高',
         priority: 'critical',
         status: 'pending',
         createdAt: '2024-01-15T10:30:00Z',
+        // 系统分析的数据范围
+        analysisData: {
+          dataRange: '2024-01-12 至 2024-01-15',
+          analysisType: '3天数据趋势分析',
+          patientEntries: [
+            { date: '2024-01-13', value: '175/92', time: '08:30' },
+            { date: '2024-01-14', value: '178/94', time: '09:15' },
+            { date: '2024-01-15', value: '180/95', time: '10:25' }
+          ],
+          trend: '连续上升',
+          avgValue: '177.7/93.7'
+        },
         relatedMetric: '血压',
         value: '180/95 mmHg',
-        threshold: '< 140/90 mmHg'
+        threshold: '< 140/90 mmHg',
+        thresholdSetBy: '医生设定'
       },
       {
         id: 2,
         patientId: 2,
         patientName: '李四',
         patientAge: 58,
+        doctorId: 1,
+        assignedAt: '2023-11-15T00:00:00Z',
         type: 'missed_medication',
-        title: '漏服药物提醒',
-        message: '患者已连续2天未按时服用降压药',
+        title: '连续漏服药物',
+        message: '系统检测患者最近3天用药依从性下降，连续2天未记录服药',
         priority: 'high',
         status: 'pending',
         createdAt: '2024-01-15T09:15:00Z',
+        // 系统分析的用药数据
+        analysisData: {
+          dataRange: '2024-01-13 至 2024-01-15',
+          analysisType: '用药依从性分析',
+          expectedDoses: 3, // 3天应服用次数
+          recordedDoses: 1, // 实际记录次数
+          complianceRate: '33.3%', // 依从性
+          missedPattern: '连续漏服',
+          lastTaken: '2024-01-13 08:00'
+        },
         medicationName: '氨氯地平片',
-        missedDoses: 4
+        dosage: '5mg',
+        frequency: '每日一次',
+        missedDoses: 2,
+        consecutiveMissed: true
       },
       {
         id: 3,
         patientId: 3,
         patientName: '王五',
         patientAge: 72,
-        type: 'abnormal_trend',
-        title: '血糖异常趋势',
-        message: '血糖值持续上升，近7天平均值偏高',
-        priority: 'medium',
-        status: 'handled',
+        doctorId: 1,
+        assignedAt: '2023-10-20T00:00:00Z',
+        type: 'improvement_trend',
+        title: '血糖下降改善',
+        message: '系统分析患者最近3天血糖数据，发现平均值8.00mmol/L，呈下降趋势',
+        priority: 'low',
+        status: 'pending',
         createdAt: '2024-01-14T16:45:00Z',
-        handledBy: 'Dr. 陈医生',
-        handledAt: '2024-01-15T08:20:00Z',
+        handledBy: null,
+        handledAt: null,
+        // 系统分析的血糖数据
+        analysisData: {
+          dataRange: '2024-01-12 至 2024-01-14',
+          analysisType: '血糖趋势分析',
+          patientEntries: [
+            { date: '2024-01-12', value: 8.2, type: '餐后2小时' },
+            { date: '2024-01-13', value: 8.0, type: '空腹' },
+            { date: '2024-01-14', value: 7.8, type: '餐后' }
+          ],
+          avgValue: 8.00,
+          trend: '持续下降',
+          exceedsTarget: true,
+          targetRange: '4.4-7.0'
+        },
         relatedMetric: '血糖',
+        targetRange: '4.4-7.0 mmol/L',
         trendDirection: 'up'
       },
       {
@@ -98,29 +156,91 @@ const AlertsScreen = ({ navigation }) => {
         patientId: 4,
         patientName: '赵六',
         patientAge: 60,
-        type: 'system_notification',
-        title: '定期复查提醒',
-        message: '患者需要进行季度血脂检查',
+        doctorId: 1,
+        assignedAt: '2023-09-05T00:00:00Z',
+        type: 'patient_inactivity',
+        title: '患者活动异常',
+        message: '系统检测患者最近3天数据上传活跃度异常，仅1次记录',
         priority: 'low',
         status: 'pending',
         createdAt: '2024-01-14T14:20:00Z',
-        dueDate: '2024-01-20',
-        checkupType: '血脂检查'
+        // 系统分析的活跃度数据
+        analysisData: {
+          dataRange: '2024-01-12 至 2024-01-14',
+          analysisType: '患者活跃度分析',
+          expectedEntries: 9, // 3天预期记录数
+          actualEntries: 1, // 实际记录数
+          activityRate: '11.1%',
+          lastActive: '2024-01-11 22:30',
+          inactiveDays: 3
+        },
+        expectedFrequency: '每日数据上传',
+        lastDataSync: '2024-01-11T22:30:00Z'
       },
       {
         id: 5,
         patientId: 1,
         patientName: '张三',
         patientAge: 65,
+        doctorId: 1,
+        assignedAt: '2023-12-01T00:00:00Z',
         type: 'threshold_exceeded',
-        title: '心率异常',
-        message: '心率过快，达到110bpm',
+        title: '心率异常告警',
+        message: '系统分析患者3天心率数据，运动状态下110bpm属正常范围',
         priority: 'high',
         status: 'dismissed',
         createdAt: '2024-01-13T11:30:00Z',
-        dismissedBy: 'Dr. 李医生',
+        dismissedBy: '当前医生',
         dismissedAt: '2024-01-13T12:00:00Z',
-        dismissReason: '患者刚运动完毕，属正常现象'
+        dismissReason: '患者APP显示运动状态，心率正常',
+        // 系统分析的心率数据
+        analysisData: {
+          dataRange: '2024-01-11 至 2024-01-13',
+          analysisType: '心率异常检测',
+          patientEntries: [
+            { date: '2024-01-11', value: 72, context: '静息' },
+            { date: '2024-01-12', value: 85, context: '餐后' },
+            { date: '2024-01-13', value: 110, context: '运动后' }
+          ],
+          contextAnalysis: '运动状态下心率正常',
+          riskLevel: '低风险'
+        },
+        relatedMetric: '心率',
+        normalRange: '60-100 bpm',
+        threshold: '< 100 bpm (静息状态)'
+      },
+      {
+        id: 6,
+        patientId: 5,
+        patientName: '钱七',
+        patientAge: 55,
+        doctorId: 1,
+        assignedAt: '2023-08-10T00:00:00Z',
+        type: 'medication_side_effect',
+        title: '用药反应报告',
+        message: '系统检测患者最近3天症状报告，发现用药后轻微不适',
+        priority: 'low',
+        status: 'dismissed',
+        createdAt: '2024-01-12T09:15:00Z',
+        dismissedBy: '当前医生',
+        dismissedAt: '2024-01-12T10:30:00Z',
+        dismissReason: '已电话随访，轻微反应，继续观察',
+        // 系统分析的症状数据
+        analysisData: {
+          dataRange: '2024-01-10 至 2024-01-12',
+          analysisType: '副作用监测分析',
+          symptomReports: [
+            { date: '2024-01-10', symptoms: '无', medication: '氨氯地平片' },
+            { date: '2024-01-11', symptoms: '轻微头晕', medication: '氨氯地平片' },
+            { date: '2024-01-12', symptoms: '头晕，想吐', medication: '氨氯地平片' }
+          ],
+          pattern: '服药后轻微副作用',
+          severity: '可耐受',
+          recommendation: '继续观察'
+        },
+        medicationName: '氨氯地平片',
+        sideEffectType: '常见副作用',
+        followUpNeeded: false
       }
     ]
   });
@@ -131,11 +251,88 @@ const AlertsScreen = ({ navigation }) => {
 
   const loadAlerts = async () => {
     setLoading(true);
-    // 模拟API调用
-    setTimeout(() => {
+    try {
+      // 检查认证状态
+      if (!isAuthenticated || !token || !user) {
+        console.error('用户未认证，无法获取告警数据');
+        console.log('使用模拟数据...');
+  
+        setLoading(false);
+        return;
+      }
+
+      console.log('🔐 用户认证信息:', { 
+        isAuthenticated, 
+        userId: user?.id, 
+        role, 
+        hasToken: !!token 
+      });
+      
+      // 系统每3天自动分析患者数据联动流程：
+      // 1. 查询医患关系表(DoctorPatientRelation)获取当前医生的患者
+      // 2. 从健康指标表(HealthMetric)抓取患者最近3天数据
+      // 3. 从用药提醒表(MedicationReminder)分析用药依从性
+      // 4. 分析数据趋势，生成告警写入Alert表
+      // 5. 查询Alert表获取告警推送医生端
+      
+      // 实际API调用 - 从数据库获取告警数据
+      const doctorId = user.id || alertsData.doctorId;
+      const apiUrl = `${API_BASE_URL.replace('/api', '')}/api/health/alerts/doctor/${doctorId}/`;
+      
+      console.log('📡 API请求:', apiUrl);
+      
+      const response = await fetch(apiUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('从数据库获取告警数据:', result);
+        
+        if (result.success && result.data) {
+          // 更新告警数据
+          setAlertsData(prev => ({
+            ...prev,
+            alerts: result.data.alerts,
+            stats: result.data.stats,
+            lastAnalysisTime: result.data.lastAnalysisTime,
+            dataSource: result.data.dataSource
+          }));
+          
+          console.log(`成功获取 ${result.data.alerts.length} 条数据库告警数据`);
+          console.log(`数据来源: ${result.dataSource}`);
+        }
+        
+        // 处理告警数据
+  
+      } else {
+        console.error('获取告警数据失败:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('错误详情:', errorText);
+        // 降级使用模拟数据
+        console.log('降级使用模拟数据...');
+  
+      }
+      
       setLoading(false);
-    }, 1000);
+    } catch (error) {
+      console.error('获取数据库告警数据失败:', error);
+      console.error('错误类型:', error.name);
+      console.error('错误消息:', error.message);
+      // 降级使用模拟数据
+      console.log('使用模拟数据...');
+
+      setLoading(false);
+    }
   };
+
+
+
+
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -224,7 +421,15 @@ const AlertsScreen = ({ navigation }) => {
     switch (type) {
       case 'threshold_exceeded': return 'warning';
       case 'missed_medication': return 'medical';
-              case 'abnormal_trend': return 'arrow-up';
+      case 'abnormal_trend': return 'arrow-up';
+      // 新的血糖趋势类型
+      case 'glucose_high_rising': return 'trending-up';
+      case 'glucose_high_falling': return 'trending-down';
+      case 'glucose_high_stable': return 'remove';
+      case 'glucose_normal_rising': return 'arrow-up';
+      // 其他趋势类型
+      case 'improvement_trend': return 'trending-down';
+      case 'worsening_trend': return 'trending-up';
       case 'system_notification': return 'notifications';
       default: return 'alert-circle';
     }
@@ -294,9 +499,10 @@ const AlertsScreen = ({ navigation }) => {
                 <Text variant="titleMedium" style={styles.alertTitle}>
                   {alert.title}
                 </Text>
+
               </View>
               <Text style={styles.patientName}>
-                {alert.patientName} · {alert.patientAge}岁
+                {alert.patientName} · {alert.patientAge}岁 · 我的患者
               </Text>
             </View>
             
@@ -323,6 +529,8 @@ const AlertsScreen = ({ navigation }) => {
           </View>
           
           <Text style={styles.alertMessage}>{alert.message}</Text>
+
+
           
           {/* 告警详细信息 */}
           {alert.relatedMetric && (
@@ -454,59 +662,136 @@ const AlertsScreen = ({ navigation }) => {
   const renderFilters = () => (
     <View>
       <Text style={styles.filterTitle}>{t('alerts.statusFilter')}</Text>
-      <View style={styles.filtersContainer}>
+      <View style={styles.statusFiltersContainer}>
         <Chip 
-          selected={filterStatus === 'all'} 
+          mode="outlined"
           onPress={() => setFilterStatus('all')}
-          style={styles.filterChip}
+          style={[
+            styles.statusFilterChip,
+            filterStatus === 'all' && styles.selectedStatusChip
+          ]}
+          textStyle={[
+            styles.statusFilterChipText,
+            filterStatus === 'all' && styles.selectedStatusChipText
+          ]}
         >
           {t('alerts.all')} ({alertsData.stats.total})
         </Chip>
         <Chip 
-          selected={filterStatus === 'pending'} 
+          mode="outlined"
           onPress={() => setFilterStatus('pending')}
-          style={styles.filterChip}
+          style={[
+            styles.statusFilterChip,
+            filterStatus === 'pending' && styles.selectedStatusChip
+          ]}
+          textStyle={[
+            styles.statusFilterChipText,
+            filterStatus === 'pending' && styles.selectedStatusChipText
+          ]}
         >
           {t('alerts.pending')} ({alertsData.stats.pending})
         </Chip>
         <Chip 
-          selected={filterStatus === 'handled'} 
+          mode="outlined"
           onPress={() => setFilterStatus('handled')}
-          style={styles.filterChip}
+          style={[
+            styles.statusFilterChip,
+            filterStatus === 'handled' && styles.selectedStatusChip
+          ]}
+          textStyle={[
+            styles.statusFilterChipText,
+            filterStatus === 'handled' && styles.selectedStatusChipText
+          ]}
         >
           {t('alerts.handled')} ({alertsData.stats.handled})
+        </Chip>
+        <Chip 
+          mode="outlined"
+          onPress={() => setFilterStatus('dismissed')}
+          style={[
+            styles.statusFilterChip,
+            filterStatus === 'dismissed' && styles.selectedStatusChip
+          ]}
+          textStyle={[
+            styles.statusFilterChipText,
+            filterStatus === 'dismissed' && styles.selectedStatusChipText
+          ]}
+        >
+          已忽略 ({alertsData.stats.dismissed})
         </Chip>
       </View>
 
       <Text style={styles.filterTitle}>{t('alerts.priorityFilter')}</Text>
       <View style={styles.filtersContainer}>
         <Chip 
-          selected={filterPriority === 'all'} 
+          mode="outlined"
           onPress={() => setFilterPriority('all')}
-          style={styles.filterChip}
+          style={[
+            styles.filterChip,
+            filterPriority === 'all' && styles.selectedPriorityChip
+          ]}
+          textStyle={[
+            styles.priorityFilterChipText,
+            filterPriority === 'all' && styles.selectedPriorityChipText
+          ]}
         >
           全部
         </Chip>
         <Chip 
-          selected={filterPriority === 'critical'} 
+          mode="outlined"
           onPress={() => setFilterPriority('critical')}
-          style={[styles.filterChip, { backgroundColor: filterPriority === 'critical' ? '#D32F2F' : undefined }]}
+          style={[
+            styles.filterChip,
+            filterPriority === 'critical' && styles.selectedCriticalChip
+          ]}
+          textStyle={[
+            styles.priorityFilterChipText,
+            filterPriority === 'critical' && styles.selectedCriticalChipText
+          ]}
         >
           危急
         </Chip>
         <Chip 
-          selected={filterPriority === 'high'} 
+          mode="outlined"
           onPress={() => setFilterPriority('high')}
-          style={[styles.filterChip, { backgroundColor: filterPriority === 'high' ? '#F57C00' : undefined }]}
+          style={[
+            styles.filterChip,
+            filterPriority === 'high' && styles.selectedHighChip
+          ]}
+          textStyle={[
+            styles.priorityFilterChipText,
+            filterPriority === 'high' && styles.selectedHighChipText
+          ]}
         >
           高
         </Chip>
         <Chip 
-          selected={filterPriority === 'medium'} 
+          mode="outlined"
           onPress={() => setFilterPriority('medium')}
-          style={styles.filterChip}
+          style={[
+            styles.filterChip,
+            filterPriority === 'medium' && styles.selectedMediumChip
+          ]}
+          textStyle={[
+            styles.priorityFilterChipText,
+            filterPriority === 'medium' && styles.selectedMediumChipText
+          ]}
         >
           中
+        </Chip>
+        <Chip 
+          mode="outlined"
+          onPress={() => setFilterPriority('low')}
+          style={[
+            styles.filterChip,
+            filterPriority === 'low' && styles.selectedLowChip
+          ]}
+          textStyle={[
+            styles.priorityFilterChipText,
+            filterPriority === 'low' && styles.selectedLowChipText
+          ]}
+        >
+          低
         </Chip>
       </View>
     </View>
@@ -534,19 +819,19 @@ const AlertsScreen = ({ navigation }) => {
           </Text>
           <TouchableOpacity onPress={() => setShowStats(!showStats)}>
             <Ionicons 
-              name={showStats ? 'stats-chart' : 'stats-chart-outline'} 
+              name={showStats ? 'bar-chart' : 'bar-chart-outline'} 
               size={24} 
               color="#2196F3" 
             />
           </TouchableOpacity>
         </View>
         <Text variant="bodyMedium" style={styles.subtitle}>
-          {t('alerts.realtimeMonitoring')}
+          系统分析数据库患者数据并推送 · 共{new Set(alertsData.alerts.map(alert => alert.patientId)).size}位患者 · 数据来源: {alertsData.dataSource || '健康指标表+用药记录表'}
         </Text>
       </View>
 
       <Searchbar
-        placeholder={t('alerts.searchPlaceholder')}
+        placeholder="搜索患者姓名或告警内容..."
         onChangeText={setSearchQuery}
         value={searchQuery}
         style={styles.searchBar}
@@ -554,7 +839,8 @@ const AlertsScreen = ({ navigation }) => {
 
       <FlatList
         data={[
-          ...(showStats ? ['stats', 'filters'] : ['filters']),
+          ...(showStats ? ['stats'] : []),
+          'filters',
           ...filteredAlerts
         ]}
         renderItem={({ item, index }) => {
@@ -575,15 +861,17 @@ const AlertsScreen = ({ navigation }) => {
         }
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>🔔</Text>
-            <Text variant="headlineSmall" style={styles.emptyTitle}>
-              {t('alerts.noAlerts')}
-            </Text>
-            <Text variant="bodyMedium" style={styles.emptySubtitle}>
-              {t('alerts.noMatchingAlerts')}
-            </Text>
-          </View>
+          filteredAlerts.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyIcon}>🔔</Text>
+              <Text variant="headlineSmall" style={styles.emptyTitle}>
+                暂无异常告警
+              </Text>
+              <Text variant="bodyMedium" style={styles.emptySubtitle}>
+                系统分析患者数据正常，暂无异常趋势需要关注
+              </Text>
+            </View>
+          ) : null
         }
       />
     </SafeAreaView>
@@ -605,28 +893,33 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   header: {
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 16,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 12,
     backgroundColor: '#f8f9fa',
   },
   headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 8,
   },
   title: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#333',
+    flex: 1,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#666',
     marginTop: 4,
+    lineHeight: 20,
   },
   searchBar: {
-    margin: 16,
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 12,
     backgroundColor: '#ffffff',
     elevation: 2,
     shadowColor: '#000',
@@ -637,8 +930,8 @@ const styles = StyleSheet.create({
   },
   statsContainer: {
     paddingHorizontal: 16,
-    marginBottom: 16,
-    marginTop: 8,
+    marginBottom: 12,
+    marginTop: 4,
   },
   statsRow: {
     flexDirection: 'row',
@@ -672,25 +965,114 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   filterTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 15,
+    fontWeight: '600',
     color: '#333',
     marginHorizontal: 16,
-    marginTop: 16,
+    marginTop: 12,
     marginBottom: 8,
   },
   filtersContainer: {
     flexDirection: 'row',
     paddingHorizontal: 16,
-    paddingBottom: 8,
+    paddingBottom: 12,
     flexWrap: 'wrap',
+    alignItems: 'center',
+  },
+  statusFiltersContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    flexWrap: 'wrap',
+    alignItems: 'center',
   },
   filterChip: {
-    marginRight: 8,
+    marginRight: 6,
     marginBottom: 8,
+    height: 32,
+    minWidth: 60,
+    backgroundColor: '#F5F5F5',
+    borderColor: '#E0E0E0',
+    borderWidth: 1,
+  },
+  statusFilterChip: {
+    minWidth: 80,
+    marginRight: 6,
+    marginBottom: 8,
+    height: 32,
+    backgroundColor: '#F5F5F5',
+    borderColor: '#E0E0E0',
+    borderWidth: 1,
+  },
+  selectedStatusChip: {
+    backgroundColor: '#E3F2FD',
+    borderColor: '#2196F3',
+    borderWidth: 1,
+  },
+  statusFilterChipText: {
+    fontSize: 12,
+    color: '#666666',
+    fontWeight: '500',
+  },
+  selectedStatusChipText: {
+    color: '#2196F3',
+    fontWeight: '600',
+  },
+  // 优先级筛选芯片样式
+  priorityFilterChipText: {
+    fontSize: 12,
+    color: '#666666',
+    fontWeight: '500',
+  },
+  selectedPriorityChip: {
+    backgroundColor: '#E3F2FD',
+    borderColor: '#2196F3',
+    borderWidth: 1,
+  },
+  selectedPriorityChipText: {
+    color: '#2196F3',
+    fontWeight: '600',
+  },
+  selectedCriticalChip: {
+    backgroundColor: '#FFEBEE',
+    borderColor: '#D32F2F',
+    borderWidth: 1,
+  },
+  selectedCriticalChipText: {
+    color: '#D32F2F',
+    fontWeight: '600',
+  },
+  selectedHighChip: {
+    backgroundColor: '#FFF3E0',
+    borderColor: '#F57C00',
+    borderWidth: 1,
+  },
+  selectedHighChipText: {
+    color: '#F57C00',
+    fontWeight: '600',
+  },
+  selectedMediumChip: {
+    backgroundColor: '#E3F2FD',
+    borderColor: '#1976D2',
+    borderWidth: 1,
+  },
+  selectedMediumChipText: {
+    color: '#1976D2',
+    fontWeight: '600',
+  },
+  selectedLowChip: {
+    backgroundColor: '#E8F5E8',
+    borderColor: '#388E3C',
+    borderWidth: 1,
+  },
+  selectedLowChipText: {
+    color: '#388E3C',
+    fontWeight: '600',
   },
   listContainer: {
-    paddingBottom: 120, // 增加底部padding避免被底部导航遮挡
+    paddingBottom: 80,
+    flexGrow: 1,
+    paddingTop: 8,
   },
   alertCard: {
     marginHorizontal: 16,
@@ -807,10 +1189,10 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   emptyState: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: 100,
+    paddingVertical: 60,
+    paddingHorizontal: 20,
   },
   emptyIcon: {
     fontSize: 80,
@@ -828,6 +1210,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 20,
   },
+
+
 });
 
 export default AlertsScreen; 

@@ -30,31 +30,75 @@ const LoginScreen = ({ navigation }) => {
   };
 
   const handleLogin = async () => {
+    console.log('🚀 开始登录流程...');
+    console.log('📱 登录参数:', { 
+      phone: formData.phone, 
+      userType: formData.userType,
+      timestamp: new Date().toISOString()
+    });
+
     // 验证输入
     if (!formData.phone.trim()) {
+      console.log('❌ 手机号为空');
       Alert.alert(t('common.warning'), t('auth.enterPhone'));
       return;
     }
     if (!formData.password.trim()) {
+      console.log('❌ 密码为空');
       Alert.alert(t('common.warning'), t('auth.enterPassword'));
       return;
     }
 
     try {
+      console.log('📡 发送登录请求...');
       const result = await dispatch(loginUser({
         phone: formData.phone,
         password: formData.password,
         userType: formData.userType
       }));
 
+      console.log('📋 登录结果:', {
+        type: result.type,
+        meta: result.meta,
+        hasPayload: !!result.payload
+      });
+
       if (loginUser.fulfilled.match(result)) {
+        console.log('✅ 登录成功!');
+        console.log('👤 用户信息:', result.payload.user);
         // 登录成功，导航会由AppNavigator自动处理
       } else {
-        // 登录失败
-        Alert.alert(t('auth.loginFailed'), result.payload || t('auth.checkCredentials'));
+        console.log('❌ 登录失败:', result.payload);
+        
+        // 提供详细的错误信息
+        let errorTitle = t('auth.loginFailed');
+        let errorMessage = result.payload || t('auth.checkCredentials');
+        
+        // 根据错误类型提供具体建议
+        if (typeof result.payload === 'string') {
+          if (result.payload.includes('网络')) {
+            errorMessage += '\n\n建议检查：\n• 网络连接是否正常\n• 后端服务是否启动\n• API地址是否正确';
+          } else if (result.payload.includes('密码') || result.payload.includes('用户')) {
+            errorMessage += '\n\n建议检查：\n• 手机号格式是否正确\n• 密码是否正确\n• 用户类型是否匹配';
+          } else if (result.payload.includes('500') || result.payload.includes('服务器')) {
+            errorMessage += '\n\n建议检查：\n• 后端服务器是否正常运行\n• 数据库连接是否正常\n• 查看服务器日志';
+          }
+        }
+        
+        Alert.alert(errorTitle, errorMessage);
       }
     } catch (error) {
-      Alert.alert(t('auth.loginFailed'), t('auth.networkError'));
+      console.log('🚨 登录异常:', error);
+      console.log('错误详情:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
+      
+      Alert.alert(
+        t('auth.loginFailed'), 
+        `网络连接失败\n\n错误信息: ${error.message}\n\n建议：\n• 检查网络连接\n• 确认后端服务运行\n• 查看控制台日志`
+      );
     }
   };
 
@@ -70,9 +114,29 @@ const LoginScreen = ({ navigation }) => {
               <Text variant="headlineLarge" style={styles.title}>
                 {t('auth.login')}
               </Text>
-              <TouchableOpacity onPress={quickFixLogin} style={styles.debugButton}>
-                <Ionicons name="bug" size={24} color="#007AFF" />
-              </TouchableOpacity>
+              <View style={styles.debugButtons}>
+                <TouchableOpacity onPress={quickFixLogin} style={styles.debugButton}>
+                  <Ionicons name="bug" size={20} color="#007AFF" />
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={async () => {
+                    console.log('🔍 开始全面诊断...');
+                    await diagnoseLoginIssues(formData.phone, formData.password, formData.userType);
+                  }} 
+                  style={styles.debugButton}
+                >
+                  <Ionicons name="medical" size={20} color="#FF6B35" />
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={async () => {
+                    console.log('⚡ 快速诊断...');
+                    await quickLoginDiagnosis();
+                  }} 
+                  style={styles.debugButton}
+                >
+                  <Ionicons name="flash" size={20} color="#28A745" />
+                </TouchableOpacity>
+              </View>
             </View>
             <Text variant="bodyLarge" style={styles.subtitle}>
               {t('auth.welcomeBack')}
@@ -164,7 +228,7 @@ const LoginScreen = ({ navigation }) => {
                   onPress={() => {
                     setFormData({
                       phone: '+8613800138000',
-                      password: '123456',
+                      password: 'test123456',
                       userType: 'patient'
                     });
                   }}
@@ -176,7 +240,7 @@ const LoginScreen = ({ navigation }) => {
                   onPress={() => {
                     setFormData({
                       phone: '+8613800138001',
-                      password: '123456',
+                      password: 'test123456',
                       userType: 'doctor'
                     });
                   }}
@@ -245,8 +309,14 @@ const styles = StyleSheet.create({
     color: '#666666',
     textAlign: 'center',
   },
+  debugButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
   debugButton: {
-    padding: 8,
+    padding: 6,
+    borderRadius: 4,
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
   },
   form: {
     flex: 1,

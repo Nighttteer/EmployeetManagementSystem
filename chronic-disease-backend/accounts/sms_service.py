@@ -51,20 +51,54 @@ class AliyunSMSService(BaseSMSService):
     def send_sms(self, phone: str, message: str) -> Tuple[bool, str]:
         """
         发送阿里云短信
-        注：这是示例实现，实际使用需要安装阿里云SDK
         """
         if not all([self.access_key_id, self.access_key_secret, self.template_code]):
             logger.warning("阿里云SMS配置不完整，使用模拟模式")
             return DemoSMSService().send_sms(phone, message)
         
         try:
-            # 这里应该使用阿里云SDK发送短信
-            # from alibabacloud_dysmsapi20170525.client import Client
-            # 实际实现请参考阿里云官方文档
+            # 导入阿里云SDK
+            from alibabacloud_dysmsapi20170525.client import Client as DysmsapiClient
+            from alibabacloud_dysmsapi20170525.models import SendSmsRequest
+            from alibabacloud_tea_openapi.models import Config
+            from alibabacloud_tea_util.models import RuntimeOptions
+            import json
             
-            logger.info(f"📱 [阿里云SMS] 发送到 {phone}: {message}")
-            return True, "短信发送成功"
+            # 配置客户端
+            config = Config(
+                access_key_id=self.access_key_id,
+                access_key_secret=self.access_key_secret,
+                endpoint='dysmsapi.aliyuncs.com'
+            )
+            client = DysmsapiClient(config)
             
+            # 提取验证码（假设message格式为：【签名】您的验证码是 123456，5分钟内有效...）
+            import re
+            code_match = re.search(r'(\d{6})', message)
+            verification_code = code_match.group(1) if code_match else '000000'
+            
+            # 构建请求
+            request = SendSmsRequest(
+                phone_numbers=phone,
+                sign_name=self.sign_name,
+                template_code=self.template_code,
+                template_param=json.dumps({'code': verification_code})
+            )
+            
+            # 发送短信
+            runtime = RuntimeOptions()
+            response = client.send_sms_with_options(request, runtime)
+            
+            if response.body.code == 'OK':
+                logger.info(f"📱 [阿里云SMS] 发送成功到 {phone}")
+                return True, "短信发送成功"
+            else:
+                logger.error(f"阿里云SMS发送失败: {response.body.code} - {response.body.message}")
+                return False, f"短信发送失败: {response.body.message}"
+                
+        except ImportError:
+            logger.error("阿里云SDK未安装，请运行: pip install alibabacloud-dysmsapi20170525")
+            return DemoSMSService().send_sms(phone, message)
         except Exception as e:
             logger.error(f"阿里云SMS发送失败: {str(e)}")
             return False, f"短信发送失败: {str(e)}"

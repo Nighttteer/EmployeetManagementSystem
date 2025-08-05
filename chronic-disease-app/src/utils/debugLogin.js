@@ -5,7 +5,7 @@ import { API_BASE_URL } from '../services/api';
 /**
  * 调试登录功能
  */
-export const debugLogin = async (phone = '+8613800138000', password = '123456', userType = 'patient') => {
+export const debugLogin = async (phone = '+8613800138000', password = 'test123456', userType = 'patient') => {
   console.log('🔍 开始调试登录功能...');
   console.log('参数:', { phone, password: '***', userType });
 

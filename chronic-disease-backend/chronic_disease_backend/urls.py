@@ -48,7 +48,8 @@ urlpatterns = [
     path('api/', api_root, name='api_root'),
     
     # 各应用API路由
-    path('api/auth/', include('accounts.urls')),
+    path('api/auth/', include(('accounts.urls', 'accounts'), namespace='auth')),
+    path('api/accounts/', include(('accounts.urls', 'accounts'), namespace='accounts')),
     path('api/user/', include('accounts.user_urls')),  # 使用专门的user路由配置
     path('api/health/', include('health.urls')),
     path('api/communication/', include('communication.urls')),

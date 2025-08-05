@@ -344,14 +344,22 @@ class PasswordResetSerializer(serializers.Serializer):
 
 class UserListSerializer(serializers.ModelSerializer):
     """用户列表序列化器（用于医生查看患者列表等）"""
+    risk_level = serializers.SerializerMethodField()
     
     class Meta:
         model = User
         fields = [
             'id', 'name', 'email', 'role', 'phone', 'age', 'gender',
-            'avatar', 'is_profile_complete', 'created_at', 'last_login'
+            'avatar', 'is_profile_complete', 'created_at', 'last_login',
+            'chronic_diseases', 'risk_level'  # 添加疾病和风险等级字段
         ]
-        read_only_fields = fields 
+        read_only_fields = fields
+    
+    def get_risk_level(self, obj):
+        """计算并返回患者的风险等级"""
+        if obj.role != 'patient':
+            return 'unassessed'
+        return obj.get_disease_risk_level() 
 
 # SMS验证相关序列化器
 class SendSMSCodeSerializer(serializers.Serializer):
@@ -612,4 +620,68 @@ class UserRegistrationWithSMSSerializer(serializers.ModelSerializer):
         if verification_code:
             verification_code.mark_as_used()
         
-        return user 
+        return user
+
+
+class PatientUpdateSerializer(serializers.ModelSerializer):
+    """患者信息更新序列化器（专门用于医生更新患者信息）"""
+    
+    class Meta:
+        model = User
+        fields = [
+            'name', 'age', 'gender', 'phone', 'address',
+            'emergency_contact', 'emergency_phone',
+            'height', 'blood_type', 'smoking_status',
+            'chronic_diseases'  # 支持疾病信息更新
+        ]
+        extra_kwargs = {
+            'name': {'required': False},
+            'age': {'required': False},
+            'gender': {'required': False},
+            'phone': {'required': False},
+            'chronic_diseases': {'required': False, 'allow_null': True},
+        }
+    
+    def validate_chronic_diseases(self, value):
+        """验证chronic_diseases字段"""
+        # 允许None（未评估）、空列表（健康）或疾病ID列表
+        if value is None:
+            return value  # 未评估状态
+        
+        if isinstance(value, list):
+            # 验证疾病ID是否有效（可选，根据需要实现）
+            valid_diseases = [
+                'alzheimer', 'arthritis', 'asthma', 'cancer', 'copd', 
+                'crohn', 'cystic_fibrosis', 'dementia', 'diabetes', 
+                'endometriosis', 'epilepsy', 'fibromyalgia', 'heart_disease', 
+                'hypertension', 'hiv_aids', 'migraine', 'mood_disorder', 
+                'multiple_sclerosis', 'narcolepsy', 'parkinson', 
+                'sickle_cell', 'ulcerative_colitis'
+            ]
+            
+            for disease in value:
+                if disease not in valid_diseases:
+                    raise serializers.ValidationError(f"无效的疾病ID: {disease}")
+            
+            return value
+        
+        raise serializers.ValidationError("chronic_diseases必须是None或疾病ID列表")
+    
+    def update(self, instance, validated_data):
+        """更新患者信息"""
+        # 记录更新前的状态（用于日志）
+        old_diseases = instance.chronic_diseases
+        
+        # 执行更新
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        
+        instance.save()
+        
+        # 记录日志
+        new_diseases = instance.chronic_diseases
+        print(f"💾 患者信息序列化器更新: {instance.name}")
+        print(f"   疾病状态: {old_diseases} → {new_diseases}")
+        print(f"   风险等级: {instance.get_disease_risk_level()}")
+        
+        return instance 

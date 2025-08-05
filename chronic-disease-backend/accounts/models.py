@@ -36,6 +36,7 @@ class User(AbstractUser):
     height = models.FloatField('身高(cm)', blank=True, null=True)
     blood_type = models.CharField('血型', max_length=10, blank=True, null=True)
     smoking_status = models.CharField('吸烟状况', max_length=20, blank=True, null=True)
+    chronic_diseases = models.JSONField('慢性疾病列表', blank=True, null=True, default=None, help_text='存储患者的慢性疾病ID列表。None=未评估，[]=健康，[diseases]=有疾病')
     
     # 时间戳
     created_at = models.DateTimeField('创建时间', auto_now_add=True)
@@ -100,6 +101,62 @@ class User(AbstractUser):
             total_fields = len(required_fields)
         
         return int((completed_fields / total_fields) * 100)
+    
+    def get_disease_risk_level(self):
+        """
+        根据患者的慢性疾病计算风险等级
+        返回: 'unassessed', 'healthy', 'low', 'medium', 'high'
+        """
+        if not self.is_patient:
+            return 'unassessed'
+        
+        # 如果chronic_diseases字段为None，说明医生还没有进行疾病评估
+        if self.chronic_diseases is None:
+            return 'unassessed'
+        
+        # 如果chronic_diseases是空列表[]，说明医生已评估但患者没有疾病
+        if len(self.chronic_diseases) == 0:
+            return 'healthy'
+        
+        # 疾病风险分类（基于医学严重程度和生活质量影响）
+        high_risk_diseases = [
+            'cancer',           # 癌症 - 生命威胁
+            'heart_disease',    # 心脏病 - 心血管风险
+            'copd',            # 慢性阻塞性肺病 - 呼吸系统严重疾病
+            'multiple_sclerosis', # 多发性硬化症 - 神经系统退行性疾病
+            'parkinson',       # 帕金森病 - 神经退行性疾病
+            'dementia',        # 痴呆症 - 认知功能严重衰退
+            'alzheimer',       # 阿尔茨海默病 - 认知功能严重衰退
+            'cystic_fibrosis', # 囊性纤维化 - 遗传性严重疾病
+            'sickle_cell'      # 镰状细胞病 - 遗传性血液疾病
+        ]
+        
+        medium_risk_diseases = [
+            'diabetes',        # 糖尿病 - 代谢性疾病，需要持续管理
+            'hypertension',    # 高血压 - 心血管危险因素
+            'asthma',          # 哮喘 - 慢性呼吸系统疾病
+            'epilepsy',        # 癫痫 - 神经系统疾病
+            'crohn',           # 克罗恩病 - 炎症性肠病
+            'ulcerative_colitis', # 溃疡性结肠炎 - 炎症性肠病
+            'endometriosis',   # 子宫内膜异位症 - 妇科慢性疾病
+            'hiv_aids',        # 艾滋病 - 免疫系统疾病
+            'mood_disorder',   # 情绪障碍 - 精神健康问题
+            'narcolepsy'       # 嗜睡症 - 睡眠障碍
+        ]
+        
+        # 低风险疾病（其他未列出的疾病自动归为低风险）
+        # 包括：arthritis, fibromyalgia, migraine 等
+        
+        # 检查高风险疾病
+        if any(disease in high_risk_diseases for disease in self.chronic_diseases):
+            return 'high'
+        
+        # 检查中风险疾病
+        if any(disease in medium_risk_diseases for disease in self.chronic_diseases):
+            return 'medium'
+        
+        # 有疾病但都是低风险的，或者没有疾病
+        return 'low'
     
     def save(self, *args, **kwargs):
         # 自动更新资料完整度状态

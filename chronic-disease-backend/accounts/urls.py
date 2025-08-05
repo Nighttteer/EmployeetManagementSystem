@@ -27,6 +27,7 @@ urlpatterns = [
     # 用户列表
     path('patients/', views.PatientListView.as_view(), name='patient_list'),
     path('patients/create/', views.PatientCreateView.as_view(), name='patient_create'),
+    path('patients/<int:pk>/update/', views.PatientUpdateView.as_view(), name='patient_update'),
     path('patients/unassigned/', views.UnassignedPatientsView.as_view(), name='unassigned_patients'),
     path('patients/bind-doctor/', views.DoctorPatientBindView.as_view(), name='bind_doctor'),
     path('doctors/', views.DoctorListView.as_view(), name='doctor_list'),

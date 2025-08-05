@@ -2,8 +2,11 @@ from django.shortcuts import render
 from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
+
+# 注意：智能提醒相关的视图在intelligent_views.py中定义
+# 在urls.py中直接导入使用，这里不需要重复导入
 from django.utils import timezone
-from django.db.models import Q
+from django.db.models import Q, Count
 from datetime import datetime, timedelta
 from .models import HealthMetric, HealthRecord, ThresholdSetting, DoctorAdvice, Alert
 from .serializers import (
@@ -142,6 +145,196 @@ def health_dashboard(request):
         'unread_advice_count': unread_advice,
         'active_alerts_count': active_alerts,
         'last_measurement': recent_metrics.first().measured_at if recent_metrics.exists() else None,
+    }
+    
+    return Response(response_data)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def doctor_dashboard(request):
+    """医生端仪表板数据"""
+    user = request.user
+    
+    if user.role != 'doctor':
+        return Response(
+            {"error": "只有医生可以查看医生仪表板"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    from .models import DoctorPatientRelation
+    from medication.models import MedicationReminder
+    
+    # 1. 患者总人数 - 该医生管理的活跃患者
+    patient_relations = DoctorPatientRelation.objects.filter(
+        doctor=user,
+        status='active'
+    )
+    total_patients = patient_relations.count()
+    
+    # 获取患者ID列表
+    patient_ids = list(patient_relations.values_list('patient_id', flat=True))
+    
+    # 2. 活跃告警 - 待处理的告警数量
+    active_alerts = Alert.objects.filter(
+        assigned_doctor=user,
+        status='pending'
+    ).count()
+    
+    # 3. 今日咨询 - 模拟数据（因为没有咨询表）
+    today_consultations = 0  # 暂时为0，后续可以从就诊记录获取
+    
+    # 4. 药物依从性 - 计算最近7天的用药依从率
+    from datetime import timedelta
+    seven_days_ago = timezone.now() - timedelta(days=7)
+    
+    if patient_ids:
+        # 最近7天的用药提醒
+        total_reminders = MedicationReminder.objects.filter(
+            plan__patient_id__in=patient_ids,
+            reminder_time__gte=seven_days_ago
+        ).count()
+        
+        # 已确认的用药记录
+        confirmed_reminders = MedicationReminder.objects.filter(
+            plan__patient_id__in=patient_ids,
+            reminder_time__gte=seven_days_ago,
+            status='taken'
+        ).count()
+        
+        # 计算依从率
+        medication_compliance = round(
+            (confirmed_reminders / total_reminders * 100) if total_reminders > 0 else 0,
+            1
+        )
+    else:
+        medication_compliance = 0
+    
+    # 5. 风险分布统计
+    if patient_ids:
+        # 获取患者的最新健康指标进行风险评估
+        from collections import defaultdict
+        risk_distribution = defaultdict(int)
+        
+        for patient_id in patient_ids:
+            # 获取最近的血压和血糖数据
+            recent_bp = HealthMetric.objects.filter(
+                patient_id=patient_id,
+                metric_type='blood_pressure'
+            ).order_by('-measured_at').first()
+            
+            recent_bg = HealthMetric.objects.filter(
+                patient_id=patient_id,
+                metric_type='blood_glucose'
+            ).order_by('-measured_at').first()
+            
+            # 简单的风险评估逻辑
+            risk_level = 'low'
+            if recent_bp and (recent_bp.systolic >= 140 or recent_bp.diastolic >= 90):
+                risk_level = 'high'
+            elif recent_bg and recent_bg.blood_glucose >= 7.0:
+                risk_level = 'high'
+            elif (recent_bp and (recent_bp.systolic >= 130 or recent_bp.diastolic >= 80)) or \
+                 (recent_bg and recent_bg.blood_glucose >= 6.1):
+                risk_level = 'medium'
+            
+            risk_distribution[risk_level] += 1
+        
+        patient_risk_distribution = [
+            { 'label': '高风险', 'value': risk_distribution['high'], 'color': '#F44336' },
+            { 'label': '中风险', 'value': risk_distribution['medium'], 'color': '#FF9800' },
+            { 'label': '低风险', 'value': risk_distribution['low'], 'color': '#4CAF50' }
+        ]
+    else:
+        patient_risk_distribution = [
+            { 'label': '高风险', 'value': 0, 'color': '#F44336' },
+            { 'label': '中风险', 'value': 0, 'color': '#FF9800' },
+            { 'label': '低风险', 'value': 0, 'color': '#4CAF50' }
+        ]
+    
+    # 6. 告警类型分布
+    alert_types_stats = Alert.objects.filter(
+        assigned_doctor=user
+    ).values('alert_type').annotate(count=Count('id'))
+    
+    alert_types = []
+    for stat in alert_types_stats:
+        type_name = {
+            'threshold_exceeded': '指标异常',
+            'missed_medication': '用药提醒',
+            'abnormal_trend': '趋势异常',
+            'system_notification': '系统通知'
+        }.get(stat['alert_type'], stat['alert_type'])
+        
+        alert_types.append({
+            'label': type_name,
+            'value': stat['count']
+        })
+    
+    # 7. 最近患者活动 - 获取最近有健康数据更新的患者
+    recent_patients = []
+    if patient_ids:
+        recent_metrics = HealthMetric.objects.filter(
+            patient_id__in=patient_ids
+        ).select_related('patient').order_by('-measured_at')[:5]
+        
+        for metric in recent_metrics:
+            # 简单的风险评估
+            risk_level = 'low'
+            condition = '正常'
+            
+            if metric.metric_type == 'blood_pressure' and metric.systolic:
+                if metric.systolic >= 140:
+                    risk_level = 'high'
+                    condition = '血压偏高'
+                elif metric.systolic >= 130:
+                    risk_level = 'medium'
+                    condition = '血压偏高'
+            elif metric.metric_type == 'blood_glucose' and metric.blood_glucose:
+                if metric.blood_glucose >= 7.0:
+                    risk_level = 'high'
+                    condition = '血糖偏高'
+                elif metric.blood_glucose >= 6.1:
+                    risk_level = 'medium'
+                    condition = '血糖偏高'
+            
+            # 计算时间差
+            time_diff = timezone.now() - metric.measured_at
+            if time_diff.days > 0:
+                last_visit = f'{time_diff.days}天前'
+            elif time_diff.seconds > 3600:
+                last_visit = f'{time_diff.seconds // 3600}小时前'
+            else:
+                last_visit = f'{time_diff.seconds // 60}分钟前'
+            
+            recent_patients.append({
+                'id': metric.patient.id,
+                'name': metric.patient.name,
+                'age': metric.patient.age or 0,
+                'riskLevel': risk_level,
+                'lastVisit': last_visit,
+                'condition': condition
+            })
+    
+    # 准备响应数据
+    response_data = {
+        'stats': {
+            'totalPatients': total_patients,
+            'activeAlerts': active_alerts,
+            'todayConsultations': today_consultations,
+            'medicationCompliance': medication_compliance,
+        },
+        'trends': {
+            'patientGrowth': 0,  # 需要历史数据计算
+            'alertReduction': 0,  # 需要历史数据计算
+            'consultationIncrease': 0,  # 需要历史数据计算
+            'complianceImprovement': 0,  # 需要历史数据计算
+        },
+        'patientRiskDistribution': patient_risk_distribution,
+        'alertTypes': alert_types,
+        'recentPatients': recent_patients,
+        'dataSource': 'database',
+        'lastUpdated': timezone.now().isoformat()
     }
     
     return Response(response_data)
