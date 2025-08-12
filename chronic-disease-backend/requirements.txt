@@ -4,4 +4,18 @@ djangorestframework-simplejwt==5.5.0
 django-cors-headers==4.7.0
 python-decouple==3.8
 Pillow==11.2.1
-requests==2.32.3 
+requests==2.32.3
+
+# 测试依赖
+pytest==8.3.3
+pytest-django==4.9.0
+pytest-cov==6.0.0
+factory-boy==3.3.1
+faker==30.8.2
+
+# 性能测试
+locust==2.32.0
+
+# 安全测试
+bandit==1.8.0
+safety==3.2.11 
