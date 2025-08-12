@@ -77,7 +77,7 @@ export const authAPI = {
     return apiClient.post('/auth/login/', {
       phone,
       password,
-      user_type: role,  // 修正参数名：role -> user_type
+      role,  // 修正参数名：使用role而不是user_type
     });
   },
 
