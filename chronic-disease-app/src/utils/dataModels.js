@@ -25,11 +25,11 @@ export const MESSAGE_TYPES = {
   IMAGE: 'image'
 };
 
-// 健康指标表单字段配置
+// 健康指标表单字段配置 - 使用翻译键而不是硬编码文本
 export const HEALTH_METRIC_FIELDS = {
   [METRIC_TYPES.BLOOD_PRESSURE]: {
     fields: ['systolic', 'diastolic'],
-    labels: { systolic: '收缩压', diastolic: '舒张压' },
+    labelKeys: { systolic: 'health.systolicBP', diastolic: 'health.diastolicBP' },
     units: { systolic: 'mmHg', diastolic: 'mmHg' },
     validations: {
       systolic: { min: 60, max: 250 },
@@ -38,7 +38,7 @@ export const HEALTH_METRIC_FIELDS = {
   },
   [METRIC_TYPES.BLOOD_GLUCOSE]: {
     fields: ['blood_glucose'],
-    labels: { blood_glucose: '血糖' },
+    labelKeys: { blood_glucose: 'health.bloodGlucose' },
     units: { blood_glucose: 'mmol/L' },
     validations: {
       blood_glucose: { min: 2, max: 30 }
@@ -46,7 +46,7 @@ export const HEALTH_METRIC_FIELDS = {
   },
   [METRIC_TYPES.HEART_RATE]: {
     fields: ['heart_rate'],
-    labels: { heart_rate: '心率' },
+    labelKeys: { heart_rate: 'health.heartRate' },
     units: { heart_rate: 'bpm' },
     validations: {
       heart_rate: { min: 40, max: 200 }
@@ -54,7 +54,7 @@ export const HEALTH_METRIC_FIELDS = {
   },
   [METRIC_TYPES.WEIGHT]: {
     fields: ['weight'],
-    labels: { weight: '体重' },
+    labelKeys: { weight: 'health.weight' },
     units: { weight: 'kg' },
     validations: {
       weight: { min: 20, max: 300 }
@@ -62,7 +62,7 @@ export const HEALTH_METRIC_FIELDS = {
   },
   [METRIC_TYPES.URIC_ACID]: {
     fields: ['uric_acid'],
-    labels: { uric_acid: '尿酸' },
+    labelKeys: { uric_acid: 'health.uricAcid' },
     units: { uric_acid: 'μmol/L' },
     validations: {
       uric_acid: { min: 100, max: 800 }
@@ -70,11 +70,11 @@ export const HEALTH_METRIC_FIELDS = {
   },
   [METRIC_TYPES.LIPIDS]: {
     fields: ['lipids_total', 'hdl', 'ldl', 'triglyceride'],
-    labels: {
-      lipids_total: '总胆固醇',
-      hdl: '高密度脂蛋白',
-      ldl: '低密度脂蛋白',
-      triglyceride: '甘油三酯'
+    labelKeys: {
+      lipids_total: 'health.totalCholesterol',
+      hdl: 'health.hdlCholesterol',
+      ldl: 'health.ldlCholesterol',
+      triglyceride: 'health.triglycerides'
     },
     units: {
       lipids_total: 'mmol/L',

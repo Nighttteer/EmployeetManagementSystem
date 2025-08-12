@@ -36,9 +36,8 @@ const languageDetector = {
         return;
       }
       
-      // 如果没有保存的语言设置，使用设备语言
-      const deviceLanguage = getDeviceLanguage();
-      callback(deviceLanguage);
+      // 如果没有保存的语言设置，默认使用英文
+      callback('en');
     } catch (error) {
       console.warn('语言检测失败，使用默认语言', error);
       callback('en');

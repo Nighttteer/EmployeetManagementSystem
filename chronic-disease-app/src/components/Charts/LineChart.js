@@ -54,7 +54,7 @@ const LineChart = ({
       (chartData.length === 1 && (!chartData[0].data || chartData[0].data.length === 0))) {
     return (
       <View style={{ width: screenWidth, height, justifyContent: 'center', alignItems: 'center' }}>
-        <Text>暂无数据</Text>
+        <Text>No data available</Text>
       </View>
     );
   }
@@ -66,7 +66,7 @@ const LineChart = ({
   if (validValues.length === 0) {
     return (
       <View style={{ width: screenWidth, height, justifyContent: 'center', alignItems: 'center' }}>
-        <Text>暂无有效数据</Text>
+        <Text>No valid data</Text>
       </View>
     );
   }

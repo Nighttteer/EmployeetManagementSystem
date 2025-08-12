@@ -1,6 +1,10 @@
 """
 告警相关API视图
 基于真实数据库数据的告警系统
+
+Alert-related API views backed by real database entities. These endpoints
+enforce doctor-only operations where appropriate and return structured
+payloads suitable for dashboards and detail pages.
 """
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -23,7 +27,7 @@ def get_doctor_alerts(request, doctor_id):
     
     API路径: /api/alerts/doctor/{doctor_id}/
     
-    数据流程:
+    数据流程 / Data flow:
     1. 验证医生身份
     2. 从Alert表查询该医生的告警
     3. 返回告警列表和统计数据
@@ -69,7 +73,7 @@ def analyze_patient_data(request, doctor_id):
     
     API路径: /api/alerts/doctor/{doctor_id}/analyze/
     
-    数据分析流程:
+    数据分析流程 / Analysis pipeline:
     1. 查询DoctorPatientRelation获取医生的患者
     2. 从HealthMetric表获取患者最近3天数据
     3. 从MedicationReminder表分析用药依从性
@@ -119,7 +123,7 @@ def handle_alert(request, alert_id):
         
         alert = Alert.objects.get(id=alert_id)
         
-        # 验证权限
+        # 验证权限 / Ensure the alert belongs to the current doctor
         if alert.assigned_doctor != request.user:
             return Response({
                 'error': '无权限处理此告警'
@@ -134,7 +138,7 @@ def handle_alert(request, alert_id):
                 'error': '无效的处理动作'
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        # 更新告警状态
+        # 更新告警状态 / Persist handling outcome with metadata
         alert.status = action
         alert.handled_at = timezone.now()
         alert.handled_by = request.user
@@ -176,7 +180,7 @@ def get_patient_health_data(request, patient_id):
         from medication.models import MedicationReminder
         from datetime import timedelta
         
-        # 获取最近7天的数据
+        # 获取最近7天的数据 / Restrict the timeframe to last 7 days
         end_date = timezone.now()
         start_date = end_date - timedelta(days=7)
         

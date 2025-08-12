@@ -1,6 +1,6 @@
 /**
- * 智能异常提醒服务
- * 为医生端提供智能提醒功能
+ * Intelligent Alert Service
+ * Provides intelligent alert functionality for doctors
  */
 import { api } from './api';
 
@@ -10,13 +10,13 @@ class IntelligentAlertService {
   }
 
   /**
-   * 获取智能提醒列表
-   * @param {Object} params - 查询参数
-   * @param {number} params.patient_id - 病人ID（可选）
-   * @param {string} params.priority - 优先级（可选）
-   * @param {string} params.type - 提醒类型（可选）
-   * @param {number} params.days - 查看天数（默认7天）
-   * @returns {Promise} 智能提醒数据
+   * Get intelligent alerts list
+   * @param {Object} params - Query parameters
+   * @param {number} params.patient_id - Patient ID (optional)
+   * @param {string} params.priority - Priority level (optional)
+   * @param {string} params.type - Alert type (optional)
+   * @param {number} params.days - Days to view (default 7 days)
+   * @returns {Promise} Intelligent alert data
    */
   async getIntelligentAlerts(params = {}) {
     try {
@@ -25,15 +25,15 @@ class IntelligentAlertService {
       });
       return response.data;
     } catch (error) {
-      console.error('获取智能提醒失败:', error);
+      console.error('Failed to get intelligent alerts:', error);
       throw error;
     }
   }
 
   /**
-   * 手动触发智能提醒生成
-   * @param {number} patientId - 病人ID（可选，不传则为所有病人生成）
-   * @returns {Promise} 生成结果
+   * Manually trigger intelligent alert generation
+   * @param {number} patientId - Patient ID (optional, generate for all patients if not provided)
+   * @returns {Promise} Generation result
    */
   async generateIntelligentAlerts(patientId = null) {
     try {
@@ -41,15 +41,15 @@ class IntelligentAlertService {
       const response = await api.post(`${this.baseUrl}/intelligent-alerts/generate/`, data);
       return response.data;
     } catch (error) {
-      console.error('生成智能提醒失败:', error);
+      console.error('Failed to generate intelligent alerts:', error);
       throw error;
     }
   }
 
   /**
-   * 获取病人风险分析
-   * @param {number} patientId - 病人ID
-   * @returns {Promise} 风险分析结果
+   * Get patient risk analysis
+   * @param {number} patientId - Patient ID
+   * @returns {Promise} Risk analysis result
    */
   async getPatientRiskAnalysis(patientId) {
     try {
@@ -58,93 +58,93 @@ class IntelligentAlertService {
       });
       return response.data;
     } catch (error) {
-      console.error('获取风险分析失败:', error);
+      console.error('Failed to get risk analysis:', error);
       throw error;
     }
   }
 
   /**
-   * 处理告警
-   * @param {number} alertId - 告警ID
-   * @param {Object} data - 处理数据
-   * @param {string} data.action_taken - 采取的措施
-   * @param {string} data.notes - 备注
-   * @returns {Promise} 处理结果
+   * Handle alert
+   * @param {number} alertId - Alert ID
+   * @param {Object} data - Handling data
+   * @param {string} data.action_taken - Action taken
+   * @param {string} data.notes - Notes
+   * @returns {Promise} Handling result
    */
   async handleAlert(alertId, data) {
     try {
       const response = await api.post(`${this.baseUrl}/alerts/${alertId}/handle/`, data);
       return response.data;
     } catch (error) {
-      console.error('处理告警失败:', error);
+      console.error('Failed to handle alert:', error);
       throw error;
     }
   }
 
   /**
-   * 获取告警统计信息
-   * @param {Object} params - 查询参数
-   * @returns {Promise} 统计数据
+   * Get alert statistics
+   * @param {Object} params - Query parameters
+   * @returns {Promise} Statistics data
    */
   async getAlertStats(params = {}) {
     try {
       const response = await this.getIntelligentAlerts(params);
       return response.stats;
     } catch (error) {
-      console.error('获取告警统计失败:', error);
+      console.error('Failed to get alert statistics:', error);
       throw error;
     }
   }
 
   /**
-   * 获取优先级颜色
-   * @param {string} priority - 优先级
-   * @returns {string} 颜色值
+   * Get priority color
+   * @param {string} priority - Priority level
+   * @returns {string} Color value
    */
   getPriorityColor(priority) {
     const colors = {
-      'critical': '#F44336',  // 红色
-      'high': '#FF9800',      // 橙色
-      'medium': '#FFC107',    // 黄色
-      'low': '#4CAF50'        // 绿色
+      'critical': '#F44336',  // Red
+      'high': '#FF9800',      // Orange
+      'medium': '#FFC107',    // Yellow
+      'low': '#4CAF50'        // Green
     };
     return colors[priority] || '#9E9E9E';
   }
 
   /**
-   * 获取优先级文本
-   * @param {string} priority - 优先级
-   * @returns {string} 优先级文本
+   * Get priority text
+   * @param {string} priority - Priority level
+   * @returns {string} Priority text
    */
   getPriorityText(priority) {
     const texts = {
-      'critical': '危急',
-      'high': '高',
-      'medium': '中',
-      'low': '低'
+      'critical': 'Critical',
+      'high': 'High',
+      'medium': 'Medium',
+      'low': 'Low'
     };
-    return texts[priority] || '未知';
+    return texts[priority] || 'Unknown';
   }
 
   /**
-   * 获取提醒类型文本
-   * @param {string} type - 提醒类型
-   * @returns {string} 类型文本
+   * Get alert type text
+   * @param {string} type - Alert type
+   * @returns {string} Type text
    */
   getAlertTypeText(type) {
     const texts = {
-      'missed_medication': '漏服药物',
-      'threshold_exceeded': '阈值超标',
-      'abnormal_trend': '异常趋势',
-      'system_notification': '系统通知'
+      'missed_medication': 'Missed Medication',
+      'threshold_exceeded': 'Threshold Exceeded',
+      'abnormal_trend': 'Abnormal Trend',
+      'system_notification': 'System Notification'
     };
-    return texts[type] || '未知类型';
+    return texts[type] || 'Unknown Type';
   }
 
   /**
-   * 获取提醒类型图标
-   * @param {string} type - 提醒类型
-   * @returns {string} 图标名称
+   * Get alert type icon
+   * @param {string} type - Alert type
+   * @returns {string} Icon name
    */
   getAlertTypeIcon(type) {
     const icons = {
@@ -157,9 +157,9 @@ class IntelligentAlertService {
   }
 
   /**
-   * 格式化时间
-   * @param {string} dateString - 时间字符串
-   * @returns {string} 格式化后的时间
+   * Format time
+   * @param {string} dateString - Date string
+   * @returns {string} Formatted time
    */
   formatTime(dateString) {
     const date = new Date(dateString);
@@ -167,13 +167,13 @@ class IntelligentAlertService {
     const diffInSeconds = Math.floor((now - date) / 1000);
 
     if (diffInSeconds < 60) {
-      return '刚刚';
+      return 'Just now';
     } else if (diffInSeconds < 3600) {
-      return `${Math.floor(diffInSeconds / 60)}分钟前`;
+      return `${Math.floor(diffInSeconds / 60)} minutes ago`;
     } else if (diffInSeconds < 86400) {
-      return `${Math.floor(diffInSeconds / 3600)}小时前`;
+      return `${Math.floor(diffInSeconds / 3600)} hours ago`;
     } else {
-      return date.toLocaleDateString('zh-CN', {
+      return date.toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
         hour: '2-digit',
@@ -185,6 +185,6 @@ class IntelligentAlertService {
 
 }
 
-// 导出服务实例
+// Export service instance
 export const intelligentAlertService = new IntelligentAlertService();
 export default intelligentAlertService;

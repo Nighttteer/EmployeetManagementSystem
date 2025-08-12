@@ -33,7 +33,7 @@ const PieChart = ({
   if (!data || data.length === 0) {
     return (
       <View style={{ width: screenWidth, height, justifyContent: 'center', alignItems: 'center' }}>
-        <Text>暂无数据</Text>
+        <Text>No data available</Text>
       </View>
     );
   }
@@ -50,7 +50,7 @@ const PieChart = ({
   if (validData.length === 0) {
     return (
       <View style={{ width: screenWidth, height, justifyContent: 'center', alignItems: 'center' }}>
-        <Text>暂无有效数据</Text>
+        <Text>No valid data</Text>
       </View>
     );
   }
@@ -62,7 +62,7 @@ const PieChart = ({
   if (total <= 0) {
     return (
       <View style={{ width: screenWidth, height, justifyContent: 'center', alignItems: 'center' }}>
-        <Text>数据总值无效</Text>
+        <Text>Invalid total value</Text>
       </View>
     );
   }

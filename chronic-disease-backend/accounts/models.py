@@ -7,6 +7,13 @@ class User(AbstractUser):
     """
     用户统一模型：包括患者、医生、管理员
     基于用户提供的数据库架构设计
+
+    Unified user model covering patient, doctor, and admin roles.
+
+    Security notes:
+    - `USERNAME_FIELD` is set to `email` to reduce ambiguity.
+    - Passwords are hashed via Django auth pipeline; never stored in plaintext.
+    - `last_login_ip` helps with audit and suspicious activity review.
     """
     ROLE_CHOICES = settings.USER_ROLES
     GENDER_CHOICES = settings.GENDER_CHOICES
@@ -76,7 +83,7 @@ class User(AbstractUser):
         return self.role == 'admin'
     
     def get_full_profile_completion(self):
-        """计算用户资料完整度"""
+        """计算用户资料完整度 / Compute a simple profile completion score (0-100)."""
         required_fields = ['name', 'email', 'phone', 'age', 'gender']
         completed_fields = 0
         
@@ -106,6 +113,9 @@ class User(AbstractUser):
         """
         根据患者的慢性疾病计算风险等级
         返回: 'unassessed', 'healthy', 'low', 'medium', 'high'
+
+        Compute a coarse-grained disease risk classification using the
+        presence of specific chronic disease identifiers.
         """
         if not self.is_patient:
             return 'unassessed'
@@ -159,7 +169,7 @@ class User(AbstractUser):
         return 'low'
     
     def save(self, *args, **kwargs):
-        # 自动更新资料完整度状态
+        # 自动更新资料完整度状态 / Auto-update profile completeness flag
         completion = self.get_full_profile_completion()
         self.is_profile_complete = completion >= 80
         super().save(*args, **kwargs)
@@ -168,6 +178,9 @@ class User(AbstractUser):
 class UserProfile(models.Model):
     """
     用户资料扩展模型（可选）
+
+    Optional extension of user profile for preferences and clinical
+    summary fields. Created automatically on user creation.
     """
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     
@@ -205,9 +218,16 @@ def create_user_profile(sender, instance, created, **kwargs):
     if created:
         UserProfile.objects.create(user=instance)
 
-
+#SMS CAPTCHA model
 class SMSVerificationCode(models.Model):
-    """SMS验证码模型"""
+    """
+    SMS验证码模型
+
+    SMS verification code entity with basic anti-abuse controls:
+    - Expiration window (default 5 minutes)
+    - Attempt counter with an upper bound
+    - Mark-as-used semantics to prevent replay
+    """
     phone = models.CharField('手机号', max_length=20)
     code = models.CharField('验证码', max_length=6)
     purpose = models.CharField('用途', max_length=20, choices=[
@@ -217,11 +237,11 @@ class SMSVerificationCode(models.Model):
         ('change_phone', '更换手机号'),
     ], default='register')
     
-    # 状态管理
+    # Status Management
     is_used = models.BooleanField('是否已使用', default=False)
     is_verified = models.BooleanField('是否已验证', default=False)
     
-    # 时间戳
+    # timestamp
     created_at = models.DateTimeField('创建时间', auto_now_add=True)
     used_at = models.DateTimeField('使用时间', null=True, blank=True)
     expires_at = models.DateTimeField('过期时间')
@@ -246,17 +266,17 @@ class SMSVerificationCode(models.Model):
     
     @property
     def is_expired(self):
-        """检查验证码是否过期"""
+        """检查验证码是否过期 / True if current time is past expiry."""
         from django.utils import timezone
         return timezone.now() > self.expires_at
     
     @property
     def is_valid(self):
-        """检查验证码是否有效（未使用且未过期）"""
+        """检查验证码是否有效（未使用且未过期） / Convenience validity check."""
         return not self.is_used and not self.is_expired
     
     def mark_as_used(self):
-        """标记验证码为已使用"""
+        """标记验证码为已使用 / Mark code as used and verified with timestamp."""
         from django.utils import timezone
         self.is_used = True
         self.is_verified = True
@@ -264,19 +284,24 @@ class SMSVerificationCode(models.Model):
         self.save(update_fields=['is_used', 'is_verified', 'used_at'])
     
     def increment_attempt(self):
-        """增加验证尝试次数"""
+        """增加验证尝试次数 / Increment and persist attempt counter."""
         self.attempt_count += 1
         self.save(update_fields=['attempt_count'])
     
     @classmethod
     def generate_code(cls):
-        """生成6位随机验证码"""
+        """生成6位随机验证码 / Generate a 6-digit numeric code as string."""
         import random
         return ''.join([str(random.randint(0, 9)) for _ in range(6)])
     
     @classmethod
     def create_verification_code(cls, phone, purpose='register', ip_address=None):
-        """创建新的验证码"""
+        """
+        创建新的验证码
+
+        Issue a new SMS code after invalidating prior unused codes for
+        the same phone/purpose pair. Codes expire in 5 minutes.
+        """
         from django.utils import timezone
         from datetime import timedelta
         
@@ -301,7 +326,12 @@ class SMSVerificationCode(models.Model):
     
     @classmethod
     def verify_code(cls, phone, code, purpose='register'):
-        """验证验证码"""
+        """
+        验证验证码
+
+        Validate a code for the given phone/purpose with expiration and
+        attempt controls. Marks the code as used on success.
+        """
         try:
             verification = cls.objects.get(
                 phone=phone,

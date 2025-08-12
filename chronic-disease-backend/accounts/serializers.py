@@ -5,7 +5,24 @@ from .models import User, UserProfile, SMSVerificationCode
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
-    """用户注册序列化器"""
+    """
+    用户注册序列化器
+
+    User registration serializer.
+
+    Responsibilities:
+    - Validate core identity fields and basic profile attributes
+    - Enforce password confirmation matching and strength validation
+    - Create the user via Django's built-in user factory to ensure the
+      password is hashed using the configured password hasher
+      (PBKDF2 by default in Django).
+
+    Security notes:
+    - Never store plaintext passwords; `create_user` will call
+      `set_password` internally, hashing the password safely.
+    - Email and username uniqueness checks help prevent account takeover
+      via ambiguous identifiers.
+    """
     password = serializers.CharField(write_only=True, validators=[validate_password])
     password_confirm = serializers.CharField(write_only=True)
     
@@ -26,22 +43,46 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         }
     
     def validate(self, attrs):
+        """
+        Ensure the password confirmation matches the provided password.
+
+        Returns:
+            dict: Validated attributes when the password pair is consistent.
+        Raises:
+            serializers.ValidationError: If the two passwords do not match.
+        """
         if attrs['password'] != attrs['password_confirm']:
             raise serializers.ValidationError("密码确认不匹配")
         return attrs
     
     def validate_email(self, value):
+        """
+        Enforce uniqueness on email addresses.
+
+        Using unique emails reduces ambiguity during authentication and
+        supports security notifications to a single, verified channel.
+        """
         if User.objects.filter(email=value).exists():
             raise serializers.ValidationError("邮箱已被注册")
         return value
     
     def validate_username(self, value):
+        """
+        Enforce uniqueness on username to prevent collisions.
+        """
         if User.objects.filter(username=value).exists():
             raise serializers.ValidationError("用户名已存在")
         return value
     
     def validate_phone(self, value):
-        """验证手机号格式（支持国际化）"""
+        """
+        验证手机号格式（支持国际化）
+
+        Validate phone number format (international/E.164-like):
+        - Must start with '+' and contain digits only thereafter
+        - Typical international length between 7 and 15 digits
+        - Must be unique if provided
+        """
         if not value:
             return value
         
@@ -65,6 +106,15 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         return value
     
     def create(self, validated_data):
+        """
+        Create a new user using Django's `create_user` to ensure the
+        password is hashed via the configured password hasher.
+
+        Steps:
+        1) Remove confirmation field (not persisted)
+        2) Pop raw password from payload
+        3) Delegate to `User.objects.create_user` to perform safe hashing
+        """
         validated_data.pop('password_confirm')
         password = validated_data.pop('password')
         
@@ -76,13 +126,32 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
 
 class UserLoginSerializer(serializers.Serializer):
-    """用户登录序列化器 - 支持手机号登录"""
+    """
+    用户登录序列化器 - 支持手机号登录
+
+    User login serializer with phone-based authentication.
+
+    Flow:
+    - Validate E.164-like phone format
+    - Resolve user by phone
+    - Verify password hash using `check_password`
+    - Optionally enforce role match when provided
+
+    Security notes:
+    - Error messages are intentionally generic to avoid disclosing which
+      part of the credential pair failed (mitigates user enumeration).
+    - Users must be active to proceed with login.
+    """
     phone = serializers.CharField(required=True, help_text="手机号（包含国家区号）")
     password = serializers.CharField(required=True, write_only=True)
     role = serializers.ChoiceField(choices=[('patient', '患者'), ('doctor', '医生')], required=False)
     
     def validate_phone(self, value):
-        """验证手机号格式"""
+        """
+        验证手机号格式
+
+        Validate the phone number format using a simplified E.164 check.
+        """
         if not value:
             raise serializers.ValidationError("手机号不能为空")
         
@@ -102,25 +171,31 @@ class UserLoginSerializer(serializers.Serializer):
         return value
     
     def validate(self, attrs):
+        """
+        Authenticate user by phone + password and optionally by role.
+
+        Adds the authenticated `user` object to `attrs` when successful.
+        """
         phone = attrs.get('phone')
         password = attrs.get('password')
         role = attrs.get('role')
         
         if phone and password:
-            # 使用手机号查找用户
+            # Resolve the user by phone. Keep error responses generic
+            # to avoid leaking which part failed.
             try:
                 user = User.objects.get(phone=phone)
             except User.DoesNotExist:
                 raise serializers.ValidationError('手机号或密码错误')
             
-            # 验证密码
+            # Verify password hash
             if not user.check_password(password):
                 raise serializers.ValidationError('手机号或密码错误')
             
             if not user.is_active:
                 raise serializers.ValidationError('账户已被禁用')
             
-            # 验证角色（如果提供）
+            # Optional role check for multi-tenant UX separation
             if role and user.role != role:
                 raise serializers.ValidationError('角色不匹配')
                 
@@ -131,7 +206,15 @@ class UserLoginSerializer(serializers.Serializer):
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
-    """用户资料序列化器"""
+    """
+    用户资料序列化器
+
+    User profile serializer.
+
+    Includes a derived field `profile_completion` to indicate how much
+    of the optional profile has been filled. This enables progressive
+    onboarding and UX nudges without exposing sensitive internals.
+    """
     profile_completion = serializers.SerializerMethodField()
     
     class Meta:
@@ -147,11 +230,17 @@ class UserProfileSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'username', 'email', 'role', 'created_at', 'updated_at', 'last_login']
     
     def get_profile_completion(self, obj):
+        """Compute and return profile completion percentage/score."""
         return obj.get_full_profile_completion()
 
 
 class UserProfileUpdateSerializer(serializers.ModelSerializer):
-    """用户资料更新序列化器"""
+    """
+    用户资料更新序列化器
+
+    Serializer for updating user profile data with light role-aware
+    validation (e.g., doctors should maintain key professional fields).
+    """
     
     class Meta:
         model = User
@@ -165,6 +254,9 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
         ]
     
     def validate(self, attrs):
+        """
+        Apply role-aware validation rules for profile completeness.
+        """
         user = self.instance
         
         # 根据用户角色验证必填字段
@@ -178,7 +270,12 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
 
 
 class UserExtendedProfileSerializer(serializers.ModelSerializer):
-    """用户扩展资料序列化器"""
+    """
+    用户扩展资料序列化器
+
+    Extended profile serializer for less frequently edited attributes
+    such as allergies, medical history, and consent preferences.
+    """
     
     class Meta:
         model = UserProfile
@@ -191,23 +288,39 @@ class UserExtendedProfileSerializer(serializers.ModelSerializer):
 
 
 class PasswordChangeSerializer(serializers.Serializer):
-    """密码修改序列化器"""
+    """
+    密码修改序列化器
+
+    Password change serializer.
+
+    Security notes:
+    - The old password is verified using `check_password`.
+    - The new password is persisted via `set_password`, ensuring the
+      password is hashed and never stored in plaintext.
+    - New password must pass Django's password validators.
+    """
     old_password = serializers.CharField(required=True, write_only=True)
     new_password = serializers.CharField(required=True, write_only=True, validators=[validate_password])
     new_password_confirm = serializers.CharField(required=True, write_only=True)
     
     def validate_old_password(self, value):
+        """Validate that the provided old password matches the account."""
         user = self.context['request'].user
         if not user.check_password(value):
             raise serializers.ValidationError("原密码不正确")
         return value
     
     def validate(self, attrs):
+        """Ensure the new password is confirmed correctly."""
         if attrs['new_password'] != attrs['new_password_confirm']:
             raise serializers.ValidationError("新密码确认不匹配")
         return attrs
     
     def save(self):
+        """
+        Persist the new password securely using `set_password`.
+        Returns the updated user instance.
+        """
         user = self.context['request'].user
         user.set_password(self.validated_data['new_password'])
         user.save()
@@ -215,11 +328,25 @@ class PasswordChangeSerializer(serializers.Serializer):
 
 
 class PasswordResetRequestSerializer(serializers.Serializer):
-    """密码重置请求序列化器（发送验证码）"""
+    """
+    密码重置请求序列化器（发送验证码）
+
+    Password reset request serializer (send SMS verification code).
+
+    Process:
+    - Validate phone format
+    - Ensure the phone exists in the system
+    - Rate-limiting and code issuance are handled in the corresponding view
+      and the SMS code model utilities.
+    """
     phone = serializers.CharField(required=True, max_length=20)
     
     def validate_phone(self, value):
-        """验证手机号格式"""
+        """
+        验证手机号格式
+
+        Validate phone format and existence for reset flow safety.
+        """
         if not value:
             raise serializers.ValidationError("手机号不能为空")
         
@@ -244,14 +371,28 @@ class PasswordResetRequestSerializer(serializers.Serializer):
 
 
 class PasswordResetSerializer(serializers.Serializer):
-    """密码重置序列化器（基于SMS验证码）"""
+    """
+    密码重置序列化器（基于SMS验证码）
+
+    Password reset serializer (SMS-based verification).
+
+    Security notes:
+    - Confirms the verification code validity (length, digits, not expired,
+      not over-attempted, and not used).
+    - Uses `set_password` to safely hash the new password.
+    - Marks the verification code as used to prevent replay.
+    """
     phone = serializers.CharField(required=True, max_length=20)
     code = serializers.CharField(required=True, max_length=6)
     new_password = serializers.CharField(required=True, write_only=True, validators=[validate_password])
     new_password_confirm = serializers.CharField(required=True, write_only=True)
     
     def validate_phone(self, value):
-        """验证手机号格式"""
+        """
+        验证手机号格式
+
+        Validate phone format and ensure a user exists for the number.
+        """
         if not value:
             raise serializers.ValidationError("手机号不能为空")
         
@@ -275,7 +416,11 @@ class PasswordResetSerializer(serializers.Serializer):
         return value
     
     def validate_code(self, value):
-        """验证验证码格式"""
+        """
+        验证验证码格式
+
+        Validate verification code shape (6 numeric digits).
+        """
         if not value or len(value) != 6:
             raise serializers.ValidationError("验证码必须是6位数字")
         
@@ -285,6 +430,11 @@ class PasswordResetSerializer(serializers.Serializer):
         return value
     
     def validate(self, attrs):
+        """
+        Cross-field validation for password confirmation and SMS code
+        verification. On success, the corresponding code object is
+        attached as a private attribute for later consumption in `save`.
+        """
         # 验证密码确认
         if attrs['new_password'] != attrs['new_password_confirm']:
             raise serializers.ValidationError("密码确认不匹配")
@@ -327,6 +477,10 @@ class PasswordResetSerializer(serializers.Serializer):
         return attrs
     
     def save(self):
+        """
+        Set the new password for the user identified by phone and mark
+        the verification code as used to prevent replay attacks.
+        """
         phone = self.validated_data['phone']
         new_password = self.validated_data['new_password']
         verification_code = self.validated_data['_verification_code']
@@ -343,7 +497,12 @@ class PasswordResetSerializer(serializers.Serializer):
 
 
 class UserListSerializer(serializers.ModelSerializer):
-    """用户列表序列化器（用于医生查看患者列表等）"""
+    """
+    用户列表序列化器（用于医生查看患者列表等）
+
+    Lightweight projection of user data for list views, including a
+    computed `risk_level` for patients to support triage and dashboards.
+    """
     risk_level = serializers.SerializerMethodField()
     
     class Meta:
@@ -356,14 +515,25 @@ class UserListSerializer(serializers.ModelSerializer):
         read_only_fields = fields
     
     def get_risk_level(self, obj):
-        """计算并返回患者的风险等级"""
+        """
+        计算并返回患者的风险等级
+
+        Compute and return the patient's risk level. For non-patient
+        roles, return a sentinel such as 'unassessed'.
+        """
         if obj.role != 'patient':
             return 'unassessed'
         return obj.get_disease_risk_level() 
 
 # SMS验证相关序列化器
 class SendSMSCodeSerializer(serializers.Serializer):
-    """发送SMS验证码序列化器"""
+    """
+    发送SMS验证码序列化器
+
+    Serializer responsible for validating phone and purpose before
+    issuing an SMS verification code. Additional rate-limiting checks
+    (per minute and per day) help mitigate abuse.
+    """
     phone = serializers.CharField(required=True, max_length=20)
     purpose = serializers.ChoiceField(
         choices=[
@@ -376,7 +546,11 @@ class SendSMSCodeSerializer(serializers.Serializer):
     )
     
     def validate_phone(self, value):
-        """验证手机号格式"""
+        """
+        验证手机号格式
+
+        Validate phone format using a simplified E.164 check.
+        """
         if not value:
             raise serializers.ValidationError("手机号不能为空")
         
@@ -396,6 +570,11 @@ class SendSMSCodeSerializer(serializers.Serializer):
         return value
     
     def validate(self, attrs):
+        """
+        Enforce rate limits for code issuance:
+        - At most once per minute
+        - Up to 10 times per day
+        """
         phone = attrs.get('phone')
         purpose = attrs.get('purpose')
         
@@ -429,7 +608,13 @@ class SendSMSCodeSerializer(serializers.Serializer):
 
 
 class VerifySMSCodeSerializer(serializers.Serializer):
-    """验证SMS验证码序列化器"""
+    """
+    验证SMS验证码序列化器
+
+    Validate a supplied code for a given phone and purpose without
+    marking the code as used (useful for pre-check flows such as
+    registration prior to persistence).
+    """
     phone = serializers.CharField(required=True, max_length=20)
     code = serializers.CharField(required=True, max_length=6)
     purpose = serializers.ChoiceField(
@@ -443,7 +628,11 @@ class VerifySMSCodeSerializer(serializers.Serializer):
     )
     
     def validate_phone(self, value):
-        """验证手机号格式"""
+        """
+        验证手机号格式
+
+        Validate phone format using a simplified E.164 check.
+        """
         if not value:
             raise serializers.ValidationError("手机号不能为空")
         
@@ -463,7 +652,11 @@ class VerifySMSCodeSerializer(serializers.Serializer):
         return value
     
     def validate_code(self, value):
-        """验证验证码格式"""
+        """
+        验证验证码格式
+
+        Validate verification code shape (6 numeric digits).
+        """
         if not value or len(value) != 6:
             raise serializers.ValidationError("验证码必须是6位数字")
         
@@ -473,6 +666,10 @@ class VerifySMSCodeSerializer(serializers.Serializer):
         return value
     
     def validate(self, attrs):
+        """
+        Check that the code exists, is not expired or over-attempted,
+        and remains unused. Attach the code object for downstream use.
+        """
         phone = attrs.get('phone')
         code = attrs.get('code')
         purpose = attrs.get('purpose')
@@ -502,7 +699,18 @@ class VerifySMSCodeSerializer(serializers.Serializer):
 
 
 class UserRegistrationWithSMSSerializer(serializers.ModelSerializer):
-    """带SMS验证的用户注册序列化器"""
+    """
+    带SMS验证的用户注册序列化器
+
+    User registration serializer with SMS verification.
+
+    Process:
+    - Validate user core fields and phone format
+    - Enforce per-role uniqueness for phone numbers (a phone can be used
+      by one patient and one doctor at most)
+    - Validate SMS code and mark it as used after successful creation
+    - Create user via `create_user` to hash password securely
+    """
     password = serializers.CharField(write_only=True, validators=[validate_password])
     password_confirm = serializers.CharField(write_only=True)
     sms_code = serializers.CharField(write_only=True, max_length=6)
@@ -525,6 +733,10 @@ class UserRegistrationWithSMSSerializer(serializers.ModelSerializer):
         }
     
     def validate(self, attrs):
+        """
+        Cross-field checks for password confirmation, per-role phone
+        uniqueness, and SMS code validity with attempt and expiry checks.
+        """
         if attrs['password'] != attrs['password_confirm']:
             raise serializers.ValidationError("密码确认不匹配")
         
@@ -565,17 +777,23 @@ class UserRegistrationWithSMSSerializer(serializers.ModelSerializer):
         return attrs
     
     def validate_email(self, value):
+        """Ensure email uniqueness for account integrity."""
         if User.objects.filter(email=value).exists():
             raise serializers.ValidationError("邮箱已被注册")
         return value
     
     def validate_username(self, value):
+        """Ensure username uniqueness to avoid collisions."""
         if User.objects.filter(username=value).exists():
             raise serializers.ValidationError("用户名已存在")
         return value
     
     def validate_phone(self, value):
-        """验证手机号格式（支持国际化）"""
+        """
+        验证手机号格式（支持国际化）
+
+        Validate E.164-like phone pattern and length bounds.
+        """
         if not value:
             raise serializers.ValidationError("手机号不能为空")
         
@@ -595,7 +813,11 @@ class UserRegistrationWithSMSSerializer(serializers.ModelSerializer):
         return value
     
     def validate_sms_code(self, value):
-        """验证SMS验证码格式"""
+        """
+        验证SMS验证码格式
+
+        Validate that the SMS code is 6 digits and numeric.
+        """
         if not value or len(value) != 6:
             raise serializers.ValidationError("验证码必须是6位数字")
         
@@ -605,6 +827,10 @@ class UserRegistrationWithSMSSerializer(serializers.ModelSerializer):
         return value
     
     def create(self, validated_data):
+        """
+        Create a new user and mark the SMS code as used after successful
+        persistence to prevent code reuse.
+        """
         validated_data.pop('password_confirm')
         validated_data.pop('sms_code')  # 移除SMS验证码，不保存到用户模型
         verification_code = validated_data.pop('_verification_code', None)  # 获取验证码对象
@@ -624,7 +850,13 @@ class UserRegistrationWithSMSSerializer(serializers.ModelSerializer):
 
 
 class PatientUpdateSerializer(serializers.ModelSerializer):
-    """患者信息更新序列化器（专门用于医生更新患者信息）"""
+    """
+    患者信息更新序列化器（专门用于医生更新患者信息）
+
+    Serializer dedicated to doctor-mediated updates of patient profiles,
+    including chronic disease lists. Applies shape validation on
+    `chronic_diseases` and logs before/after states in the view layer.
+    """
     
     class Meta:
         model = User
@@ -643,7 +875,16 @@ class PatientUpdateSerializer(serializers.ModelSerializer):
         }
     
     def validate_chronic_diseases(self, value):
-        """验证chronic_diseases字段"""
+        """
+        验证chronic_diseases字段
+
+        Validate that `chronic_diseases` is either:
+        - None (meaning unassessed), or
+        - A list of allowed disease identifiers.
+
+        Raises an explicit validation error for unknown identifiers to
+        maintain data quality.
+        """
         # 允许None（未评估）、空列表（健康）或疾病ID列表
         if value is None:
             return value  # 未评估状态
@@ -668,7 +909,13 @@ class PatientUpdateSerializer(serializers.ModelSerializer):
         raise serializers.ValidationError("chronic_diseases必须是None或疾病ID列表")
     
     def update(self, instance, validated_data):
-        """更新患者信息"""
+        """
+        更新患者信息
+
+        Update patient fields from validated input. The view is
+        responsible for logging before/after comparisons and computing
+        risk level changes post-update.
+        """
         # 记录更新前的状态（用于日志）
         old_diseases = instance.chronic_diseases
         

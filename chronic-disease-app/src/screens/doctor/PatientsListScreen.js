@@ -16,6 +16,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { fetchPatientsList, setSearchQuery } from '../../store/slices/patientsSlice';
 import { api } from '../../services/api';
+import { switchToEnglish, switchToChinese, getCurrentLanguage } from '../../utils/languageHelper';
 
 const PatientsListScreen = ({ navigation }) => {
   const { t } = useTranslation();
@@ -34,6 +35,20 @@ const PatientsListScreen = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [filterType, setFilterType] = useState('all'); // all, critical, stable
   const [chatLoading, setChatLoading] = useState(false);
+  
+  // 语言切换功能
+  const handleLanguageSwitch = async () => {
+    const currentLang = getCurrentLanguage();
+    if (currentLang === 'zh') {
+      await switchToEnglish();
+    } else {
+      await switchToChinese();
+    }
+    // 强制重新渲染
+    setTimeout(() => {
+      dispatch(fetchPatientsList());
+    }, 100);
+  };
   
 
 
@@ -179,17 +194,17 @@ const PatientsListScreen = ({ navigation }) => {
   const getRiskLevelText = (riskLevel) => {
     switch (riskLevel) {
       case 'high':
-        return '高风险';
+        return t('common.highRisk');
       case 'medium':
-        return '中风险';
+        return t('common.mediumRisk');
       case 'low':
-        return '低风险';
+        return t('common.lowRisk');
       case 'healthy':
-        return '健康';
+        return t('common.healthy');
       case 'unassessed':
-        return '未评估';
+        return t('common.unassessed');
       default:
-        return '未评估';
+        return t('common.unassessed');
     }
   };
   
@@ -248,7 +263,7 @@ const PatientsListScreen = ({ navigation }) => {
           
           <View style={styles.patientMeta}>
             <Text variant="bodySmall" style={styles.metaText}>
-              最后活跃: {formatLastActive(patient.last_login)}
+              {t('common.lastActive') || 'Last Active'}: {formatLastActive(patient.last_login)}
             </Text>
             
             {patient.bio && (
@@ -298,7 +313,7 @@ const PatientsListScreen = ({ navigation }) => {
           ]}
           textStyle={filterType === 'all' ? styles.selectedFilterText : {}}
         >
-          全部 ({patients.length})
+          {t('common.all')} ({patients.length})
         </Chip>
         <Chip 
           onPress={() => setFilterType('unassessed')}
@@ -308,7 +323,7 @@ const PatientsListScreen = ({ navigation }) => {
           ]}
           textStyle={filterType === 'unassessed' ? styles.selectedFilterText : {}}
         >
-          未评估 ({patients.filter(p => p.risk_level === 'unassessed').length})
+          {t('common.unassessed')} ({patients.filter(p => p.risk_level === 'unassessed').length})
         </Chip>
         <Chip 
           onPress={() => setFilterType('healthy')}
@@ -318,7 +333,7 @@ const PatientsListScreen = ({ navigation }) => {
           ]}
           textStyle={filterType === 'healthy' ? styles.selectedFilterText : {}}
         >
-          健康 ({patients.filter(p => p.risk_level === 'healthy').length})
+          {t('common.healthy')} ({patients.filter(p => p.risk_level === 'healthy').length})
         </Chip>
         <Chip 
           onPress={() => setFilterType('low')}
@@ -328,7 +343,7 @@ const PatientsListScreen = ({ navigation }) => {
           ]}
           textStyle={filterType === 'low' ? styles.selectedFilterText : {}}
         >
-          低风险 ({patients.filter(p => p.risk_level === 'low').length})
+          {t('common.lowRisk')} ({patients.filter(p => p.risk_level === 'low').length})
         </Chip>
         <Chip 
           onPress={() => setFilterType('medium')}
@@ -338,7 +353,7 @@ const PatientsListScreen = ({ navigation }) => {
           ]}
           textStyle={filterType === 'medium' ? styles.selectedFilterText : {}}
         >
-          中风险 ({patients.filter(p => p.risk_level === 'medium').length})
+          {t('common.mediumRisk')} ({patients.filter(p => p.risk_level === 'medium').length})
         </Chip>
         <Chip 
           onPress={() => setFilterType('high')}
@@ -348,7 +363,7 @@ const PatientsListScreen = ({ navigation }) => {
           ]}
           textStyle={filterType === 'high' ? styles.selectedFilterText : {}}
         >
-          高风险 ({patients.filter(p => p.risk_level === 'high').length})
+          {t('common.highRisk')} ({patients.filter(p => p.risk_level === 'high').length})
         </Chip>
       </View>
     );
@@ -408,16 +423,28 @@ const PatientsListScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text variant="headlineMedium" style={styles.title}>
-          {t('patients.patientManagement')}
-        </Text>
-        <Text variant="bodyMedium" style={styles.subtitle}>
-          {t('patients.managePatientHealth')}
-        </Text>
+        <View style={styles.headerTop}>
+          <View style={styles.headerText}>
+            <Text variant="headlineMedium" style={styles.title}>
+              {t('patients.patientManagement')}
+            </Text>
+            <Text variant="bodyMedium" style={styles.subtitle}>
+              {t('patients.managePatientHealth')}
+            </Text>
+          </View>
+          <TouchableOpacity 
+            style={styles.languageButton}
+            onPress={handleLanguageSwitch}
+          >
+            <Text style={styles.languageButtonText}>
+              {getCurrentLanguage() === 'zh' ? 'EN' : '中'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
       
       <Searchbar
-        placeholder={t('patients.searchPlaceholder')}
+        placeholder={t('patients.searchPatientPlaceholder')}
         onChangeText={handleSearch}
         value={searchQuery}
         style={styles.searchBar}
@@ -461,6 +488,14 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     backgroundColor: '#f8f9fa',
   },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  headerText: {
+    flex: 1,
+  },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
@@ -470,6 +505,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     marginTop: 4,
+  },
+  languageButton: {
+    backgroundColor: '#2196F3',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginLeft: 16,
+  },
+  languageButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
   searchBar: {
     margin: 16,

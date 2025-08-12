@@ -20,7 +20,13 @@ from .serializers import (
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
 def medication_list(request):
-    """获取药品列表"""
+    """
+    获取药品列表
+
+    List active medications with optional filtering by category and a
+    text search across name fields. Authentication required to reduce
+    surface for automated scraping.
+    """
     medications = Medication.objects.filter(is_active=True)
     
     # 支持按类别筛选
@@ -42,10 +48,25 @@ def medication_list(request):
 
 
 class MedicationPlanViewSet(APIView):
+    """
+    用药计划视图集合
+
+    Medication plan view set handling listing, creation, update, and
+    deletion. Restricted to doctors; patients cannot manage plans.
+
+    Authorization model:
+    - Access limited to plans owned by the requesting doctor
+    - Patient target must exist and be a patient role when specified
+    """
     permission_classes = [permissions.IsAuthenticated]
     
     def get(self, request, patient_id=None):
-        """获取用药计划列表"""
+        """
+        获取用药计划列表
+
+        List medication plans for the current doctor. If `patient_id` is
+        provided, further filter by the target patient.
+        """
         user = request.user
         
         if not user.is_doctor:
@@ -85,7 +106,12 @@ class MedicationPlanViewSet(APIView):
         })
     
     def post(self, request, patient_id=None):
-        """创建用药计划"""
+        """
+        创建用药计划
+
+        Create a medication plan as the current doctor. The doctor field
+        is enforced from the authenticated user to avoid spoofing.
+        """
         user = request.user
         
         if not user.is_doctor:
@@ -109,7 +135,12 @@ class MedicationPlanViewSet(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     def put(self, request, patient_id=None, plan_id=None):
-        """更新用药计划"""
+        """
+        更新用药计划
+
+        Update a medication plan owned by the current doctor. Partial
+        updates are supported.
+        """
         user = request.user
         
         if not user.is_doctor:
@@ -138,7 +169,11 @@ class MedicationPlanViewSet(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     def delete(self, request, patient_id=None, plan_id=None):
-        """删除用药计划"""
+        """
+        删除用药计划
+
+        Delete a medication plan owned by the current doctor.
+        """
         user = request.user
         
         if not user.is_doctor:
@@ -164,7 +199,13 @@ class MedicationPlanViewSet(APIView):
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
 def medication_plan_stats(request, patient_id=None):
-    """获取用药计划统计信息"""
+    """
+    获取用药计划统计信息
+
+    Provide aggregate statistics for plans under the current doctor with
+    optional restriction to a specific patient. Includes last-30-day
+    compliance rate and per-category counts.
+    """
     user = request.user
     
     if not user.is_doctor:
@@ -215,7 +256,12 @@ def medication_plan_stats(request, patient_id=None):
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
 def update_plan_status(request, plan_id):
-    """更新用药计划状态"""
+    """
+    更新用药计划状态
+
+    Update the status of a medication plan owned by the current doctor
+    and append a structured status history record for auditability.
+    """
     user = request.user
     
     if not user.is_doctor:
@@ -265,7 +311,12 @@ def update_plan_status(request, plan_id):
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
 def get_medication_history(request, patient_id):
-    """获取患者的用药历史记录"""
+    """
+    获取患者的用药历史记录
+
+    Return a flattened, reverse-chronological list of medication plan
+    status changes for a patient managed by the current doctor.
+    """
     user = request.user
     
     if not user.is_doctor:
@@ -322,7 +373,12 @@ def get_medication_history(request, patient_id):
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
 def test_medication_api(request):
-    """测试medication API是否正常工作"""
+    """
+    测试medication API是否正常工作
+
+    Lightweight diagnostic endpoint to verify DB connectivity,
+    permissions, and basic serialization flows.
+    """
     try:
         # 测试1: 检查数据库连接
         medication_count = Medication.objects.count()

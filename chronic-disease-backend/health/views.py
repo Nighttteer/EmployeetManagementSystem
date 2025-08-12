@@ -14,72 +14,124 @@ from .serializers import (
     HealthRecordSerializer, ThresholdSettingSerializer,
     DoctorAdviceSerializer, AlertSerializer, HealthTrendsSerializer
 )
+from .permissions import get_doctor_patient_ids, verify_doctor_patient_access, check_patient_data_access
 
 
 class HealthMetricListCreateView(generics.ListCreateAPIView):
-    """健康指标记录列表和创建视图"""
+    """
+    健康指标记录列表和创建视图
+
+    List and create health metric records.
+
+    Authorization model:
+    - Patients: list/create their own metrics
+    - Doctors: list metrics of actively managed patients only
+
+    Security notes:
+    - Creation sets both `patient` and `measured_by` to the authenticated
+      user, preventing spoofing of ownership via request payload.
+    """
     permission_classes = [permissions.IsAuthenticated]
     
     def get_queryset(self):
-        """获取用户的健康指标记录"""
+        """Access to users' health indicator records (role-aware)."""
         user = self.request.user
         if user.is_patient:
             return HealthMetric.objects.filter(patient=user)
         elif user.is_doctor:
-            # 医生可以查看所有患者的数据
-            return HealthMetric.objects.all()
+            # Doctors can only view data on the patients for whom they are responsible
+            patient_ids = get_doctor_patient_ids(user)
+            return HealthMetric.objects.filter(patient_id__in=patient_ids)
         return HealthMetric.objects.none()
     
     def get_serializer_class(self):
-        """根据操作类型选择序列化器"""
+        """根据操作类型选择序列化器 / Choose serializer by method."""
         if self.request.method == 'POST':
             return HealthMetricCreateSerializer
         return HealthMetricSerializer
     
     def perform_create(self, serializer):
-        """创建健康指标记录"""
+        """创建健康指标记录 / Persist a new metric for the current user."""
         user = self.request.user
         serializer.save(patient=user, measured_by=user)
 
 
 class HealthMetricDetailView(generics.RetrieveUpdateDestroyAPIView):
-    """健康指标记录详情视图"""
+    """
+    健康指标记录详情视图
+
+    Retrieve, update, or delete a single health metric record subject to
+    role-based access control.
+
+    Security notes:
+    - Updates stamp `last_modified_by` to support auditability.
+    - Queryset is filtered by role to prevent insecure direct object access.
+    """
     serializer_class = HealthMetricSerializer
     permission_classes = [permissions.IsAuthenticated]
     
     def get_queryset(self):
-        """获取用户的健康指标记录"""
+        """获取用户的健康指标记录 / Role-scoped queryset for safety."""
         user = self.request.user
         if user.is_patient:
             return HealthMetric.objects.filter(patient=user)
         elif user.is_doctor:
-            return HealthMetric.objects.all()
+            # 医生只能查看其负责患者的数据
+            patient_ids = get_doctor_patient_ids(user)
+            return HealthMetric.objects.filter(patient_id__in=patient_ids)
         return HealthMetric.objects.none()
     
     def perform_update(self, serializer):
-        """更新健康指标记录"""
+        """更新健康指标记录 / Tag modifier for audit trails."""
         serializer.save(last_modified_by=self.request.user)
 
 
 class HealthRecordView(generics.RetrieveUpdateAPIView):
-    """健康档案视图"""
+    """
+    健康档案视图
+
+    Retrieve or update a consolidated patient health record, with access
+    enforced via shared permission utilities.
+    """
     serializer_class = HealthRecordSerializer
     permission_classes = [permissions.IsAuthenticated]
     
     def get_object(self):
-        """获取或创建健康档案"""
+        """获取或创建健康档案 / Enforce access and return/create record."""
         user = self.request.user
-        record, created = HealthRecord.objects.get_or_create(patient=user)
+        patient_id = self.kwargs.get('patient_id')
+        
+        # 使用权限检查工具
+        has_access, patient = check_patient_data_access(user, patient_id)
+        if not has_access:
+            from django.http import Http404
+            raise Http404("无权访问健康档案")
+        
+        if user.is_doctor and not patient_id:
+            from django.http import Http404
+            raise Http404("医生必须指定患者ID")
+        
+        # 获取或创建健康档案
+        target_patient = patient if patient else user
+        record, created = HealthRecord.objects.get_or_create(patient=target_patient)
         return record
 
 
 class DoctorAdviceListView(generics.ListCreateAPIView):
-    """医生建议列表视图"""
+    """
+    医生建议列表视图
+
+    List and create doctor advice records.
+
+    Security notes:
+    - Patients: only see advice addressed to them
+    - Doctors: may list their own authored advice and set `doctor` upon create
+    """
     serializer_class = DoctorAdviceSerializer
     permission_classes = [permissions.IsAuthenticated]
     
     def get_queryset(self):
-        """获取相关的医生建议"""
+        """获取相关的医生建议 / Role-scoped listing."""
         user = self.request.user
         if user.is_patient:
             return DoctorAdvice.objects.filter(patient=user)
@@ -88,19 +140,23 @@ class DoctorAdviceListView(generics.ListCreateAPIView):
         return DoctorAdvice.objects.none()
     
     def perform_create(self, serializer):
-        """创建医生建议"""
+        """创建医生建议 / Attribute current doctor as author."""
         user = self.request.user
         if user.is_doctor:
             serializer.save(doctor=user)
 
 
 class AlertListView(generics.ListAPIView):
-    """健康告警列表视图"""
+    """
+    健康告警列表视图
+
+    List health alerts relevant to the current user (patient or doctor).
+    """
     serializer_class = AlertSerializer
     permission_classes = [permissions.IsAuthenticated]
     
     def get_queryset(self):
-        """获取相关的健康告警"""
+        """获取相关的健康告警 / Role-scoped listing of alerts."""
         user = self.request.user
         if user.is_patient:
             return Alert.objects.filter(patient=user)
@@ -112,7 +168,12 @@ class AlertListView(generics.ListAPIView):
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
 def health_dashboard(request):
-    """健康仪表板数据"""
+    """
+    健康仪表板数据
+
+    Patient dashboard aggregates recent metrics, unread advice count,
+    and active alerts within the last 30 days.
+    """
     user = request.user
     
     if not user.is_patient:
@@ -153,7 +214,13 @@ def health_dashboard(request):
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
 def doctor_dashboard(request):
-    """医生端仪表板数据"""
+    """
+    医生端仪表板数据
+
+    Provide high-level KPIs for the doctor: patient count, pending
+    alerts, 7-day medication compliance, risk distribution, and recent
+    patient activity.
+    """
     user = request.user
     
     if user.role != 'doctor':
@@ -343,7 +410,12 @@ def doctor_dashboard(request):
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
 def health_trends(request):
-    """健康趋势数据"""
+    """
+    健康趋势数据
+
+    Return time-series metrics for the authenticated patient across a
+    requested time window, with basic trend analysis summary.
+    """
     user = request.user
     
     if not user.is_patient:
@@ -492,7 +564,7 @@ def health_trends(request):
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
 def mark_advice_read(request, advice_id):
-    """标记建议为已读"""
+    """标记建议为已读 / Mark a doctor advice as read by the patient."""
     user = request.user
     
     try:
@@ -512,7 +584,7 @@ def mark_advice_read(request, advice_id):
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
 def handle_alert(request, alert_id):
-    """处理健康告警"""
+    """处理健康告警 / Handle an alert by the assigned doctor."""
     user = request.user
     
     if not user.is_doctor:

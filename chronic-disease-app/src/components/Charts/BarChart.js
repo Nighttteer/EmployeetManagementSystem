@@ -36,7 +36,7 @@ const BarChart = ({
   if (!data || data.length === 0) {
     return (
       <View style={{ width: screenWidth, height, justifyContent: 'center', alignItems: 'center' }}>
-        <Text>暂无数据</Text>
+        <Text>No data available</Text>
       </View>
     );
   }
@@ -47,13 +47,13 @@ const BarChart = ({
     .map(item => ({
       ...item,
       value: safeNumber(item.value, 0),
-      label: item.label || '未知'
+      label: item.label || 'Unknown'
     }));
 
   if (validData.length === 0) {
     return (
       <View style={{ width: screenWidth, height, justifyContent: 'center', alignItems: 'center' }}>
-        <Text>暂无有效数据</Text>
+        <Text>No valid data</Text>
       </View>
     );
   }
@@ -67,7 +67,7 @@ const BarChart = ({
   if (!isValidNumber(maxValue) || !isValidNumber(minValue)) {
     return (
       <View style={{ width: screenWidth, height, justifyContent: 'center', alignItems: 'center' }}>
-        <Text>数据范围无效</Text>
+        <Text>Invalid data range</Text>
       </View>
     );
   }

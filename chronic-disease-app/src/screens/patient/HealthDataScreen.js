@@ -698,7 +698,7 @@ const HealthDataScreen = ({ navigation }) => {
               <LineChart
                 series={[
                   {
-                    name: '收缩压',
+                    name: 'Systolic BP',
                     color: '#FF5722',
                     data: metricsByType.blood_pressure
                       .filter(metric => {
@@ -716,7 +716,7 @@ const HealthDataScreen = ({ navigation }) => {
                       }))
                   },
                   {
-                    name: '舒张压',
+                    name: 'Diastolic BP',
                     color: '#2196F3',
                     data: metricsByType.blood_pressure
                       .filter(metric => {

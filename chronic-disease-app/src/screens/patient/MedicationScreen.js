@@ -31,50 +31,50 @@ const MedicationScreen = ({ navigation }) => {
   const { user } = useSelector((state) => state.auth);
   const [refreshing, setRefreshing] = useState(false);
 
-  // 模拟用药数据
-  const [medicationData, setMedicationData] = useState({
+  // 获取模拟用药数据的函数
+  const getMedicationData = () => ({
     todayMedications: [
       {
         id: 1,
-        name: '氨氯地平片',
+        name: 'Amlodipine Tablets',
         dosage: '5mg',
         time: '08:00',
         status: 'pending',
         taken: false,
-        category: '降压药',
-        instructions: '早餐后服用',
-        sideEffects: '可能引起头晕、水肿',
+        category: t('common.antihypertensive'),
+        instructions: t('common.afterBreakfast'),
+        sideEffects: t('common.maycauseDizzinessSwelling'),
       },
       {
         id: 2,
-        name: '二甲双胍片',
+        name: 'Metformin Tablets',
         dosage: '500mg',
         time: '12:30',
         status: 'pending',
         taken: false,
-        category: '降糖药',
-        instructions: '餐中服用',
-        sideEffects: '可能引起胃肠道不适',
+        category: t('common.antidiabetic'),
+        instructions: t('common.withMeals'),
+        sideEffects: t('common.maycauseGastrointestinalDiscomfort'),
       },
       {
         id: 3,
-        name: '阿司匹林肠溶片',
+        name: 'Aspirin Enteric-coated Tablets',
         dosage: '100mg',
         time: '20:00',
         status: 'pending',
         taken: false,
-        category: '抗凝药',
-        instructions: '晚餐后服用',
-        sideEffects: '可能引起胃部不适',
+        category: t('common.anticoagulant'),
+        instructions: t('common.afterDinner'),
+        sideEffects: t('common.mayCauseStomachDiscomfort'),
       },
     ],
     medicationPlans: [
       {
         id: 1,
-        name: '氨氯地平片',
+        name: 'Amlodipine Tablets',
         dosage: '5mg',
-        frequency: '每日一次',
-        timeOfDay: '早餐后',
+        frequency: t('common.onceDaily'),
+        timeOfDay: t('common.afterBreakfastShort'),
         startDate: '2024-01-01',
         endDate: null,
         status: 'active',
@@ -85,10 +85,10 @@ const MedicationScreen = ({ navigation }) => {
       },
       {
         id: 2,
-        name: '二甲双胍片',
+        name: 'Metformin Tablets',
         dosage: '500mg',
-        frequency: '每日两次',
-        timeOfDay: '餐中',
+        frequency: t('common.twiceDaily'),
+        timeOfDay: t('common.withMealsShort'),
         startDate: '2024-01-01',
         endDate: null,
         status: 'active',
@@ -101,15 +101,22 @@ const MedicationScreen = ({ navigation }) => {
     medicationHistory: [
       {
         id: 1,
-        name: '硝苯地平片',
+        name: 'Nifedipine Tablets',
         dosage: '10mg',
-        frequency: '每日三次',
+        frequency: t('common.thriceDaily'),
         startDate: '2023-06-01',
         endDate: '2023-12-31',
-        reason: '血压控制不佳，更换为氨氯地平',
+        reason: t('common.replacedDueToPoorControl'),
         compliance: 78,
       },
     ],
+  });
+
+  // 初始化用药数据 - 延迟初始化避免翻译问题
+  const [medicationData, setMedicationData] = useState({
+    todayMedications: [],
+    medicationPlans: [],
+    medicationHistory: []
   });
 
   useEffect(() => {
@@ -117,9 +124,23 @@ const MedicationScreen = ({ navigation }) => {
     setupNotifications();
   }, []);
 
+  // 当翻译系统准备好后重新加载数据
+  useEffect(() => {
+    if (t && typeof t === 'function') {
+      loadMedicationData();
+    }
+  }, [t]);
+
   const loadMedicationData = async () => {
-    // 这里应该调用API获取真实的用药数据
-    console.log('加载用药数据');
+    try {
+      // 这里应该调用API获取真实的用药数据
+      // 目前使用模拟数据
+      const data = getMedicationData();
+      setMedicationData(data);
+      console.log('✅ 用药数据加载完成:', data.todayMedications.length, '个今日用药');
+    } catch (error) {
+      console.error('❌ 加载用药数据失败:', error);
+    }
   };
 
   const setupNotifications = async () => {
@@ -155,17 +176,17 @@ const MedicationScreen = ({ navigation }) => {
           : med
       ),
     }));
-    Alert.alert('成功', '已记录服药');
+    Alert.alert(t('common.success'), t('medication.medicationRecorded'));
   };
 
   const skipMedication = (medicationId) => {
     Alert.alert(
-      '跳过服药',
-      '确定要跳过这次服药吗？',
+      t('medication.skipMedication'),
+      t('medication.confirmSkipMedication'),
       [
-        { text: '取消', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: '确定',
+          text: t('common.confirm'),
           onPress: () => {
             setMedicationData(prev => ({
               ...prev,
@@ -175,6 +196,7 @@ const MedicationScreen = ({ navigation }) => {
                   : med
               ),
             }));
+            Alert.alert(t('common.success'), t('medication.medicationSkipped'));
           },
         },
       ]
@@ -192,9 +214,9 @@ const MedicationScreen = ({ navigation }) => {
 
   const getStatusText = (status) => {
     switch (status) {
-      case 'taken': return t('medication.taken');
-      case 'pending': return t('medication.pending');
-      case 'skipped': return t('medication.skipped');
+      case 'taken': return t('common.taken');
+      case 'pending': return t('common.pending');
+      case 'skipped': return t('common.skipped');
       default: return t('common.unknown');
     }
   };
@@ -211,15 +233,20 @@ const MedicationScreen = ({ navigation }) => {
       <Card.Content>
         <View style={styles.cardHeader}>
           <Text variant="titleLarge" style={styles.cardTitle}>
-            {t('medication.todayMedication')}
+            {t('common.todayMedication')}
           </Text>
           <Chip mode="outlined" textStyle={styles.chipText}>
-            {medicationData.todayMedications.filter(m => m.status === 'pending').length} {t('medication.pending')}
+            {(() => {
+              const pendingCount = medicationData.todayMedications.filter(m => m.status === 'pending').length;
+              const totalCount = medicationData.todayMedications.length;
+              console.log('📊 今日用药统计:', { total: totalCount, pending: pendingCount });
+              return pendingCount;
+            })()} {t('common.pending')}
           </Chip>
         </View>
         
         <Text style={styles.sectionNote}>
-                        {t('medication.planMadeByDoctor')}
+                        {t('common.planMadeByDoctor')}
         </Text>
         
         {medicationData.todayMedications.map((medication) => (
@@ -255,7 +282,7 @@ const MedicationScreen = ({ navigation }) => {
                   style={[styles.actionButton, styles.takeButton]}
                   labelStyle={styles.actionButtonText}
                 >
-                  {t('medication.taken')}
+                  {t('common.taken')}
                 </Button>
                 <Button
                   mode="outlined"
@@ -278,10 +305,10 @@ const MedicationScreen = ({ navigation }) => {
       <Card.Content>
         <View style={styles.cardHeader}>
           <Text variant="titleLarge" style={styles.cardTitle}>
-            {t('medication.medicationPlan')}
+            {t('common.medicationPlan')}
           </Text>
           <Chip mode="outlined" textStyle={styles.chipText}>
-            {t('medication.planMadeByDoctor')}
+            {t('common.planMadeByDoctor')}
           </Chip>
         </View>
         
@@ -297,7 +324,7 @@ const MedicationScreen = ({ navigation }) => {
                   {plan.dosage} · {plan.frequency} · {plan.timeOfDay}
                 </Text>
                 <Text style={styles.planDate}>
-                  {plan.startDate} - {plan.endDate || t('medication.longTerm')}
+                  {plan.startDate} - {plan.endDate || t('common.longTerm')}
                 </Text>
               </View>
               
@@ -306,7 +333,7 @@ const MedicationScreen = ({ navigation }) => {
                 textStyle={styles.statusChipText}
                 compact={true}
               >
-                {plan.status === 'active' ? t('medication.active') : t('medication.stopped')}
+                {plan.status === 'active' ? t('common.active') : t('common.stopped')}
               </Chip>
             </View>
             
@@ -334,10 +361,10 @@ const MedicationScreen = ({ navigation }) => {
         ) : (
           <View style={styles.emptyState}>
             <Text style={styles.emptyStateText}>
-  {t('medication.noMedicationPlan')}
+  {t('common.noMedicationPlan')}
             </Text>
             <Text style={styles.emptyStateSubtext}>
-  {t('medication.contactDoctorForPlan')}
+  {t('common.contactDoctorForPlan')}
             </Text>
           </View>
         )}
@@ -399,10 +426,10 @@ const MedicationScreen = ({ navigation }) => {
       >
         <View style={styles.header}>
           <Text variant="headlineLarge" style={styles.title}>
-            {t('medication.medicationReminder')}
+            {t('common.medicationReminder')}
           </Text>
           <Text variant="bodyLarge" style={styles.subtitle}>
-            {t('medication.managePlanAndReminder')}
+            {t('common.managePlanAndReminder')}
           </Text>
         </View>
 
@@ -453,6 +480,8 @@ const styles = StyleSheet.create({
   },
   chipText: {
     fontSize: 12,
+    textAlign: 'center',
+    textAlignVertical: 'center',
   },
   sectionNote: {
     fontSize: 12,
@@ -460,6 +489,7 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginBottom: 16,
     textAlign: 'center',
+    textAlignVertical: 'center',
   },
   medicationItem: {
     marginBottom: 16,
@@ -498,6 +528,8 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   takeButton: {
     backgroundColor: '#4CAF50',
@@ -507,17 +539,25 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     fontSize: 14,
+    textAlign: 'center',
+    textAlignVertical: 'center',
   },
   skipButtonText: {
     color: '#F44336',
     fontSize: 14,
+    textAlign: 'center',
+    textAlignVertical: 'center',
   },
   statusChip: {
     height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   statusChipText: {
     fontSize: 10,
     color: '#fff',
+    textAlign: 'center',
+    textAlignVertical: 'center',
   },
   planItem: {
     marginBottom: 16,
@@ -613,11 +653,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666666',
     marginBottom: 8,
+    textAlign: 'center',
+    textAlignVertical: 'center',
   },
   emptyStateSubtext: {
     fontSize: 14,
     color: '#888888',
     textAlign: 'center',
+    textAlignVertical: 'center',
   },
 });
 

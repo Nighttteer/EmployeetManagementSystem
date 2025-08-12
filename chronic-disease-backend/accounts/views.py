@@ -21,7 +21,16 @@ User = get_user_model()
 
 
 class UserRegistrationView(generics.CreateAPIView):
-    """用户注册"""
+    """
+    用户注册
+
+    User registration endpoint.
+
+    Security considerations:
+    - Delegates password hashing to the serializer via `create_user`.
+    - Returns JWT upon successful creation to support immediate login UX.
+    - Uses `AllowAny` but creation is fully validated server-side.
+    """
     queryset = User.objects.all()
     serializer_class = UserRegistrationSerializer
     permission_classes = [permissions.AllowAny]
@@ -47,7 +56,17 @@ class UserRegistrationView(generics.CreateAPIView):
 
 
 class UserLoginView(TokenObtainPairView):
-    """用户登录"""
+    """
+    用户登录
+
+    User login endpoint backed by custom serializer validation to
+    authenticate via phone + password and optional role match.
+
+    Security considerations:
+    - On success issues both refresh and access tokens (JWT SimpleJWT).
+    - Records `last_login_ip` for audit/forensics.
+    - Returns generic error on failure to avoid user enumeration.
+    """
     permission_classes = [permissions.AllowAny]
     
     def post(self, request, *args, **kwargs):
@@ -74,7 +93,7 @@ class UserLoginView(TokenObtainPairView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     def get_client_ip(self, request):
-        """获取客户端IP地址"""
+        """获取客户端IP地址 / Extract client IP from headers or socket."""
         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
         if x_forwarded_for:
             ip = x_forwarded_for.split(',')[0]
@@ -84,7 +103,16 @@ class UserLoginView(TokenObtainPairView):
 
 
 class UserProfileView(generics.RetrieveUpdateAPIView):
-    """用户资料查看和更新"""
+    """
+    用户资料查看和更新
+
+    Retrieve and update the authenticated user's profile.
+
+    Security considerations:
+    - Requires authentication; operates on `request.user`.
+    - Read returns a richer projection; write uses update serializer with
+      role-aware validation for doctors.
+    """
     serializer_class = UserProfileSerializer
     permission_classes = [permissions.IsAuthenticated]
     
@@ -98,7 +126,11 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
 
 
 class UserExtendedProfileView(generics.RetrieveUpdateAPIView):
-    """用户扩展资料管理"""
+    """
+    用户扩展资料管理
+
+    Manage extended profile details for the authenticated user.
+    """
     serializer_class = UserExtendedProfileSerializer
     permission_classes = [permissions.IsAuthenticated]
     
@@ -108,7 +140,16 @@ class UserExtendedProfileView(generics.RetrieveUpdateAPIView):
 
 
 class PasswordChangeView(generics.CreateAPIView):
-    """密码修改"""
+    """
+    密码修改
+
+    Change password for the authenticated user.
+
+    Security considerations:
+    - Validates old password and applies Django validators for the new
+      password.
+    - Persists via `set_password` to ensure hashing.
+    """
     serializer_class = PasswordChangeSerializer
     permission_classes = [permissions.IsAuthenticated]
     
@@ -121,7 +162,15 @@ class PasswordChangeView(generics.CreateAPIView):
 
 
 class PasswordResetRequestView(generics.CreateAPIView):
-    """密码重置请求（发送验证码）"""
+    """
+    密码重置请求（发送验证码）
+
+    Request a password reset code via SMS.
+
+    Security considerations:
+    - Associates issuance with client IP for observability.
+    - SMS rate-limiting and attempt controls exist in serializer/model.
+    """
     serializer_class = PasswordResetRequestSerializer
     permission_classes = [permissions.AllowAny]
     
@@ -158,7 +207,15 @@ class PasswordResetRequestView(generics.CreateAPIView):
 
 
 class PasswordResetView(generics.CreateAPIView):
-    """密码重置确认"""
+    """
+    密码重置确认
+
+    Confirm password reset with an SMS code.
+
+    Security considerations:
+    - Validates code freshness and attempts; persists via `set_password`.
+    - Avoids leaking user existence beyond the validated flow.
+    """
     serializer_class = PasswordResetSerializer
     permission_classes = [permissions.AllowAny]
     
@@ -182,7 +239,13 @@ class PasswordResetView(generics.CreateAPIView):
 
 
 class PatientListView(generics.ListAPIView):
-    """患者列表（医生端使用）"""
+    """
+    患者列表（医生端使用）
+
+    List patients managed by the current doctor based on active
+    doctor–patient relationships. Falls back to all active patients when
+    no bindings exist (configurable business rule).
+    """
     serializer_class = UserListSerializer
     permission_classes = [permissions.IsAuthenticated]
     
@@ -208,7 +271,15 @@ class PatientListView(generics.ListAPIView):
 
 
 class PatientCreateView(generics.CreateAPIView):
-    """创建患者（医生端使用）"""
+    """
+    创建患者（医生端使用）
+
+    Create a patient account by a doctor and auto-bind the relation.
+
+    Security considerations:
+    - Requires doctor role; coerces role to 'patient' regardless of input.
+    - Establishes a primary, active relation upon creation.
+    """
     serializer_class = UserRegistrationSerializer
     permission_classes = [permissions.IsAuthenticated]
     
@@ -249,7 +320,12 @@ class PatientCreateView(generics.CreateAPIView):
 
 
 class UnassignedPatientsView(generics.ListAPIView):
-    """获取未分配医生的患者列表"""
+    """
+    获取未分配医生的患者列表
+
+    Returns active patients who are not currently bound to any doctor,
+    with optional search filtering.
+    """
     serializer_class = UserListSerializer
     permission_classes = [permissions.IsAuthenticated]
     
@@ -289,7 +365,16 @@ class UnassignedPatientsView(generics.ListAPIView):
 
 
 class DoctorPatientBindView(generics.CreateAPIView):
-    """绑定医患关系"""
+    """
+    绑定医患关系
+
+    Bind a patient to the current doctor (self-only binding enforced).
+
+    Security considerations:
+    - Only doctors can initiate bindings.
+    - Enforces self-binding to prevent privilege escalation by IDs.
+    - Ensures idempotency by checking existing active relation first.
+    """
     permission_classes = [permissions.IsAuthenticated]
     
     def create(self, request, *args, **kwargs):
@@ -351,7 +436,11 @@ class DoctorPatientBindView(generics.CreateAPIView):
 
 
 class DoctorListView(generics.ListAPIView):
-    """医生列表"""
+    """
+    医生列表
+
+    List active doctors.
+    """
     serializer_class = UserListSerializer
     permission_classes = [permissions.IsAuthenticated]
     

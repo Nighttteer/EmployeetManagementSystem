@@ -71,14 +71,14 @@ const PatientDetailsScreen = ({ route, navigation }) => {
   const [patientData, setPatientData] = useState({
     basicInfo: {
       id: patient.id,
-      name: patient.name || '张三',
+      name: patient.name || 'John Doe',
       age: patient.age || 65,
       gender: patient.gender || 'male',
       phone: patient.phone || '+86 138-0013-8000',
-      address: '北京市朝阳区xxx街道xxx号',
-      emergencyContact: '李四',
+      address: '123 Main Street, City, State',
+      emergencyContact: 'Jane Doe',
       emergencyPhone: '+86 139-0013-8001',
-      bloodType: 'A型',
+      bloodType: 'A+',
       height: 170,
       weight: 75,
       riskLevel: patient.risk_level || 'medium',
@@ -132,20 +132,20 @@ const PatientDetailsScreen = ({ route, navigation }) => {
     medications: [
       {
         id: 1,
-        name: '氨氯地平片',
+        name: 'Amlodipine Tablets',
         dosage: '5mg',
-        frequency: '每日一次',
-        time: '早餐后',
+        frequency: 'Once daily',
+        time: 'After breakfast',
         startDate: '2023-03-15',
         status: 'active',
         compliance: 85
       },
       {
         id: 2,
-        name: '二甲双胍片',
+        name: 'Metformin Tablets',
         dosage: '500mg',
-        frequency: '每日两次',
-        time: '餐后',
+        frequency: 'Twice daily',
+        time: 'After meals',
         startDate: '2023-06-01',
         status: 'active',
         compliance: 92
@@ -155,14 +155,14 @@ const PatientDetailsScreen = ({ route, navigation }) => {
       {
         id: 1,
         type: 'blood_pressure',
-        message: '血压偏高，建议调整用药',
+        message: 'Blood pressure is high, recommend adjusting medication',
         date: '2024-01-15',
         status: 'pending'
       },
       {
         id: 2,
         type: 'medication',
-        message: '用药依从性良好',
+        message: 'Good medication compliance',
         date: '2024-01-14',
         status: 'info'
       }
@@ -172,7 +172,7 @@ const PatientDetailsScreen = ({ route, navigation }) => {
         id: 1,
         date: '2024-01-15',
         type: 'consultation',
-        title: '定期复查',
+        title: 'Regular Follow-up',
         description: '血压控制情况良好，继续现有治疗方案',
         doctor: 'Dr. 陈医生'
       },
@@ -180,8 +180,8 @@ const PatientDetailsScreen = ({ route, navigation }) => {
         id: 2,
         date: '2024-01-10',
         type: 'lab_result',
-        title: '血常规检查',
-        description: '各项指标正常',
+        title: 'Blood Test',
+        description: 'All indicators normal',
         doctor: 'Dr. 李医生'
       }
     ]
@@ -334,7 +334,7 @@ const PatientDetailsScreen = ({ route, navigation }) => {
           }
         }
         
-        console.log('✅ 成功加载患者用药计划:', plans.length, '个');
+        console.log('✅ Successfully loaded patient medication plans:', plans.length, 'plans');
         setRealMedicationPlans(plans);
       } catch (medicationError) {
         console.error('❌ 加载用药数据失败:', medicationError);
@@ -467,9 +467,9 @@ const PatientDetailsScreen = ({ route, navigation }) => {
   // 获取风险等级文本（5级风险系统）
   const getRiskLevelText = (level) => {
     switch (level) {
-      case 'high': return '高风险';
-      case 'medium': return '中风险';
-      case 'low': return '低风险';
+      case 'high': return 'High Risk';
+      case 'medium': return 'Medium Risk';
+      case 'low': return 'Low Risk';
       case 'healthy': return '健康';
       case 'unassessed': return '未评估';
       default: return '未评估';

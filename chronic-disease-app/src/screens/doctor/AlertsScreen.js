@@ -19,7 +19,8 @@ import {
 } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { fetchPatientsList } from '../../store/slices/patientsSlice';
 import { Ionicons } from '@expo/vector-icons';
 
 // 导入图表组件
@@ -31,10 +32,12 @@ import { API_BASE_URL } from '../../services/api';
 
 const AlertsScreen = ({ navigation }) => {
   const { t } = useTranslation();
+  const dispatch = useDispatch();
   const [loading, setLoading] = useState(true);
   
-  // 获取认证信息
+  // 获取认证信息和患者数据
   const { isAuthenticated, user, role, token } = useSelector(state => state.auth);
+  const { patientsList } = useSelector(state => state.patients);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all'); // all, pending, handled, dismissed
@@ -62,12 +65,12 @@ const AlertsScreen = ({ navigation }) => {
       {
         id: 1,
         patientId: 1,
-        patientName: '张三',
+        patientName: '李四',
         patientAge: 65,
         doctorId: 1,
         assignedAt: '2023-12-01T00:00:00Z',
         type: 'threshold_exceeded',
-        title: '血压异常警报',
+        title: '血压异常告警',
         message: '系统分析患者最近3天血压数据，发现收缩压持续偏高',
         priority: 'critical',
         status: 'pending',
@@ -92,13 +95,13 @@ const AlertsScreen = ({ navigation }) => {
       {
         id: 2,
         patientId: 2,
-        patientName: '李四',
+        patientName: '王五',
         patientAge: 58,
         doctorId: 1,
         assignedAt: '2023-11-15T00:00:00Z',
         type: 'missed_medication',
         title: '连续漏服药物',
-        message: '系统检测患者最近3天用药依从性下降，连续2天未记录服药',
+        message: '系统检测到最近3天用药依从性下降，连续2天无用药记录',
         priority: 'high',
         status: 'pending',
         createdAt: '2024-01-15T09:15:00Z',
@@ -112,22 +115,22 @@ const AlertsScreen = ({ navigation }) => {
           missedPattern: '连续漏服',
           lastTaken: '2024-01-13 08:00'
         },
-        medicationName: '氨氯地平片',
+        medicationName: 'Amlodipine Tablets',
         dosage: '5mg',
-        frequency: '每日一次',
+        frequency: 'Once daily',
         missedDoses: 2,
         consecutiveMissed: true
       },
       {
         id: 3,
         patientId: 3,
-        patientName: '王五',
+        patientName: '赵六',
         patientAge: 72,
         doctorId: 1,
         assignedAt: '2023-10-20T00:00:00Z',
         type: 'improvement_trend',
-        title: '血糖下降改善',
-        message: '系统分析患者最近3天血糖数据，发现平均值8.00mmol/L，呈下降趋势',
+        title: '血糖改善趋势',
+        message: '系统分析患者最近3天血糖数据，平均值8.00mmol/L，呈下降趋势',
         priority: 'low',
         status: 'pending',
         createdAt: '2024-01-14T16:45:00Z',
@@ -180,7 +183,7 @@ const AlertsScreen = ({ navigation }) => {
       {
         id: 5,
         patientId: 1,
-        patientName: '张三',
+        patientName: '李四',
         patientAge: 65,
         doctorId: 1,
         assignedAt: '2023-12-01T00:00:00Z',
@@ -238,7 +241,7 @@ const AlertsScreen = ({ navigation }) => {
           severity: '可耐受',
           recommendation: '继续观察'
         },
-        medicationName: '氨氯地平片',
+        medicationName: 'Amlodipine Tablets',
         sideEffectType: '常见副作用',
         followUpNeeded: false
       }
@@ -247,7 +250,16 @@ const AlertsScreen = ({ navigation }) => {
 
   useEffect(() => {
     loadAlerts();
+    // 获取患者数据
+    dispatch(fetchPatientsList());
   }, []);
+
+  // 监听患者数据变化，当有新患者时自动分析
+  useEffect(() => {
+    if (patientsList && patientsList.length > 0) {
+      analyzeNewPatients();
+    }
+  }, [patientsList]);
 
   const loadAlerts = async () => {
     setLoading(true);
@@ -388,11 +400,11 @@ const AlertsScreen = ({ navigation }) => {
   // 获取优先级文本
   const getPriorityText = (priority) => {
     switch (priority) {
-      case 'critical': return '危急';
-      case 'high': return '高';
-      case 'medium': return '中';
-      case 'low': return '低';
-      default: return '未知';
+      case 'critical': return t('common.critical');
+      case 'high': return t('common.high');
+      case 'medium': return t('common.medium');
+      case 'low': return t('common.low');
+      default: return t('common.unknown');
     }
   };
 
@@ -409,10 +421,10 @@ const AlertsScreen = ({ navigation }) => {
   // 获取状态文本
   const getStatusText = (status) => {
     switch (status) {
-      case 'pending': return t('alerts.pending');
-      case 'handled': return t('alerts.handled');
-      case 'dismissed': return t('alerts.dismissed');
-      default: return t('alerts.unknown');
+      case 'pending': return t('common.pending');
+      case 'handled': return t('common.handled');
+      case 'dismissed': return t('common.dismissed');
+      default: return t('common.unknown');
     }
   };
 
@@ -443,41 +455,359 @@ const AlertsScreen = ({ navigation }) => {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
     if (diffDays === 1) {
-      return '昨天';
+      return t('common.yesterday');
     } else if (diffDays < 7) {
-      return `${diffDays}天前`;
+      return t('common.daysAgo', { count: diffDays });
     } else {
-      return date.toLocaleDateString('zh-CN');
+      return date.toLocaleDateString();
     }
   };
 
   // 处理告警
   const handleAlert = (alertId) => {
     Alert.alert(
-      t('alerts.handleAlert'),
-      t('alerts.selectHandlingMethod'),
+      t('common.handleAlert'),
+      t('common.selectHandlingMethod'),
       [
         { text: t('common.cancel'), style: 'cancel' },
         { 
-          text: t('alerts.markAsHandled'), 
+          text: t('common.markAsHandled'), 
           onPress: () => markAsHandled(alertId) 
         },
         { 
-          text: t('alerts.dismissAlert'), 
+          text: t('common.dismissAlert'), 
           onPress: () => dismissAlert(alertId) 
         }
       ]
     );
   };
 
+  // 重新计算统计数据
+  const recalculateStats = (alerts) => {
+    const stats = {
+      total: alerts.length,
+      pending: alerts.filter(a => a.status === 'pending').length,
+      handled: alerts.filter(a => a.status === 'handled').length,
+      dismissed: alerts.filter(a => a.status === 'dismissed').length,
+      critical: alerts.filter(a => a.priority === 'critical').length,
+      high: alerts.filter(a => a.priority === 'high').length,
+      medium: alerts.filter(a => a.priority === 'medium').length,
+      low: alerts.filter(a => a.priority === 'low').length
+    };
+    
+    console.log('📊 统计数据更新:', stats);
+    return stats;
+  };
+
   const markAsHandled = (alertId) => {
-    // 模拟处理告警
-    console.log('处理告警:', alertId);
+    console.log('Handle alert:', alertId);
+    
+    // 更新告警状态为已处理
+    setAlertsData(prevData => {
+      const updatedAlerts = prevData.alerts.map(alert => 
+        alert.id === alertId 
+          ? { 
+              ...alert, 
+              status: 'handled',
+              handledBy: '当前医生',
+              handledAt: new Date().toISOString(),
+              handledMethod: '医生处理'
+            }
+          : alert
+      );
+      
+      return {
+        ...prevData,
+        alerts: updatedAlerts,
+        stats: recalculateStats(updatedAlerts)
+      };
+    });
+    
+    Alert.alert(
+      t('common.success'), 
+      t('medication.alertHandledSuccessfully')
+    );
   };
 
   const dismissAlert = (alertId) => {
-    // 模拟忽略告警
-    console.log('忽略告警:', alertId);
+    console.log('Dismiss alert:', alertId);
+    
+    // 更新告警状态为已忽略
+    setAlertsData(prevData => {
+      const updatedAlerts = prevData.alerts.map(alert => 
+        alert.id === alertId 
+          ? { 
+              ...alert, 
+              status: 'dismissed',
+              dismissedBy: '当前医生',
+              dismissedAt: new Date().toISOString(),
+              dismissReason: '医生判断无需处理'
+            }
+          : alert
+      );
+      
+      return {
+        ...prevData,
+        alerts: updatedAlerts,
+        stats: recalculateStats(updatedAlerts)
+      };
+    });
+    
+    Alert.alert(
+      t('common.success'), 
+      t('medication.alertDismissedSuccessfully')
+    );
+  };
+
+  // 根据慢性疾病计算风险等级
+  const getRiskLevelFromDiseases = (chronicDiseases) => {
+    if (!chronicDiseases || chronicDiseases.length === 0) {
+      return 'healthy';
+    }
+
+    const highRiskDiseases = ['heart_disease', 'stroke', 'kidney_disease'];
+    const mediumRiskDiseases = ['hypertension', 'diabetes', 'hyperlipidemia'];
+    const lowRiskDiseases = ['arthritis', 'osteoporosis'];
+
+    // 检查是否有高风险疾病
+    const hasHighRisk = chronicDiseases.some(disease => 
+      highRiskDiseases.includes(disease)
+    );
+    if (hasHighRisk) return 'high';
+
+    // 检查是否有中风险疾病
+    const hasMediumRisk = chronicDiseases.some(disease => 
+      mediumRiskDiseases.includes(disease)
+    );
+    if (hasMediumRisk) {
+      // 如果有多个中风险疾病，升级为高风险
+      const mediumRiskCount = chronicDiseases.filter(disease => 
+        mediumRiskDiseases.includes(disease)
+      ).length;
+      return mediumRiskCount >= 2 ? 'high' : 'medium';
+    }
+
+    // 检查是否有低风险疾病
+    const hasLowRisk = chronicDiseases.some(disease => 
+      lowRiskDiseases.includes(disease)
+    );
+    if (hasLowRisk) return 'low';
+
+    return 'healthy';
+  };
+
+  // 分析新患者并生成告警
+  const analyzeNewPatients = () => {
+    if (!patientsList || patientsList.length === 0) return;
+
+    const newAlerts = [];
+    let nextAlertId = Math.max(...alertsData.alerts.map(a => a.id), 0) + 1;
+
+    patientsList.forEach(patient => {
+      // 检查是否已经为此患者生成过告警
+      const existingAlerts = alertsData.alerts.filter(alert => alert.patientId === patient.id);
+      
+      // 检查是否是新患者（最近7天内添加）且还没有告警
+      const isNewPatient = patient.created_at && 
+        new Date(patient.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      
+      // 临时：为了测试，也分析没有created_at的患者
+      const shouldAnalyze = (isNewPatient || !patient.created_at) && existingAlerts.length === 0;
+      
+      if (shouldAnalyze) {
+        console.log(`🔍 分析新患者: ${patient.name}`);
+        console.log(`📋 患者数据:`, {
+          id: patient.id,
+          name: patient.name,
+          age: patient.age,
+          chronic_diseases: patient.chronic_diseases,
+          created_at: patient.created_at,
+          existingAlertsCount: existingAlerts.length
+        });
+        
+        // 基于患者慢性疾病生成告警
+        if (patient.chronic_diseases && patient.chronic_diseases.length > 0) {
+          console.log(`🏥 患者有慢性疾病: ${patient.chronic_diseases.join(', ')}`);
+          patient.chronic_diseases.forEach(disease => {
+            const alert = generateDiseaseAlert(patient, disease, nextAlertId++);
+            if (alert) {
+              console.log(`✅ 生成疾病告警: ${alert.title}`);
+              newAlerts.push(alert);
+            }
+          });
+        } else {
+          console.log(`💚 患者无慢性疾病`);
+        }
+
+        // 基于风险等级生成告警
+        const riskLevel = getRiskLevelFromDiseases(patient.chronic_diseases);
+        console.log(`⚖️ 风险等级: ${riskLevel}`);
+        if (riskLevel === 'high' || riskLevel === 'medium') {
+          const riskAlert = generateRiskAlert(patient, riskLevel, nextAlertId++);
+          if (riskAlert) {
+            console.log(`✅ 生成风险告警: ${riskAlert.title}`);
+            newAlerts.push(riskAlert);
+          }
+        }
+
+        // 基于年龄生成告警（老年患者）
+        if (patient.age >= 65) {
+          console.log(`👴 老年患者，年龄: ${patient.age}`);
+          const ageAlert = generateAgeAlert(patient, nextAlertId++);
+          if (ageAlert) {
+            console.log(`✅ 生成年龄告警: ${ageAlert.title}`);
+            newAlerts.push(ageAlert);
+          }
+        } else {
+          console.log(`👤 非老年患者，年龄: ${patient.age}`);
+        }
+
+        // 为新患者生成欢迎/评估提醒（即使没有慢性疾病）
+        if (newAlerts.length === 0) {
+          console.log(`👋 为新患者生成欢迎提醒`);
+          const welcomeAlert = generateWelcomeAlert(patient, nextAlertId++);
+          if (welcomeAlert) {
+            console.log(`✅ 生成欢迎告警: ${welcomeAlert.title}`);
+            newAlerts.push(welcomeAlert);
+          }
+        }
+      }
+    });
+
+    // 如果有新生成的告警，更新状态
+    if (newAlerts.length > 0) {
+      setAlertsData(prevData => ({
+        ...prevData,
+        alerts: [...prevData.alerts, ...newAlerts],
+        stats: recalculateStats([...prevData.alerts, ...newAlerts])
+      }));
+      
+      console.log(`🚨 为新患者生成了 ${newAlerts.length} 个告警`);
+    }
+  };
+
+  // 基于疾病生成告警
+  const generateDiseaseAlert = (patient, disease, alertId) => {
+    const diseaseAlertMap = {
+      'hypertension': {
+        title: '高血压患者监测提醒',
+        message: `新患者${patient.name}患有高血压，建议定期监测血压并制定治疗方案`,
+        priority: 'high',
+        type: 'chronic_disease'
+      },
+      'diabetes': {
+        title: '糖尿病患者监测提醒', 
+        message: `新患者${patient.name}患有糖尿病，建议监测血糖并制定用药计划`,
+        priority: 'high',
+        type: 'chronic_disease'
+      },
+      'heart_disease': {
+        title: '心脏病患者关注提醒',
+        message: `新患者${patient.name}患有心脏病，需要重点关注心血管健康`,
+        priority: 'critical',
+        type: 'chronic_disease'
+      }
+    };
+
+    const alertConfig = diseaseAlertMap[disease];
+    if (!alertConfig) return null;
+
+    return {
+      id: alertId,
+      patientId: patient.id,
+      patientName: patient.name,
+      patientAge: patient.age,
+      doctorId: 1,
+      assignedAt: new Date().toISOString(),
+      type: alertConfig.type,
+      title: alertConfig.title,
+      message: alertConfig.message,
+      priority: alertConfig.priority,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      relatedMetric: disease,
+      isSystemGenerated: true
+    };
+  };
+
+  // 基于风险等级生成告警
+  const generateRiskAlert = (patient, riskLevel, alertId) => {
+    if (riskLevel === 'high') {
+      return {
+        id: alertId,
+        patientId: patient.id,
+        patientName: patient.name,
+        patientAge: patient.age,
+        doctorId: 1,
+        assignedAt: new Date().toISOString(),
+        type: 'high_risk',
+        title: '高风险患者关注提醒',
+        message: `新患者${patient.name}被评估为高风险等级，建议立即制定详细的治疗和监测计划`,
+        priority: 'critical',
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        relatedMetric: '风险评估',
+        isSystemGenerated: true
+      };
+    } else if (riskLevel === 'medium') {
+      return {
+        id: alertId,
+        patientId: patient.id,
+        patientName: patient.name,
+        patientAge: patient.age,
+        doctorId: 1,
+        assignedAt: new Date().toISOString(),
+        type: 'medium_risk',
+        title: '中风险患者监测提醒',
+        message: `新患者${patient.name}被评估为中风险等级，建议定期随访和健康监测`,
+        priority: 'medium',
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        relatedMetric: '风险评估',
+        isSystemGenerated: true
+      };
+    }
+    return null;
+  };
+
+  // 基于年龄生成告警
+  const generateAgeAlert = (patient, alertId) => {
+    return {
+      id: alertId,
+      patientId: patient.id,
+      patientName: patient.name,
+      patientAge: patient.age,
+      doctorId: 1,
+      assignedAt: new Date().toISOString(),
+      type: 'elderly_care',
+      title: '老年患者关怀提醒',
+      message: `新患者${patient.name}已${patient.age}岁，属于老年患者群体，建议加强健康监测和预防保健`,
+      priority: 'medium',
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      relatedMetric: '年龄',
+      isSystemGenerated: true
+    };
+  };
+
+  // 为新患者生成欢迎/评估提醒
+  const generateWelcomeAlert = (patient, alertId) => {
+    return {
+      id: alertId,
+      patientId: patient.id,
+      patientName: patient.name,
+      patientAge: patient.age,
+      doctorId: 1,
+      assignedAt: new Date().toISOString(),
+      type: 'new_patient',
+      title: '新患者评估提醒',
+      message: `新患者${patient.name}（${patient.age}岁）已加入系统，建议进行初步健康评估和制定个性化健康管理计划`,
+      priority: 'medium',
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      relatedMetric: '新患者评估',
+      isSystemGenerated: true
+    };
   };
 
   // 渲染告警卡片
@@ -502,7 +832,7 @@ const AlertsScreen = ({ navigation }) => {
 
               </View>
               <Text style={styles.patientName}>
-                {alert.patientName} · {alert.patientAge}岁 · 我的患者
+                {alert.patientName} · {alert.patientAge}{t('common.yearsOld')} · {t('common.myPatient')}
               </Text>
             </View>
             
@@ -535,7 +865,7 @@ const AlertsScreen = ({ navigation }) => {
           {/* 告警详细信息 */}
           {alert.relatedMetric && (
             <View style={styles.alertDetails}>
-              <Text style={styles.detailLabel}>相关指标:</Text>
+              <Text style={styles.detailLabel}>{t('alerts.relatedMetric')}:</Text>
               <Text style={styles.detailValue}>
                 {alert.relatedMetric}: {alert.value}
               </Text>
@@ -560,6 +890,8 @@ const AlertsScreen = ({ navigation }) => {
                 compact 
                 onPress={() => handleAlert(alert.id)}
                 style={styles.actionButton}
+                contentStyle={styles.actionButtonContent}
+                labelStyle={styles.actionButtonLabel}
               >
                 {t('alerts.handle')}
               </Button>
@@ -579,16 +911,16 @@ const AlertsScreen = ({ navigation }) => {
   // 渲染统计数据
   const renderStats = () => {
     const priorityData = [
-      { label: '危急', value: alertsData.stats.critical },
-      { label: '高', value: alertsData.stats.high },
-      { label: '中', value: alertsData.stats.medium },
-      { label: '低', value: alertsData.stats.low }
+      { label: t('common.critical'), value: alertsData.stats.critical },
+      { label: t('common.high'), value: alertsData.stats.high },
+      { label: t('common.medium'), value: alertsData.stats.medium },
+      { label: t('common.low'), value: alertsData.stats.low }
     ];
 
     const statusData = [
-      { label: t('alerts.pending'), value: alertsData.stats.pending, color: '#FF5722' },
-      { label: t('alerts.handled'), value: alertsData.stats.handled, color: '#4CAF50' },
-      { label: t('alerts.dismissed'), value: alertsData.stats.dismissed, color: '#9E9E9E' }
+      { label: t('common.pending'), value: alertsData.stats.pending, color: '#FF5722' },
+      { label: t('common.handled'), value: alertsData.stats.handled, color: '#4CAF50' },
+      { label: t('common.dismissed'), value: alertsData.stats.dismissed, color: '#9E9E9E' }
     ];
 
     return (
@@ -597,14 +929,14 @@ const AlertsScreen = ({ navigation }) => {
         <View style={styles.statsContainer}>
           <View style={styles.statsRow}>
             <StatsCard
-              title={t('alerts.totalAlerts')}
+              title={t('common.totalAlerts')}
               value={alertsData.stats.total.toString()}
               icon="warning"
               color="#FF5722"
               style={styles.statCard}
             />
             <StatsCard
-              title={t('alerts.pending')}
+              title={t('common.pending')}
               value={alertsData.stats.pending.toString()}
               icon="alert-circle"
               color="#F57C00"
@@ -614,14 +946,14 @@ const AlertsScreen = ({ navigation }) => {
           
           <View style={styles.statsRow}>
             <StatsCard
-              title={t('alerts.handled')}
+              title={t('common.handled')}
               value={alertsData.stats.handled.toString()}
               icon="checkmark-circle"
               color="#4CAF50"
               style={styles.statCard}
             />
             <StatsCard
-              title={t('alerts.criticalAlerts')}
+              title={t('common.criticalAlerts')}
               value={alertsData.stats.critical.toString()}
               icon="flash"
               color="#D32F2F"
@@ -661,7 +993,7 @@ const AlertsScreen = ({ navigation }) => {
   // 渲染过滤器
   const renderFilters = () => (
     <View>
-      <Text style={styles.filterTitle}>{t('alerts.statusFilter')}</Text>
+      <Text style={styles.filterTitle}>{t('common.statusFilter')}</Text>
       <View style={styles.statusFiltersContainer}>
         <Chip 
           mode="outlined"
@@ -675,7 +1007,7 @@ const AlertsScreen = ({ navigation }) => {
             filterStatus === 'all' && styles.selectedStatusChipText
           ]}
         >
-          {t('alerts.all')} ({alertsData.stats.total})
+          {t('common.all')} ({alertsData.stats.total})
         </Chip>
         <Chip 
           mode="outlined"
@@ -689,7 +1021,7 @@ const AlertsScreen = ({ navigation }) => {
             filterStatus === 'pending' && styles.selectedStatusChipText
           ]}
         >
-          {t('alerts.pending')} ({alertsData.stats.pending})
+          {t('common.pending')} ({alertsData.stats.pending})
         </Chip>
         <Chip 
           mode="outlined"
@@ -703,7 +1035,7 @@ const AlertsScreen = ({ navigation }) => {
             filterStatus === 'handled' && styles.selectedStatusChipText
           ]}
         >
-          {t('alerts.handled')} ({alertsData.stats.handled})
+          {t('common.handled')} ({alertsData.stats.handled})
         </Chip>
         <Chip 
           mode="outlined"
@@ -717,11 +1049,11 @@ const AlertsScreen = ({ navigation }) => {
             filterStatus === 'dismissed' && styles.selectedStatusChipText
           ]}
         >
-          已忽略 ({alertsData.stats.dismissed})
+          {t('common.dismissed')} ({alertsData.stats.dismissed})
         </Chip>
       </View>
 
-      <Text style={styles.filterTitle}>{t('alerts.priorityFilter')}</Text>
+      <Text style={styles.filterTitle}>{t('common.priorityFilter')}</Text>
       <View style={styles.filtersContainer}>
         <Chip 
           mode="outlined"
@@ -735,7 +1067,7 @@ const AlertsScreen = ({ navigation }) => {
             filterPriority === 'all' && styles.selectedPriorityChipText
           ]}
         >
-          全部
+          {t('common.all')}
         </Chip>
         <Chip 
           mode="outlined"
@@ -749,7 +1081,7 @@ const AlertsScreen = ({ navigation }) => {
             filterPriority === 'critical' && styles.selectedCriticalChipText
           ]}
         >
-          危急
+          {t('common.critical')}
         </Chip>
         <Chip 
           mode="outlined"
@@ -763,7 +1095,7 @@ const AlertsScreen = ({ navigation }) => {
             filterPriority === 'high' && styles.selectedHighChipText
           ]}
         >
-          高
+          {t('common.high')}
         </Chip>
         <Chip 
           mode="outlined"
@@ -777,7 +1109,7 @@ const AlertsScreen = ({ navigation }) => {
             filterPriority === 'medium' && styles.selectedMediumChipText
           ]}
         >
-          中
+          {t('common.medium')}
         </Chip>
         <Chip 
           mode="outlined"
@@ -791,7 +1123,7 @@ const AlertsScreen = ({ navigation }) => {
             filterPriority === 'low' && styles.selectedLowChipText
           ]}
         >
-          低
+          {t('common.low')}
         </Chip>
       </View>
     </View>
@@ -802,7 +1134,7 @@ const AlertsScreen = ({ navigation }) => {
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" />
-          <Text style={styles.loadingText}>{t('alerts.loadingAlerts')}</Text>
+          <Text style={styles.loadingText}>{t('common.loading')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -826,12 +1158,12 @@ const AlertsScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
         <Text variant="bodyMedium" style={styles.subtitle}>
-          系统分析数据库患者数据并推送 · 共{new Set(alertsData.alerts.map(alert => alert.patientId)).size}位患者 · 数据来源: {alertsData.dataSource || '健康指标表+用药记录表'}
+          {t('common.systemAnalysisAndPush')} · {t('common.totalPatients', { count: new Set(alertsData.alerts.map(alert => alert.patientId)).size })} · {t('common.dataSource')}: {alertsData.dataSource || t('common.healthAndMedicationTables')}
         </Text>
       </View>
 
       <Searchbar
-        placeholder="搜索患者姓名或告警内容..."
+        placeholder={t('common.searchPatientsOrAlerts')}
         onChangeText={setSearchQuery}
         value={searchQuery}
         style={styles.searchBar}
@@ -865,10 +1197,10 @@ const AlertsScreen = ({ navigation }) => {
             <View style={styles.emptyState}>
               <Text style={styles.emptyIcon}>🔔</Text>
               <Text variant="headlineSmall" style={styles.emptyTitle}>
-                暂无异常告警
+                {t('common.noAbnormalAlerts')}
               </Text>
               <Text variant="bodyMedium" style={styles.emptySubtitle}>
-                系统分析患者数据正常，暂无异常趋势需要关注
+                {t('common.patientDataNormalNoTrends')}
               </Text>
             </View>
           ) : null
@@ -994,6 +1326,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F5F5',
     borderColor: '#E0E0E0',
     borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   statusFilterChip: {
     minWidth: 80,
@@ -1003,6 +1337,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F5F5',
     borderColor: '#E0E0E0',
     borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   selectedStatusChip: {
     backgroundColor: '#E3F2FD',
@@ -1013,16 +1349,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666666',
     fontWeight: '500',
+    textAlign: 'center',
+    textAlignVertical: 'center',
   },
   selectedStatusChipText: {
     color: '#2196F3',
     fontWeight: '600',
+    textAlign: 'center',
+    textAlignVertical: 'center',
   },
   // 优先级筛选芯片样式
   priorityFilterChipText: {
     fontSize: 12,
     color: '#666666',
     fontWeight: '500',
+    textAlign: 'center',
+    textAlignVertical: 'center',
   },
   selectedPriorityChip: {
     backgroundColor: '#E3F2FD',
@@ -1032,6 +1374,8 @@ const styles = StyleSheet.create({
   selectedPriorityChipText: {
     color: '#2196F3',
     fontWeight: '600',
+    textAlign: 'center',
+    textAlignVertical: 'center',
   },
   selectedCriticalChip: {
     backgroundColor: '#FFEBEE',
@@ -1041,6 +1385,8 @@ const styles = StyleSheet.create({
   selectedCriticalChipText: {
     color: '#D32F2F',
     fontWeight: '600',
+    textAlign: 'center',
+    textAlignVertical: 'center',
   },
   selectedHighChip: {
     backgroundColor: '#FFF3E0',
@@ -1050,6 +1396,8 @@ const styles = StyleSheet.create({
   selectedHighChipText: {
     color: '#F57C00',
     fontWeight: '600',
+    textAlign: 'center',
+    textAlignVertical: 'center',
   },
   selectedMediumChip: {
     backgroundColor: '#E3F2FD',
@@ -1059,6 +1407,8 @@ const styles = StyleSheet.create({
   selectedMediumChipText: {
     color: '#1976D2',
     fontWeight: '600',
+    textAlign: 'center',
+    textAlignVertical: 'center',
   },
   selectedLowChip: {
     backgroundColor: '#E8F5E8',
@@ -1068,6 +1418,8 @@ const styles = StyleSheet.create({
   selectedLowChipText: {
     color: '#388E3C',
     fontWeight: '600',
+    textAlign: 'center',
+    textAlignVertical: 'center',
   },
   listContainer: {
     paddingBottom: 80,
@@ -1107,10 +1459,12 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     flex: 1,
     flexWrap: 'wrap',
+    textAlignVertical: 'center',
   },
   patientName: {
     fontSize: 14,
     color: '#666',
+    textAlignVertical: 'center',
   },
   alertBadges: {
     alignItems: 'flex-end',
@@ -1153,6 +1507,7 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 8,
     lineHeight: 20,
+    textAlignVertical: 'center',
   },
   alertDetails: {
     flexDirection: 'row',
@@ -1179,14 +1534,38 @@ const styles = StyleSheet.create({
   alertTime: {
     fontSize: 12,
     color: '#999',
+    textAlignVertical: 'center',
   },
   actionButton: {
-    height: 32,
+    height: 28,
+    minHeight: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  actionButtonContent: {
+    height: 28,
+    minHeight: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 0,
+    paddingHorizontal: 8,
+    margin: 0,
+  },
+  actionButtonLabel: {
+    fontSize: 11,
+    lineHeight: 14,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
+    marginVertical: 0,
+    paddingVertical: 0,
   },
   handledBy: {
     fontSize: 12,
     color: '#4CAF50',
     fontStyle: 'italic',
+    textAlign: 'right',
+    textAlignVertical: 'center',
   },
   emptyState: {
     justifyContent: 'center',

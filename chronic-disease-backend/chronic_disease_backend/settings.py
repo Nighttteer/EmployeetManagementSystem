@@ -22,11 +22,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
+# In production, source this from environment variables or a secret
+# manager. Never hard-code real secrets into the repository.
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-your-secret-key-here')
 
 # SECURITY WARNING: don't run with debug turned on in production!
+# Set DEBUG=False in production to disable detailed error pages and to
+# reduce sensitive information exposure.
 DEBUG = config('DEBUG', default=True, cast=bool)
 
+# In production, restrict to your known domain(s)/IPs to mitigate Host
+# header attacks.
 ALLOWED_HOSTS = ['*']  # 在生产环境中需要限制
 
 
@@ -179,6 +185,9 @@ REST_FRAMEWORK = {
 }
 
 # JWT Settings
+# JWT configuration. In production, prefer shorter access token lifetimes
+# with refresh rotation and blacklist enabled, and store signing key out
+# of code. Consider asymmetric algorithms for key separation.
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
@@ -207,6 +216,7 @@ SIMPLE_JWT = {
 }
 
 # CORS settings - 允许React Native应用访问
+# In production, keep this list tight and avoid `CORS_ALLOW_ALL_ORIGINS`.
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:8081",  # Expo默认端口
     "http://127.0.0.1:8081",
@@ -214,6 +224,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:19006",
 ]
 
+# Development convenience only; must be False in production.
 CORS_ALLOW_ALL_ORIGINS = DEBUG  # 仅在开发环境中允许所有源
 
 CORS_ALLOW_CREDENTIALS = True
@@ -240,7 +251,7 @@ HEALTH_METRIC_TYPES = [
     ('lipids', '血脂'),
 ]
 
-# 用户角色设置
+# User Role Setting
 USER_ROLES = [
     ('patient', '患者'),
     ('doctor', '医生'),
@@ -292,7 +303,9 @@ MESSAGE_TYPES = [
     ('audio', '语音'),
 ]
 
-# 日志配置
+# 日志配置 / Logging configuration
+# Consider shipping logs to a centralized system (e.g., ELK/Cloud) and
+# including request IDs for traceability in production.
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,

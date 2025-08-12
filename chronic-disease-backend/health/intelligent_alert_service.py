@@ -483,11 +483,12 @@ class IntelligentAlertService:
         try:
             doctor = User.objects.get(id=doctor_id, role='doctor')
             
-            # 获取医生的所有病人
-            # 注意：这里需要根据实际的医患关系模型来调整查询
-            patients = User.objects.filter(
-                role='patient'
-            )
+            # 获取医生负责的患者（基于医患关系表）
+            from .models import DoctorPatientRelation
+            patient_relations = DoctorPatientRelation.objects.filter(
+                doctor=doctor, status='active'
+            ).select_related('patient')
+            patients = [relation.patient for relation in patient_relations]
             
             all_alerts = []
             

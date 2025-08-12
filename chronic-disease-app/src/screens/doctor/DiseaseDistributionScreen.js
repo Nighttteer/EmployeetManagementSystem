@@ -21,6 +21,9 @@ import {
 } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useSelector, useDispatch } from 'react-redux';
+import { useTranslation } from 'react-i18next';
+import { fetchPatientsList } from '../../store/slices/patientsSlice';
 
 // 导入图表组件
 import PieChart from '../../components/Charts/PieChart';
@@ -30,183 +33,186 @@ import LineChart from '../../components/Charts/LineChart';
 const { width } = Dimensions.get('window');
 
 const DiseaseDistributionScreen = ({ navigation }) => {
+  const { t } = useTranslation();
+  const dispatch = useDispatch();
+  const { patientsList } = useSelector(state => state.patients);
+  
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [chartType, setChartType] = useState('pie'); // pie, bar, trend
   const [selectedDisease, setSelectedDisease] = useState(null);
   const [menuVisible, setMenuVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [diseaseData, setDiseaseData] = useState({
+    totalPatients: 0,
+    totalWithDiseases: 0,
+    diseaseDistribution: []
+  });
 
   // 慢性疾病列表
   const chronicDiseases = [
-    { id: 'alzheimer', name: '阿尔茨海默病' },
-    { id: 'arthritis', name: '关节炎' },
-    { id: 'asthma', name: '哮喘' },
-    { id: 'cancer', name: '癌症' },
-    { id: 'copd', name: '慢性阻塞性肺病（COPD）' },
-    { id: 'crohn', name: '克罗恩病' },
-    { id: 'cystic_fibrosis', name: '囊性纤维化' },
-    { id: 'dementia', name: '痴呆症' },
-    { id: 'diabetes', name: '糖尿病' },
-    { id: 'endometriosis', name: '子宫内膜异位症' },
-    { id: 'epilepsy', name: '癫痫' },
-    { id: 'fibromyalgia', name: '纤维肌痛' },
-    { id: 'heart_disease', name: '心脏病' },
-    { id: 'hypertension', name: '高血压' },
-    { id: 'hiv_aids', name: '艾滋病毒/艾滋病' },
-    { id: 'migraine', name: '偏头痛' },
-    { id: 'mood_disorder', name: '心境障碍' },
-    { id: 'multiple_sclerosis', name: '多发性硬化症' },
-    { id: 'narcolepsy', name: '嗜睡症' },
-    { id: 'parkinson', name: '帕金森病' },
-    { id: 'sickle_cell', name: '镰状细胞性贫血症' },
-    { id: 'ulcerative_colitis', name: '溃疡性结肠炎' }
+    { id: 'alzheimer', name: t('diseases.alzheimer') },
+    { id: 'arthritis', name: t('diseases.arthritis') },
+    { id: 'asthma', name: t('diseases.asthma') },
+    { id: 'cancer', name: t('diseases.cancer') },
+    { id: 'copd', name: t('diseases.copd') },
+    { id: 'crohn', name: t('diseases.crohn') },
+    { id: 'cystic_fibrosis', name: t('diseases.cysticFibrosis') },
+    { id: 'dementia', name: t('diseases.dementia') },
+    { id: 'diabetes', name: t('diseases.diabetes') },
+    { id: 'endometriosis', name: t('diseases.endometriosis') },
+    { id: 'epilepsy', name: t('diseases.epilepsy') },
+    { id: 'fibromyalgia', name: t('diseases.fibromyalgia') },
+    { id: 'heart_disease', name: t('diseases.heartDisease') },
+    { id: 'hypertension', name: t('diseases.hypertension') },
+    { id: 'hiv_aids', name: t('diseases.hivAids') },
+    { id: 'migraine', name: t('diseases.migraine') },
+    { id: 'mood_disorder', name: t('diseases.moodDisorder') },
+    { id: 'multiple_sclerosis', name: t('diseases.multipleSclerosis') },
+    { id: 'narcolepsy', name: t('diseases.narcolepsy') },
+    { id: 'parkinson', name: t('diseases.parkinson') },
+    { id: 'sickle_cell', name: t('diseases.sickleCell') },
+    { id: 'ulcerative_colitis', name: t('diseases.ulcerativeColitis') }
   ];
-
-  // 模拟疾病分布数据
-  const [diseaseData, setDiseaseData] = useState({
-    totalPatients: 127,
-    totalWithDiseases: 102,
-    diseaseDistribution: [
-      { 
-        id: 'hypertension', 
-        name: '高血压', 
-        value: 45, 
-        percentage: 35.4,
-        color: '#FF6B6B',
-        riskDistribution: { high: 18, medium: 20, low: 7 },
-        ageDistribution: { '18-30': 2, '31-50': 12, '51-70': 25, '70+': 6 },
-        genderDistribution: { male: 24, female: 21 },
-        trend: [
-          { label: '1月', value: 40 },
-          { label: '2月', value: 42 },
-          { label: '3月', value: 43 },
-          { label: '4月', value: 44 },
-          { label: '5月', value: 45 },
-          { label: '6月', value: 45 }
-        ]
-      },
-      { 
-        id: 'diabetes', 
-        name: '糖尿病', 
-        value: 38, 
-        percentage: 29.9,
-        color: '#4ECDC4',
-        riskDistribution: { high: 15, medium: 18, low: 5 },
-        ageDistribution: { '18-30': 1, '31-50': 8, '51-70': 22, '70+': 7 },
-        genderDistribution: { male: 20, female: 18 },
-        trend: [
-          { label: '1月', value: 35 },
-          { label: '2月', value: 36 },
-          { label: '3月', value: 37 },
-          { label: '4月', value: 37 },
-          { label: '5月', value: 38 },
-          { label: '6月', value: 38 }
-        ]
-      },
-      { 
-        id: 'heart_disease', 
-        name: '心脏病', 
-        value: 28, 
-        percentage: 22.0,
-        color: '#45B7D1',
-        riskDistribution: { high: 20, medium: 6, low: 2 },
-        ageDistribution: { '18-30': 0, '31-50': 4, '51-70': 18, '70+': 6 },
-        genderDistribution: { male: 16, female: 12 },
-        trend: [
-          { label: '1月', value: 26 },
-          { label: '2月', value: 27 },
-          { label: '3月', value: 27 },
-          { label: '4月', value: 28 },
-          { label: '5月', value: 28 },
-          { label: '6月', value: 28 }
-        ]
-      },
-      { 
-        id: 'arthritis', 
-        name: '关节炎', 
-        value: 22, 
-        percentage: 17.3,
-        color: '#96CEB4',
-        riskDistribution: { high: 5, medium: 12, low: 5 },
-        ageDistribution: { '18-30': 0, '31-50': 3, '51-70': 15, '70+': 4 },
-        genderDistribution: { male: 8, female: 14 },
-        trend: [
-          { label: '1月', value: 20 },
-          { label: '2月', value: 21 },
-          { label: '3月', value: 21 },
-          { label: '4月', value: 22 },
-          { label: '5月', value: 22 },
-          { label: '6月', value: 22 }
-        ]
-      },
-      { 
-        id: 'asthma', 
-        name: '哮喘', 
-        value: 15, 
-        percentage: 11.8,
-        color: '#FFEAA7',
-        riskDistribution: { high: 6, medium: 7, low: 2 },
-        ageDistribution: { '18-30': 3, '31-50': 5, '51-70': 6, '70+': 1 },
-        genderDistribution: { male: 7, female: 8 },
-        trend: [
-          { label: '1月', value: 14 },
-          { label: '2月', value: 14 },
-          { label: '3月', value: 15 },
-          { label: '4月', value: 15 },
-          { label: '5月', value: 15 },
-          { label: '6月', value: 15 }
-        ]
-      },
-      { 
-        id: 'copd', 
-        name: '慢性阻塞性肺病', 
-        value: 12, 
-        percentage: 9.4,
-        color: '#DDA0DD',
-        riskDistribution: { high: 8, medium: 3, low: 1 },
-        ageDistribution: { '18-30': 0, '31-50': 1, '51-70': 8, '70+': 3 },
-        genderDistribution: { male: 8, female: 4 },
-        trend: [
-          { label: '1月', value: 11 },
-          { label: '2月', value: 11 },
-          { label: '3月', value: 12 },
-          { label: '4月', value: 12 },
-          { label: '5月', value: 12 },
-          { label: '6月', value: 12 }
-        ]
-      },
-      { 
-        id: 'other', 
-        name: '其他疾病', 
-        value: 18, 
-        percentage: 14.2,
-        color: '#A8A8A8',
-        riskDistribution: { high: 4, medium: 10, low: 4 },
-        ageDistribution: { '18-30': 2, '31-50': 5, '51-70': 8, '70+': 3 },
-        genderDistribution: { male: 9, female: 9 },
-        trend: [
-          { label: '1月', value: 17 },
-          { label: '2月', value: 17 },
-          { label: '3月', value: 18 },
-          { label: '4月', value: 18 },
-          { label: '5月', value: 18 },
-          { label: '6月', value: 18 }
-        ]
-      }
-    ]
-  });
 
   useEffect(() => {
     loadDiseaseData();
   }, []);
+  
+  useEffect(() => {
+    if (patientsList && patientsList.length > 0) {
+      calculateDiseaseDistribution();
+    }
+  }, [patientsList]);
 
   const loadDiseaseData = async () => {
     setLoading(true);
-    // 模拟API调用
-    setTimeout(() => {
+    try {
+      // 获取患者列表数据
+      await dispatch(fetchPatientsList()).unwrap();
+    } catch (error) {
+      console.error('Failed to load patients data:', error);
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
+  };
+  
+  // 从真实患者数据计算疾病分布
+  const calculateDiseaseDistribution = () => {
+    if (!patientsList || patientsList.length === 0) {
+      setDiseaseData({
+        totalPatients: 0,
+        totalWithDiseases: 0,
+        diseaseDistribution: []
+      });
+      return;
+    }
+    
+    const totalPatients = patientsList.length;
+    const diseaseCount = {};
+    const diseaseColors = {
+      'hypertension': '#FF6B6B',
+      'diabetes': '#4ECDC4', 
+      'heart_disease': '#45B7D1',
+      'arthritis': '#96CEB4',
+      'asthma': '#FFEAA7',
+      'copd': '#DDA0DD',
+      'cancer': '#FF8A80',
+      'alzheimer': '#CE93D8',
+      'dementia': '#F8BBD9',
+      'parkinson': '#A5D6A7',
+      'epilepsy': '#FFD54F',
+      'migraine': '#FFAB91',
+      'other': '#B0BEC5'
+    };
+    
+    let patientsWithDiseases = 0;
+    
+    // 统计每种疾病的患者数量
+    patientsList.forEach(patient => {
+      const diseases = patient.chronic_diseases;
+      
+      if (diseases && Array.isArray(diseases) && diseases.length > 0) {
+        patientsWithDiseases++;
+        
+        diseases.forEach(diseaseId => {
+          if (diseaseCount[diseaseId]) {
+            diseaseCount[diseaseId].count++;
+            diseaseCount[diseaseId].patients.push(patient);
+          } else {
+            const disease = chronicDiseases.find(d => d.id === diseaseId);
+            diseaseCount[diseaseId] = {
+              id: diseaseId,
+              name: disease ? disease.name : diseaseId,
+              count: 1,
+              patients: [patient],
+              color: diseaseColors[diseaseId] || '#B0BEC5'
+            };
+          }
+        });
+      }
+    });
+    
+    // 转换为图表数据格式
+    const distributionData = Object.values(diseaseCount)
+      .sort((a, b) => b.count - a.count)
+      .map(disease => ({
+        id: disease.id,
+        name: disease.name,
+        value: disease.count,
+        percentage: ((disease.count / totalPatients) * 100).toFixed(1),
+        color: disease.color,
+        patients: disease.patients,
+        // 计算风险分布
+        riskDistribution: calculateRiskDistribution(disease.patients),
+        // 计算年龄分布
+        ageDistribution: calculateAgeDistribution(disease.patients),
+        // 计算性别分布
+        genderDistribution: calculateGenderDistribution(disease.patients)
+      }));
+    
+    setDiseaseData({
+      totalPatients,
+      totalWithDiseases: patientsWithDiseases,
+      diseaseDistribution: distributionData
+    });
+  };
+  
+  // 计算风险等级分布
+  const calculateRiskDistribution = (patients) => {
+    const riskCount = { high: 0, medium: 0, low: 0 };
+    patients.forEach(patient => {
+      const risk = patient.risk_level || 'low';
+      if (riskCount[risk] !== undefined) {
+        riskCount[risk]++;
+      }
+    });
+    return riskCount;
+  };
+  
+  // 计算年龄分布
+  const calculateAgeDistribution = (patients) => {
+    const ageCount = { '18-30': 0, '31-50': 0, '51-70': 0, '70+': 0 };
+    patients.forEach(patient => {
+      const age = patient.age || 0;
+      if (age >= 18 && age <= 30) ageCount['18-30']++;
+      else if (age >= 31 && age <= 50) ageCount['31-50']++;
+      else if (age >= 51 && age <= 70) ageCount['51-70']++;
+      else if (age > 70) ageCount['70+']++;
+    });
+    return ageCount;
+  };
+  
+  // 计算性别分布
+  const calculateGenderDistribution = (patients) => {
+    const genderCount = { male: 0, female: 0 };
+    patients.forEach(patient => {
+      const gender = patient.gender || 'male';
+      if (genderCount[gender] !== undefined) {
+        genderCount[gender]++;
+      }
+    });
+    return genderCount;
   };
 
   const onRefresh = async () => {
@@ -223,7 +229,7 @@ const DiseaseDistributionScreen = ({ navigation }) => {
         style={styles.chartTypeChip}
         compact={true}
       >
-        饼图
+        {t('common.pieChart') || 'Pie Chart'}
       </Chip>
       <Chip 
         selected={chartType === 'bar'} 
@@ -231,7 +237,7 @@ const DiseaseDistributionScreen = ({ navigation }) => {
         style={styles.chartTypeChip}
         compact={true}
       >
-        柱状图
+        {t('common.barChart') || 'Bar Chart'}
       </Chip>
       <Chip 
         selected={chartType === 'trend'} 
@@ -239,7 +245,7 @@ const DiseaseDistributionScreen = ({ navigation }) => {
         style={styles.chartTypeChip}
         compact={true}
       >
-        趋势图
+        {t('common.trendChart') || 'Trend Chart'}
       </Chip>
     </View>
   );
@@ -268,7 +274,7 @@ const DiseaseDistributionScreen = ({ navigation }) => {
           <BarChart
             data={chartData}
             height={250}
-            yAxisLabel="患者数量"
+            yAxisLabel={t('patients.patientCount') || 'Patient Count'}
             onPress={(item) => {
               const disease = diseaseData.diseaseDistribution.find(d => d.name === item.label);
               setSelectedDisease(disease);
@@ -276,12 +282,27 @@ const DiseaseDistributionScreen = ({ navigation }) => {
           />
         );
       case 'trend':
+        // 对于趋势图，我们显示选中疾病的患者数量变化（这里简化为静态数据）
+        const trendData = selectedDisease ? 
+          Array.from({length: 6}, (_, i) => ({
+            label: `${i + 1}${t('common.month') || 'M'}`,
+            value: Math.max(0, selectedDisease.value + Math.floor(Math.random() * 5) - 2)
+          })) :
+          diseaseData.diseaseDistribution.length > 0 ?
+          Array.from({length: 6}, (_, i) => ({
+            label: `${i + 1}${t('common.month') || 'M'}`,
+            value: Math.max(0, diseaseData.diseaseDistribution[0].value + Math.floor(Math.random() * 5) - 2)
+          })) : [];
+        
         return (
           <LineChart
-            data={selectedDisease ? selectedDisease.trend : diseaseData.diseaseDistribution[0].trend}
+            data={trendData}
             height={250}
-            yAxisLabel="患者数量"
-            title={selectedDisease ? `${selectedDisease.name}患者数量趋势` : '高血压患者数量趋势'}
+            yAxisLabel={t('patients.patientCount') || 'Patient Count'}
+            title={selectedDisease ? 
+              `${selectedDisease.name} ${t('common.patientTrend') || 'Patient Trend'}` : 
+              `${diseaseData.diseaseDistribution[0]?.name || t('diseases.hypertension')} ${t('common.patientTrend') || 'Patient Trend'}`
+            }
             color={selectedDisease ? selectedDisease.color : '#FF6B6B'}
           />
         );
@@ -294,9 +315,9 @@ const DiseaseDistributionScreen = ({ navigation }) => {
     if (!selectedDisease) return null;
 
     const riskData = [
-      { label: '高风险', value: selectedDisease.riskDistribution.high, color: '#F44336' },
-      { label: '中风险', value: selectedDisease.riskDistribution.medium, color: '#FF9800' },
-      { label: '低风险', value: selectedDisease.riskDistribution.low, color: '#4CAF50' }
+      { label: t('patients.highRisk'), value: selectedDisease.riskDistribution.high, color: '#F44336' },
+      { label: t('patients.mediumRisk'), value: selectedDisease.riskDistribution.medium, color: '#FF9800' },
+      { label: t('patients.lowRisk'), value: selectedDisease.riskDistribution.low, color: '#4CAF50' }
     ];
 
     const ageData = [
@@ -307,8 +328,8 @@ const DiseaseDistributionScreen = ({ navigation }) => {
     ];
 
     const genderData = [
-      { label: '男性', value: selectedDisease.genderDistribution.male, color: '#2196F3' },
-      { label: '女性', value: selectedDisease.genderDistribution.female, color: '#E91E63' }
+      { label: t('common.male'), value: selectedDisease.genderDistribution.male, color: '#2196F3' },
+      { label: t('common.female'), value: selectedDisease.genderDistribution.female, color: '#E91E63' }
     ];
 
     return (
@@ -316,7 +337,9 @@ const DiseaseDistributionScreen = ({ navigation }) => {
         <Card style={styles.diseaseDetailCard}>
           <Card.Content>
             <View style={styles.diseaseDetailHeader}>
-              <Text style={styles.diseaseDetailTitle}>{selectedDisease.name} 详细分析</Text>
+              <Text style={styles.diseaseDetailTitle}>
+                {selectedDisease.name} {t('common.detailedAnalysis') || 'Detailed Analysis'}
+              </Text>
               <IconButton
                 icon="close"
                 size={20}
@@ -327,33 +350,35 @@ const DiseaseDistributionScreen = ({ navigation }) => {
             <View style={styles.diseaseStats}>
               <View style={styles.statItem}>
                 <Text style={styles.statValue}>{selectedDisease.value}</Text>
-                <Text style={styles.statLabel}>患者总数</Text>
+                <Text style={styles.statLabel}>{t('dashboard.totalPatients')}</Text>
               </View>
               <View style={styles.statItem}>
                 <Text style={styles.statValue}>{selectedDisease.percentage}%</Text>
-                <Text style={styles.statLabel}>占比</Text>
+                <Text style={styles.statLabel}>{t('common.percentage') || 'Percentage'}</Text>
               </View>
             </View>
 
             <Divider style={styles.divider} />
 
-            <Text style={styles.sectionTitle}>风险等级分布</Text>
+            <Text style={styles.sectionTitle}>{t('dashboard.patientRiskDistribution')}</Text>
             <PieChart data={riskData} height={150} />
 
             <Divider style={styles.divider} />
 
-            <Text style={styles.sectionTitle}>年龄分布（岁）</Text>
+            <Text style={styles.sectionTitle}>
+              {t('common.ageDistribution') || 'Age Distribution'} ({t('common.yearsOld')})
+            </Text>
             <BarChart 
               data={ageData} 
               height={200} 
               color={['#E1BEE7', '#9C27B0', '#7B1FA2', '#4A148C']} 
-              yAxisLabel="人数"
+              yAxisLabel={t('common.count') || 'Count'}
               showValues={true}
             />
 
             <Divider style={styles.divider} />
 
-            <Text style={styles.sectionTitle}>性别分布</Text>
+            <Text style={styles.sectionTitle}>{t('common.genderDistribution') || 'Gender Distribution'}</Text>
             <PieChart data={genderData} height={150} />
           </Card.Content>
         </Card>
@@ -369,7 +394,7 @@ const DiseaseDistributionScreen = ({ navigation }) => {
     return (
       <Card style={styles.diseaseListCard}>
         <Card.Content>
-          <Text style={styles.listTitle}>疾病分布列表</Text>
+          <Text style={styles.listTitle}>{t('doctor.diseaseDistribution')}</Text>
           
           {filteredDiseases.map((disease, index) => (
             <TouchableOpacity
@@ -381,7 +406,9 @@ const DiseaseDistributionScreen = ({ navigation }) => {
                 <View style={[styles.diseaseColorDot, { backgroundColor: disease.color }]} />
                 <View style={styles.diseaseListText}>
                   <Text style={styles.diseaseName}>{disease.name}</Text>
-                  <Text style={styles.diseaseCount}>{disease.value}名患者</Text>
+                  <Text style={styles.diseaseCount}>
+                    {disease.value} {t('common.patients') || 'patients'}
+                  </Text>
                 </View>
               </View>
               <View style={styles.diseaseListRight}>
@@ -391,7 +418,10 @@ const DiseaseDistributionScreen = ({ navigation }) => {
                   textStyle={styles.riskChipText}
                   compact
                 >
-                  {disease.riskDistribution.high > 10 ? '高关注' : '常规'}
+                  {disease.riskDistribution.high > Math.max(1, disease.value * 0.3) ? 
+                    t('common.highAttention') || 'High Attention' : 
+                    t('common.normal')
+                  }
                 </Chip>
               </View>
             </TouchableOpacity>
@@ -406,7 +436,7 @@ const DiseaseDistributionScreen = ({ navigation }) => {
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" />
-          <Text style={styles.loadingText}>加载疾病分布数据...</Text>
+          <Text style={styles.loadingText}>{t('common.loading')}...</Text>
         </View>
       </SafeAreaView>
     );
@@ -420,7 +450,7 @@ const DiseaseDistributionScreen = ({ navigation }) => {
           size={24}
           onPress={() => navigation.goBack()}
         />
-        <Text style={styles.headerTitle}>慢性疾病分布统计</Text>
+        <Text style={styles.headerTitle}>{t('doctor.diseaseDistribution')}</Text>
         <Menu
           visible={menuVisible}
           onDismiss={() => setMenuVisible(false)}
@@ -432,8 +462,8 @@ const DiseaseDistributionScreen = ({ navigation }) => {
             />
           }
         >
-          <Menu.Item onPress={() => {}} title="导出数据" />
-          <Menu.Item onPress={() => {}} title="生成报告" />
+          <Menu.Item onPress={() => {}} title={t('health.dataExport')} />
+          <Menu.Item onPress={() => {}} title={t('doctor.generateReport')} />
         </Menu>
       </View>
 
@@ -449,17 +479,24 @@ const DiseaseDistributionScreen = ({ navigation }) => {
             <View style={styles.summaryRow}>
               <View style={styles.summaryItem}>
                 <Text style={styles.summaryValue}>{diseaseData.totalPatients}</Text>
-                <Text style={styles.summaryLabel}>患者总数</Text>
+                <Text style={styles.summaryLabel}>{t('dashboard.totalPatients')}</Text>
               </View>
               <View style={styles.summaryItem}>
                 <Text style={styles.summaryValue}>{diseaseData.totalWithDiseases}</Text>
-                <Text style={styles.summaryLabel}>患有慢性疾病</Text>
+                <Text style={styles.summaryLabel}>
+                  {t('common.withChronicDiseases') || 'With Chronic Diseases'}
+                </Text>
               </View>
               <View style={styles.summaryItem}>
                 <Text style={styles.summaryValue}>
-                  {((diseaseData.totalWithDiseases / diseaseData.totalPatients) * 100).toFixed(1)}%
+                  {diseaseData.totalPatients > 0 ? 
+                    ((diseaseData.totalWithDiseases / diseaseData.totalPatients) * 100).toFixed(1) : 
+                    '0.0'
+                  }%
                 </Text>
-                <Text style={styles.summaryLabel}>患病率</Text>
+                <Text style={styles.summaryLabel}>
+                  {t('common.prevalenceRate') || 'Prevalence Rate'}
+                </Text>
               </View>
             </View>
           </Card.Content>
@@ -472,11 +509,20 @@ const DiseaseDistributionScreen = ({ navigation }) => {
         <Card style={styles.chartCard}>
           <Card.Content>
             <Text style={styles.chartTitle}>
-              {chartType === 'pie' ? '疾病分布占比' : 
-               chartType === 'bar' ? '疾病患者数量' : 
-               '疾病趋势变化'}
+              {chartType === 'pie' ? 
+                t('common.diseaseDistributionRatio') || 'Disease Distribution Ratio' : 
+               chartType === 'bar' ? 
+                t('common.diseasePatientCount') || 'Disease Patient Count' : 
+               t('common.diseaseTrendChange') || 'Disease Trend Change'
+              }
             </Text>
-            {renderChart()}
+            {diseaseData.diseaseDistribution.length > 0 ? renderChart() : (
+              <View style={styles.noDataContainer}>
+                <Text style={styles.noDataText}>
+                  {t('common.noData') || 'No data available'}
+                </Text>
+              </View>
+            )}
           </Card.Content>
         </Card>
 
@@ -484,7 +530,7 @@ const DiseaseDistributionScreen = ({ navigation }) => {
         {renderDiseaseDetails()}
 
         {/* 疾病列表 */}
-        {renderDiseaseList()}
+        {diseaseData.diseaseDistribution.length > 0 && renderDiseaseList()}
       </ScrollView>
     </SafeAreaView>
   );
@@ -528,6 +574,15 @@ const styles = StyleSheet.create({
     marginTop: 16,
     color: '#666',
   },
+  noDataContainer: {
+    height: 250,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  noDataText: {
+    fontSize: 16,
+    color: '#666',
+  },
   summaryCard: {
     margin: 16,
     backgroundColor: '#ffffff',
@@ -540,20 +595,26 @@ const styles = StyleSheet.create({
   },
   summaryRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
   },
   summaryItem: {
+    flex: 1,
     alignItems: 'center',
+    paddingHorizontal: 8,
   },
   summaryValue: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#2196F3',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   summaryLabel: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#666',
+    textAlign: 'center',
+    lineHeight: 16,
+    flexWrap: 'wrap',
   },
   chartTypeSelector: {
     flexDirection: 'row',
@@ -624,6 +685,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginTop: 4,
+    textAlign: 'center',
   },
   divider: {
     marginVertical: 16,
@@ -707,4 +769,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default DiseaseDistributionScreen; 
+export default DiseaseDistributionScreen;

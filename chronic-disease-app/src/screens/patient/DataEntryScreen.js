@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { addHealthData, submitHealthMetrics } from '../../store/slices/userSlice';
+import { switchToEnglish, switchToChinese, getCurrentLanguage } from '../../utils/languageHelper';
 import { 
   HealthMetric, 
   METRIC_TYPES, 
@@ -28,9 +29,32 @@ const DataEntryScreen = ({ navigation }) => {
   const [measurementTime, setMeasurementTime] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  
+  // 语言切换功能
+  const handleLanguageSwitch = async () => {
+    const currentLang = getCurrentLanguage();
+    if (currentLang === 'zh') {
+      await switchToEnglish();
+    } else {
+      await switchToChinese();
+    }
+  };
 
   // 获取当前选中指标的配置
   const currentConfig = HEALTH_METRIC_FIELDS[selectedMetricType];
+  
+  // 获取指标类型的翻译键
+  const getMetricTypeLabel = (metricType) => {
+    const labelMap = {
+      [METRIC_TYPES.BLOOD_PRESSURE]: 'health.bloodPressure',
+      [METRIC_TYPES.BLOOD_GLUCOSE]: 'health.bloodGlucose',
+      [METRIC_TYPES.HEART_RATE]: 'health.heartRate',
+      [METRIC_TYPES.WEIGHT]: 'health.weight',
+      [METRIC_TYPES.URIC_ACID]: 'health.uricAcid',
+      [METRIC_TYPES.LIPIDS]: 'health.lipids'
+    };
+    return labelMap[metricType] || 'health.unknown';
+  };
 
   // 指标类型选择按钮
   const metricTypeButtons = [
@@ -106,7 +130,7 @@ const DataEntryScreen = ({ navigation }) => {
     // 检查是否有数据输入
     const hasData = Object.values(metricData).some(value => value !== null && value !== undefined);
     if (!hasData) {
-      Alert.alert('提示', '请至少输入一个指标数据');
+      Alert.alert(t('common.notice'), t('health.pleaseEnterAtLeastOne'));
       return;
     }
 
@@ -124,7 +148,7 @@ const DataEntryScreen = ({ navigation }) => {
     // 验证数据
     const validation = healthMetric.validate();
     if (!validation.valid) {
-      Alert.alert('数据验证失败', validation.errors.join('\n'));
+      Alert.alert(t('health.dataValidationFailed'), validation.errors.join('\n'));
       return;
     }
 
@@ -140,13 +164,16 @@ const DataEntryScreen = ({ navigation }) => {
         // 成功提交到后端后，也更新本地状态
         dispatch(addHealthData(result.payload));
         
-    Alert.alert(
-          '数据已成功保存',
-      `测量时间：${formatDate(measurementTime)} ${formatTime(measurementTime)}\n当前指标状态：${statusText}`,
-      [
-        {
-          text: '确定',
-          onPress: () => {
+            Alert.alert(
+          t('health.dataSavedSuccessfully'),
+          t('health.measurementTimeStatus', { 
+            time: `${formatDate(measurementTime)} ${formatTime(measurementTime)}`,
+            status: statusText 
+          }),
+          [
+            {
+              text: t('common.confirm'),
+              onPress: () => {
                 navigation.goBack();
               }
             }
@@ -157,11 +184,14 @@ const DataEntryScreen = ({ navigation }) => {
         dispatch(addHealthData(healthMetric.toSerializable()));
         
         Alert.alert(
-          '数据已保存到本地',
-          `网络连接问题，数据已保存到本地，稍后会自动同步到服务器。\n\n测量时间：${formatDate(measurementTime)} ${formatTime(measurementTime)}\n当前指标状态：${statusText}`,
+          t('health.dataSavedLocally'),
+          t('health.networkIssueLocalSave', { 
+            time: `${formatDate(measurementTime)} ${formatTime(measurementTime)}`,
+            status: statusText 
+          }),
           [
             {
-              text: '确定',
+              text: t('common.confirm'),
               onPress: () => {
                 navigation.goBack();
               }
@@ -175,42 +205,49 @@ const DataEntryScreen = ({ navigation }) => {
       // 提交失败时也保存到本地
             dispatch(addHealthData(healthMetric.toSerializable()));
       
-      Alert.alert(
-        '数据已保存到本地',
-        `服务器连接失败，数据已保存到本地，稍后会自动同步。\n\n错误信息：${error.message || '未知错误'}`,
+            Alert.alert(
+        t('health.dataSavedLocally'),
+        t('health.serverConnectionFailed', { 
+          error: error.message || t('common.unknownError')
+        }),
         [
           {
-            text: '确定',
+            text: t('common.confirm'),
             onPress: () => {
-            navigation.goBack();
+              navigation.goBack();
+            }
           }
-        }
-      ]
-    );
+        ]
+      );
     }
   };
 
   // 渲染输入字段
   const renderInputFields = () => {
-    return currentConfig.fields.map(field => (
-      <View key={field} style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>
-          {currentConfig.labels[field]} ({currentConfig.units[field]})
-        </Text>
-        <TextInput
-          style={styles.input}
-          value={metricData[field]?.toString() || ''}
-          onChangeText={(value) => updateMetricField(field, value)}
-          keyboardType="numeric"
-          placeholder={t('health.enterValue', { field: currentConfig.labels[field] })}
-          mode="outlined"
-        />
-        {/* 显示正常范围提示 */}
-        <Text style={styles.rangeHint}>
-          {t('health.normalRange')}: {currentConfig.validations[field]?.min || 0} - {currentConfig.validations[field]?.max || t('health.unlimited')} {currentConfig.units[field]}
-        </Text>
-      </View>
-    ));
+    return currentConfig.fields.map(field => {
+      const labelKey = currentConfig.labelKeys[field];
+      const fieldLabel = t(labelKey);
+      
+      return (
+        <View key={field} style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>
+            {fieldLabel} ({currentConfig.units[field]})
+          </Text>
+          <TextInput
+            style={styles.input}
+            value={metricData[field]?.toString() || ''}
+            onChangeText={(value) => updateMetricField(field, value)}
+            keyboardType="numeric"
+            placeholder={t('health.enterValue', { field: fieldLabel })}
+            mode="outlined"
+          />
+          {/* 显示正常范围提示 */}
+          <Text style={styles.rangeHint}>
+            {t('health.normalRange')}: {currentConfig.validations[field]?.min || 0} - {currentConfig.validations[field]?.max || t('health.unlimited')} {currentConfig.units[field]}
+          </Text>
+        </View>
+      );
+    });
   };
 
   // 渲染指标类型选择器
@@ -241,7 +278,7 @@ const DataEntryScreen = ({ navigation }) => {
     return (
       <Card style={styles.card}>
         <Card.Content>
-          <Text style={styles.cardTitle}>测量时间</Text>
+          <Text style={styles.cardTitle}>{t('health.measurementTime')}</Text>
           <View style={styles.timeContainer}>
             <View style={styles.timeRow}>
               <Text style={styles.timeLabel}>{t('health.date')}：</Text>
@@ -298,8 +335,20 @@ const DataEntryScreen = ({ navigation }) => {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         {/* 页面标题 */}
-        <Text style={styles.title}>{t('health.dataEntry')}</Text>
-        <Text style={styles.subtitle}>{t('health.selectMetricType')}</Text>
+        <View style={styles.headerContainer}>
+          <View style={styles.titleContainer}>
+            <Text style={styles.title}>{t('health.dataEntry')}</Text>
+            <Text style={styles.subtitle}>{t('health.selectMetricType')}</Text>
+          </View>
+          <Button
+            mode="outlined"
+            onPress={handleLanguageSwitch}
+            style={styles.languageButton}
+            compact
+          >
+            {getCurrentLanguage() === 'zh' ? 'EN' : '中'}
+          </Button>
+        </View>
 
         {/* 指标类型选择器 */}
         <Card style={styles.card}>
@@ -313,7 +362,7 @@ const DataEntryScreen = ({ navigation }) => {
         <Card style={styles.card}>
           <Card.Content>
             <Text style={styles.cardTitle}>
-              {t('health.enterDataFor', { type: metricTypeButtons.find(b => b.value === selectedMetricType)?.label })}
+              {t('health.enterDataFor', { type: t(getMetricTypeLabel(selectedMetricType)) })}
             </Text>
             <Divider style={styles.divider} />
             {renderInputFields()}
@@ -392,6 +441,15 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 32,
   },
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 24,
+  },
+  titleContainer: {
+    flex: 1,
+  },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
@@ -402,8 +460,11 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 18,
     textAlign: 'center',
-    marginBottom: 24,
     color: '#666',
+  },
+  languageButton: {
+    marginLeft: 16,
+    minWidth: 50,
   },
   card: {
     marginBottom: 16,
@@ -428,6 +489,8 @@ const styles = StyleSheet.create({
   },
   chipText: {
     fontSize: 16,
+    textAlign: 'center',
+    textAlignVertical: 'center',
   },
   divider: {
     marginBottom: 16,
@@ -440,6 +503,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 8,
     color: '#333',
+    textAlign: 'left',
+    textAlignVertical: 'center',
   },
   input: {
     fontSize: 18,
@@ -450,6 +515,8 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 4,
     fontStyle: 'italic',
+    textAlign: 'left',
+    textAlignVertical: 'center',
   },
   notesInput: {
     fontSize: 18,
@@ -483,6 +550,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginRight: 10,
     color: '#333',
+    textAlign: 'left',
+    textAlignVertical: 'center',
   },
   timeButton: {
     flex: 1,
@@ -501,10 +570,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginRight: 10,
     color: '#333',
+    textAlign: 'left',
+    textAlignVertical: 'center',
   },
   quickSelectButton: {
     fontSize: 18,
     color: '#6200ea',
+    textAlign: 'center',
+    textAlignVertical: 'center',
   },
 });
 

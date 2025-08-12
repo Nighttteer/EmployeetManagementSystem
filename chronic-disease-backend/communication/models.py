@@ -6,6 +6,14 @@ from accounts.models import User
 class Message(models.Model):
     """
     医患沟通消息：双向消息记录
+
+    Bidirectional message record between doctor and patient.
+
+    Security/Privacy notes:
+    - Attachments are stored via `FileField` and should be served via
+      authenticated endpoints to avoid direct object reference.
+    - Indexes are optimized for read/unread filtering and timeline
+      queries in typical messaging UIs.
     """
     MESSAGE_TYPES = settings.MESSAGE_TYPES
     
@@ -60,7 +68,7 @@ class Message(models.Model):
         return f"{self.sender.name} -> {self.recipient.name}: {self.content[:50]}..."
     
     def mark_as_read(self):
-        """标记消息为已读"""
+        """标记消息为已读 / Mark message as read with timestamp."""
         if not self.is_read:
             from django.utils import timezone
             self.is_read = True
@@ -71,6 +79,9 @@ class Message(models.Model):
 class Conversation(models.Model):
     """
     会话：管理医患之间的对话会话
+
+    Conversation container for grouping related messages and computing
+    per-participant unread counts and last activity timestamps.
     """
     # 会话参与者
     participants = models.ManyToManyField(User, related_name='conversations', verbose_name='参与者')
@@ -120,17 +131,20 @@ class Conversation(models.Model):
         return f"会话: {participants_names}"
     
     def get_last_message(self):
-        """获取最后一条消息"""
+        """获取最后一条消息 / Return the most recent message in this conversation."""
         return self.messages.first()
     
     def get_unread_count(self, user):
-        """获取指定用户的未读消息数量"""
+        """获取指定用户的未读消息数量 / Count unread messages for a participant."""
         return self.messages.filter(recipient=user, is_read=False).count()
 
 
 class MessageTemplate(models.Model):
     """
     消息模板：预设的常用消息模板
+
+    Predefined templates for common communications to reduce typing and
+    standardize phrasing. Supports basic variable interpolation.
     """
     # 基本信息
     name = models.CharField('模板名称', max_length=100)
@@ -179,7 +193,12 @@ class MessageTemplate(models.Model):
         return f"{self.name} ({self.get_category_display()})"
     
     def render_content(self, context=None):
-        """渲染模板内容"""
+        """
+        渲染模板内容
+
+        Render template content with naive variable replacement. For more
+        robust templating, integrate Django templates or Jinja2.
+        """
         if not context or not self.variables:
             return self.content
         
@@ -190,7 +209,7 @@ class MessageTemplate(models.Model):
         return content
     
     def increment_usage(self):
-        """增加使用次数"""
+        """增加使用次数 / Increment usage counter for analytics."""
         self.usage_count += 1
         self.save(update_fields=['usage_count'])
 
@@ -198,6 +217,15 @@ class MessageTemplate(models.Model):
 class NotificationLog(models.Model):
     """
     通知日志：记录系统发送的通知
+
+    Notification audit log capturing delivery channel, status,
+    timestamps, and linkage to related domain objects.
+
+    Security/Compliance notes:
+    - Helps trace message delivery in clinical workflows (e.g.,
+      medication reminders, alerts).
+    - Avoid storing sensitive PHI in plaintext where unnecessary; prefer
+      referencing object IDs and minimize payload surface.
     """
     # 接收者
     recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications', 
@@ -265,7 +293,7 @@ class NotificationLog(models.Model):
         return f"{self.recipient.name} - {self.title}"
     
     def mark_as_read(self):
-        """标记通知为已读"""
+        """标记通知为已读 / Mark notification as read with timestamp."""
         if self.status != 'read':
             from django.utils import timezone
             self.status = 'read'

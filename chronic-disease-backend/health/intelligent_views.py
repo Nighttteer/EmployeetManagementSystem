@@ -1,5 +1,9 @@
 """
 智能提醒相关的API视图
+
+Intelligent alerts API views. These endpoints provide filtered listings
+and generation of intelligent alerts for doctors based on recent health
+metrics and medication adherence patterns.
 """
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -21,6 +25,9 @@ from .serializers import AlertSerializer
 def intelligent_alerts(request):
     """
     获取医生的智能提醒列表
+
+    List intelligent alerts for the current doctor with optional filters
+    by patient, priority, type, and a sliding window (days).
     """
     user = request.user
     
@@ -85,6 +92,9 @@ def intelligent_alerts(request):
 def generate_intelligent_alerts(request):
     """
     手动触发智能提醒生成
+
+    Trigger the analysis service to generate alerts for all patients
+    managed by the current doctor.
     """
     user = request.user
     
@@ -118,6 +128,9 @@ def generate_intelligent_alerts(request):
 def patient_risk_analysis(request):
     """
     获取病人风险分析报告
+
+    Return a simplified risk analysis summary for a specific patient
+    constructed from the doctor's alert dataset.
     """
     user = request.user
     
@@ -166,6 +179,9 @@ def patient_risk_analysis(request):
 def handle_alert(request, alert_id):
     """
     处理告警
+
+    Mark an alert as handled by the assigned doctor with optional notes
+    and action description.
     """
     user = request.user
     

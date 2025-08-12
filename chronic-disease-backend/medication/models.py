@@ -6,6 +6,9 @@ from accounts.models import User
 class Medication(models.Model):
     """
     用药信息：系统中预设药品列表
+
+    Master catalog of medications with safety profiles and basic
+    categorization for downstream filtering and analytics.
     """
     # 基本信息
     name = models.CharField('药品名称', max_length=200)
@@ -61,6 +64,9 @@ class Medication(models.Model):
 class MedicationPlan(models.Model):
     """
     用药计划：某位医生为某患者制定的计划
+
+    Prescribed medication plan authored by a doctor for a patient.
+    Includes frequency, timing, lifecycle status, and monitoring notes.
     """
     FREQUENCY_CHOICES = settings.MEDICATION_FREQUENCIES
     TIME_CHOICES = settings.MEDICATION_TIMES
@@ -117,7 +123,7 @@ class MedicationPlan(models.Model):
     
     @property
     def is_active(self):
-        """判断用药计划是否处于活跃状态"""
+        """判断用药计划是否处于活跃状态 / Determine plan active window and status."""
         from datetime import date
         today = date.today()
         return (self.status == 'active' and 
@@ -125,7 +131,7 @@ class MedicationPlan(models.Model):
                 (self.end_date is None or self.end_date >= today))
     
     def get_daily_doses(self):
-        """获取每日剂量数"""
+        """获取每日剂量数 / Return expected daily dose count from frequency code."""
         frequency_mapping = {
             'QD': 1, 'BID': 2, 'TID': 3, 'QID': 4,
             'Q12H': 2, 'Q8H': 3, 'Q6H': 4, 'PRN': 0
@@ -136,6 +142,9 @@ class MedicationPlan(models.Model):
 class MedicationReminder(models.Model):
     """
     用药提醒记录：系统生成的提醒记录，用于统计依从率
+
+    Reminder instances used to compute adherence metrics and support
+    patient notifications.
     """
     STATUS_CHOICES = [
         ('pending', '待服用'),
@@ -182,7 +191,7 @@ class MedicationReminder(models.Model):
     
     @property
     def is_overdue(self):
-        """判断是否已经超时"""
+        """判断是否已经超时 / True if 30 minutes past reminder when still pending."""
         from django.utils import timezone
         from datetime import timedelta
         
@@ -197,6 +206,9 @@ class MedicationReminder(models.Model):
 class MedicationStock(models.Model):
     """
     药品库存管理（可选功能）
+
+    Optional stock management to track personal medication inventory and
+    anticipate resupply needs.
     """
     patient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='medication_stocks', verbose_name='患者')
     medication = models.ForeignKey(Medication, on_delete=models.CASCADE, related_name='stocks', verbose_name='药品')
@@ -235,18 +247,18 @@ class MedicationStock(models.Model):
     
     @property
     def is_low_stock(self):
-        """判断是否库存不足"""
+        """判断是否库存不足 / Compare current quantity against threshold."""
         return self.current_quantity <= self.low_stock_threshold
     
     @property
     def is_expired(self):
-        """判断是否已过期"""
+        """判断是否已过期 / True if expiry_date is before today."""
         from datetime import date
         return self.expiry_date and self.expiry_date < date.today()
     
     @property
     def days_until_expiry(self):
-        """距离过期天数"""
+        """距离过期天数 / Days remaining until expiry (0 if past)."""
         if not self.expiry_date:
             return None
         from datetime import date
@@ -257,6 +269,9 @@ class MedicationStock(models.Model):
 class MedicationStatusHistory(models.Model):
     """
     用药状态变更历史记录
+
+    Audit trail for plan status changes, attributed to a user with
+    timestamps and optional freeform notes.
     """
     STATUS_CHOICES = [
         ('active', '进行中'),
