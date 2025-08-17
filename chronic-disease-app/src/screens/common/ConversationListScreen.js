@@ -85,13 +85,13 @@ const ConversationListScreen = ({ navigation }) => {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
     if (diffDays === 1) {
-      return '今天';
+      return t('time.today');
     } else if (diffDays === 2) {
-      return '昨天';
+      return t('time.yesterday');
     } else if (diffDays <= 7) {
-      return `${diffDays - 1}天前`;
+      return t('time.daysAgo', { days: diffDays - 1 });
     } else {
-      return date.toLocaleDateString('zh-CN', {
+      return date.toLocaleDateString(i18n.language === 'zh' ? 'zh-CN' : 'en-US', {
         month: '2-digit',
         day: '2-digit',
       });

@@ -1,0 +1,45 @@
+[run]
+source = .
+branch = True
+omit =
+    */migrations/*
+    */venv/*
+    */node_modules/*
+    manage.py
+    */settings/*
+    */wsgi.py
+    */asgi.py
+    */management/commands/*
+    */tests/*
+    */test_*.py
+    */__pycache__/*
+    */htmlcov/*
+    .coverage
+    setup.py
+    conftest.py
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    if self.debug:
+    if settings.DEBUG
+    raise AssertionError
+    raise NotImplementedError
+    if 0:
+    if __name__ == .__main__.:
+    if TYPE_CHECKING:
+    except ImportError:
+    class .*\bProtocol\):
+    @(abc\.)?abstractmethod
+
+show_missing = True
+skip_covered = False
+precision = 2
+
+[html]
+directory = htmlcov
+title = 慢性病管理系统测试覆盖率报告
+
+[xml]
+output = coverage.xml

@@ -20,6 +20,7 @@ import PieChart from '../../components/Charts/PieChart';
 import BarChart from '../../components/Charts/BarChart';
 import StatsCard from '../../components/StatsCard';
 import { api } from '../../services/api';
+import { resolvePatientRiskLevel, getRiskColor, getRiskText } from '../../utils/riskUtils';
 import { fetchPatientsList } from '../../store/slices/patientsSlice';
 
 const DashboardScreen = ({ navigation }) => {
@@ -140,7 +141,7 @@ const DashboardScreen = ({ navigation }) => {
 
     // 统计每个风险等级的患者数量
     patientsList.forEach(patient => {
-      const riskLevel = patient.risk_level || getRiskLevelFromDiseases(patient.chronic_diseases);
+      const riskLevel = getRiskLevelFromDiseases(patient.chronic_diseases);
       if (riskCounts[riskLevel] !== undefined) {
         riskCounts[riskLevel]++;
       } else {
@@ -158,26 +159,7 @@ const DashboardScreen = ({ navigation }) => {
   };
 
   // 风险等级计算逻辑（与PatientDetailsScreen保持一致）
-  const getRiskLevelFromDiseases = (chronicDiseases) => {
-    if (chronicDiseases === null) return 'unassessed';
-    if (chronicDiseases.length === 0) return 'healthy';
-    
-    const highRiskDiseases = ['cancer', 'heart_disease', 'stroke', 'kidney_disease', 'liver_disease', 'sickle_cell', 'mood_disorder', 'narcolepsy'];
-    const mediumRiskDiseases = ['diabetes', 'hypertension', 'copd', 'asthma', 'epilepsy', 'multiple_sclerosis', 'parkinson', 'alzheimer', 'dementia', 'hiv_aids'];
-    
-    const hasHighRisk = chronicDiseases.some(disease => highRiskDiseases.includes(disease));
-    const hasMediumRisk = chronicDiseases.some(disease => mediumRiskDiseases.includes(disease));
-    
-    if (hasHighRisk) return 'high';
-    if (hasMediumRisk) return 'medium';
-    return 'low';
-  };
-
-  const getAlertTypes = () => [
-    { label: t('common.bloodPressureAbnormal'), value: 5 },
-    { label: t('common.bloodGlucoseExceeded'), value: 2 },
-    { label: t('common.medicationReminder'), value: 1 }
-  ];
+  const getRiskLevelFromDiseases = (chronicDiseases) => resolvePatientRiskLevel({ chronic_diseases: chronicDiseases });
 
   const getWeeklyConsultations = () => [
     { label: t('common.monday'), value: 12 },
@@ -217,13 +199,6 @@ const DashboardScreen = ({ navigation }) => {
         return;
       }
 
-      console.log('🔐 用户认证信息:', { 
-        isAuthenticated, 
-        userId: user?.id, 
-        role, 
-        hasToken: !!token 
-      });
-      
       // 调用真实的医生端仪表板API
       const doctorId = user.id;
       const response = await api.get(`/health/doctor/${doctorId}/dashboard/`);
@@ -232,12 +207,9 @@ const DashboardScreen = ({ navigation }) => {
         const apiData = response.data.data;
         
         // 数据已通过Redux store管理，无需本地状态
-        console.log('API数据:', apiData);
         
-        console.log('✅ 成功加载医生端仪表板真实数据:', apiData.summary.dataSource);
-        console.log('📊 数据摘要:', apiData.summary.analysisRange);
       } else {
-        console.error('❌ API返回失败:', response.data);
+        console.error('API返回失败:', response.data);
       }
     } catch (error) {
       console.error('❌ 加载仪表板数据失败:', error.message);
@@ -263,14 +235,7 @@ const DashboardScreen = ({ navigation }) => {
     }
   };
 
-  const getRiskLevelText = (level) => {
-    switch (level) {
-      case 'high': return '高风险';
-      case 'medium': return '中风险';
-      case 'low': return '低风险';
-      default: return '未评估';
-    }
-  };
+  const getRiskLevelText = (level) => getRiskText(level, t);
 
   if (loading && !refreshing) {
     return (
@@ -432,22 +397,6 @@ const DashboardScreen = ({ navigation }) => {
             />
           </Card.Content>
         </Card>
-
-        {/* 告警类型分布 */}
-        <Card style={styles.chartCard}>
-          <Card.Content>
-            <Text style={styles.chartTitle}>{t('dashboard.alertTypeDistribution')}</Text>
-            <BarChart
-              data={getAlertTypes()}
-              height={180}
-              color="#FF5722"
-              yAxisLabel={t('dashboard.alertCount')}
-            />
-          </Card.Content>
-        </Card>
-
-
-
 
       </ScrollView>
     </SafeAreaView>

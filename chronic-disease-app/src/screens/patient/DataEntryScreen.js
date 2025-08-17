@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { addHealthData, submitHealthMetrics } from '../../store/slices/userSlice';
-import { switchToEnglish, switchToChinese, getCurrentLanguage } from '../../utils/languageHelper';
+
 import { 
   HealthMetric, 
   METRIC_TYPES, 
@@ -30,15 +30,7 @@ const DataEntryScreen = ({ navigation }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   
-  // 语言切换功能
-  const handleLanguageSwitch = async () => {
-    const currentLang = getCurrentLanguage();
-    if (currentLang === 'zh') {
-      await switchToEnglish();
-    } else {
-      await switchToChinese();
-    }
-  };
+
 
   // 获取当前选中指标的配置
   const currentConfig = HEALTH_METRIC_FIELDS[selectedMetricType];
@@ -340,14 +332,7 @@ const DataEntryScreen = ({ navigation }) => {
             <Text style={styles.title}>{t('health.dataEntry')}</Text>
             <Text style={styles.subtitle}>{t('health.selectMetricType')}</Text>
           </View>
-          <Button
-            mode="outlined"
-            onPress={handleLanguageSwitch}
-            style={styles.languageButton}
-            compact
-          >
-            {getCurrentLanguage() === 'zh' ? 'EN' : '中'}
-          </Button>
+
         </View>
 
         {/* 指标类型选择器 */}

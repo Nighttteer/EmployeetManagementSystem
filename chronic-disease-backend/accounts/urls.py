@@ -28,6 +28,7 @@ urlpatterns = [
     path('patients/', views.PatientListView.as_view(), name='patient_list'),
     path('patients/create/', views.PatientCreateView.as_view(), name='patient_create'),
     path('patients/<int:pk>/update/', views.PatientUpdateView.as_view(), name='patient_update'),
+    # 兼容历史路径：允许 /accounts/ 前缀下访问相同视图（已由根 urls 挂载），此处无需重复定义
     path('patients/unassigned/', views.UnassignedPatientsView.as_view(), name='unassigned_patients'),
     path('patients/bind-doctor/', views.DoctorPatientBindView.as_view(), name='bind_doctor'),
     path('doctors/', views.DoctorListView.as_view(), name='doctor_list'),

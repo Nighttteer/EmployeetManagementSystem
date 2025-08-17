@@ -30,6 +30,7 @@ import AboutScreen from '../screens/common/AboutScreen';
 import ComingSoonScreen from '../screens/common/ComingSoonScreen';
 import LanguageSettingsScreen from '../screens/common/LanguageSettingsScreen';
 import EditPatientScreen from '../screens/doctor/EditPatientScreen';
+import MedicalInfoScreen from '../screens/doctor/MedicalInfoScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -65,6 +66,12 @@ const PatientsStack = () => {
         component={PatientsListScreen}
         options={{ title: t('patients.patientList'), headerShown: false }}
       />
+      {/* 路由别名：病人管理 */}
+      <Stack.Screen 
+        name="PatientManagement" 
+        component={PatientsListScreen}
+        options={{ title: t('patients.patientList'), headerShown: false }}
+      />
       <Stack.Screen 
         name="AddPatient" 
         component={AddPatientScreen}
@@ -73,7 +80,7 @@ const PatientsStack = () => {
       <Stack.Screen 
         name="PatientDetails" 
         component={PatientDetailsScreen}
-        options={{ title: t('patients.patientDetails') }}
+        options={{ title: t('patients.patientDetails'), headerShown: false }}
       />
       <Stack.Screen 
         name="EditPatient" 
@@ -181,7 +188,7 @@ const ProfileStack = () => {
 
       <Stack.Screen 
         name="MedicalInfo" 
-        component={ComingSoonScreen}
+        component={MedicalInfoScreen}
         options={{ title: t('doctor.medicalInfo'), headerShown: false }}
         initialParams={{ title: t('doctor.medicalInfo') }}
       />
@@ -191,12 +198,7 @@ const ProfileStack = () => {
         options={{ title: t('doctor.workingHours'), headerShown: false }}
         initialParams={{ title: t('doctor.workingHours') }}
       />
-      <Stack.Screen 
-        name="AlertSettings" 
-        component={ComingSoonScreen}
-        options={{ title: t('doctor.alertSettings'), headerShown: false }}
-        initialParams={{ title: t('doctor.alertSettings') }}
-      />
+
       <Stack.Screen 
         name="FAQ" 
         component={ComingSoonScreen}

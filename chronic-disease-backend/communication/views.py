@@ -1,4 +1,5 @@
 from rest_framework import generics, status, permissions
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -27,6 +28,7 @@ from .serializers import (
     ConversationCreateSerializer, MessageTemplateSerializer,
     ChatHistorySerializer, UserBasicSerializer
 )
+from .services import ConversationService, MessageService
 from accounts.models import User
 from accounts.serializers import UserListSerializer
 
@@ -75,8 +77,26 @@ class MessageListCreateView(generics.ListCreateAPIView):
         return MessageSerializer
     
     def perform_create(self, serializer):
-        """创建消息时设置发送者"""
-        serializer.save(sender=self.request.user)
+        """创建消息时设置发送者并处理会话"""
+        message = serializer.save(sender=self.request.user)
+        
+        # 使用服务层确保消息与会话关联
+        if not message.conversation:
+            self.ensure_conversation_exists(message)
+    
+    def ensure_conversation_exists(self, message):
+        """确保消息有对应的会话"""
+        # 使用服务层获取或创建会话
+        conversation, created = ConversationService.get_or_create_conversation(
+            message.sender, message.recipient
+        )
+        
+        # 将消息关联到会话
+        message.conversation = conversation
+        message.save()
+        
+        # 更新会话的最后消息时间
+        ConversationService.update_conversation_last_message(conversation, message)
 
 
 class MessageDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -94,13 +114,13 @@ class MessageDetailView(generics.RetrieveUpdateDestroyAPIView):
     def perform_update(self, serializer):
         """只允许发送者更新消息"""
         if serializer.instance.sender != self.request.user:
-            raise permissions.PermissionDenied("只能编辑自己发送的消息")
+            raise PermissionDenied("只能编辑自己发送的消息")
         serializer.save()
     
     def perform_destroy(self, instance):
         """只允许发送者删除消息"""
         if instance.sender != self.request.user:
-            raise permissions.PermissionDenied("只能删除自己发送的消息")
+            raise PermissionDenied("只能删除自己发送的消息")
         instance.delete()
 
 
@@ -137,7 +157,7 @@ class ConversationDetailView(generics.RetrieveUpdateDestroyAPIView):
     def perform_destroy(self, instance):
         """只允许创建者删除会话"""
         if instance.created_by != self.request.user:
-            raise permissions.PermissionDenied("只能删除自己创建的会话")
+            raise PermissionDenied("只能删除自己创建的会话")
         instance.delete()
 
 
@@ -199,37 +219,26 @@ class UserSearchView(generics.ListAPIView):
         user = self.request.user
         search_query = self.request.query_params.get('search', '').strip()
         
-        print(f"[DEBUG] 搜索用户: 当前用户={user.name}({user.role}), 搜索词='{search_query}'")
-        
         if not search_query:
-            print("[DEBUG] 搜索词为空，返回空结果")
             return User.objects.none()
         
         # 根据用户角色过滤可以联系的用户
         queryset = User.objects.exclude(id=user.id).filter(is_active=True)
         
-        if user.is_patient:
+        # 使用正确的角色检查方法
+        if hasattr(user, 'is_patient') and user.is_patient:
             # 患者只能搜索医生
             queryset = queryset.filter(role='doctor')
-            print(f"[DEBUG] 患者搜索医生，医生总数: {queryset.count()}")
-        elif user.is_doctor:
+        elif hasattr(user, 'is_doctor') and user.is_doctor:
             # 医生可以搜索患者
             queryset = queryset.filter(role='patient')
-            print(f"[DEBUG] 医生搜索患者，患者总数: {queryset.count()}")
         
         # 按姓名和手机号搜索
         search_filter = Q(name__icontains=search_query) | Q(phone__icontains=search_query)
         queryset = queryset.filter(search_filter)
         
-        print(f"[DEBUG] 搜索结果数量: {queryset.count()}")
-        
         # 添加排序，修复分页警告
         queryset = queryset.order_by('name', 'id')
-        
-        # 打印搜索结果（仅用于调试）
-        results_preview = queryset[:10]
-        for result in results_preview:
-            print(f"[DEBUG] 搜索结果: {result.name} ({result.phone}) - {result.role}")
         
         return queryset
 
@@ -265,7 +274,8 @@ class SendQuickMessageView(APIView):
         recipient = get_object_or_404(User, id=recipient_id)
         
         # 验证角色权限
-        if request.user.role not in template.applicable_roles.split(','):
+        user_role = getattr(request.user, 'role', '')
+        if user_role not in template.applicable_roles.split(','):
             return Response(
                 {'error': '您没有使用此模板的权限'},
                 status=status.HTTP_403_FORBIDDEN
@@ -346,18 +356,16 @@ class ChatStatsView(APIView):
 def get_conversation_between_users(request, user_id):
     """获取与指定用户的会话"""
     current_user = request.user
-    other_user = get_object_or_404(User, id=user_id)
+    try:
+        other_user = get_object_or_404(User, id=user_id)
+    except Http404:
+        return Response({
+            'error': f'用户ID {user_id} 不存在',
+            'message': '未找到指定用户'
+        }, status=status.HTTP_404_NOT_FOUND)
     
-    # 查找两个用户之间的会话
-    conversation = Conversation.objects.filter(
-        participants=current_user
-    ).filter(
-        participants=other_user
-    ).annotate(
-        participant_count=Count('participants')
-    ).filter(
-        participant_count=2
-    ).first()
+    # 使用服务层查找会话
+    conversation = ConversationService.find_conversation_between_users(current_user, other_user)
     
     if conversation:
         serializer = ConversationSerializer(
@@ -366,6 +374,7 @@ def get_conversation_between_users(request, user_id):
         )
         return Response(serializer.data)
     
+    # 如果没有找到会话，返回404状态但包含用户信息
     return Response({
         'message': '未找到与该用户的会话',
         'other_user': {
@@ -381,46 +390,34 @@ def get_conversation_between_users(request, user_id):
 def start_conversation_with_user(request, user_id):
     """与指定用户开始新会话"""
     current_user = request.user
-    other_user = get_object_or_404(User, id=user_id)
-    
-    # 检查是否已存在会话
-    existing_conversation = Conversation.objects.filter(
-        participants=current_user
-    ).filter(
-        participants=other_user
-    ).annotate(
-        participant_count=Count('participants')
-    ).filter(
-        participant_count=2
-    ).first()
-    
-    if existing_conversation:
-        serializer = ConversationSerializer(
-            existing_conversation,
-            context={'request': request}
-        )
+    try:
+        other_user = get_object_or_404(User, id=user_id)
+    except Http404:
         return Response({
-            'message': '会话已存在',
-            'conversation': serializer.data
-        })
+            'error': f'用户ID {user_id} 不存在',
+            'message': '未找到指定用户'
+        }, status=status.HTTP_404_NOT_FOUND)
     
-    # 创建新会话
-    conversation = Conversation.objects.create(
-        title=f"{current_user.name} 与 {other_user.name}",
-        created_by=current_user,
-        conversation_type='consultation' if current_user.is_doctor or other_user.is_doctor else 'general'
+    # 使用服务层获取或创建会话
+    conversation, created = ConversationService.get_or_create_conversation(
+        current_user, other_user
     )
-    conversation.participants.set([current_user, other_user])
     
     serializer = ConversationSerializer(
         conversation,
         context={'request': request}
     )
     
-    return Response({
-        'message': '会话创建成功',
-        'conversation': serializer.data
-    }, status=status.HTTP_201_CREATED)
+    if created:
+        return Response({
+            'message': '会话创建成功',
+            'conversation': serializer.data
+        }, status=status.HTTP_201_CREATED)
+    else:
+        return Response({
+            'message': '会话已存在',
+            'conversation': serializer.data
+        })
 
 # 音频文件服务视图
 @api_view(['GET'])

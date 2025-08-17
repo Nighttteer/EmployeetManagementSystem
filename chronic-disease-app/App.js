@@ -8,6 +8,7 @@ import { store } from './src/store/store';
 import AppNavigator from './src/navigation/AppNavigator';
 import notificationService from './src/services/notifications';
 import './src/config/i18n'; // 初始化国际化
+import { initializeLanguage } from './src/store/slices/languageSlice';
 
 // 自定义主题
 const theme = {
@@ -26,16 +27,20 @@ const theme = {
 
 export default function App() {
   useEffect(() => {
-    // 初始化推送通知服务
-    const initializeNotifications = async () => {
+    // 初始化语言设置
+    const initializeApp = async () => {
       try {
+        // 初始化推送通知服务
         await notificationService.initialize();
+        
+        // 初始化语言设置
+        store.dispatch(initializeLanguage());
       } catch (error) {
-        console.error('推送通知初始化失败:', error);
+        console.error('应用初始化失败:', error);
       }
     };
 
-    initializeNotifications();
+    initializeApp();
 
     // 清理函数
     return () => {

@@ -10,11 +10,130 @@ from health.models import HealthMetric, Alert, DoctorPatientRelation, ThresholdS
 from medication.models import MedicationReminder, MedicationPlan
 
 
+class AlertTemplates:
+    """告警模板类 - 支持中文和英文"""
+    
+    @staticmethod
+    def get_alert_content(alert_type, language='zh', **kwargs):
+        """
+        获取告警内容模板
+        
+        Args:
+            alert_type: 告警类型
+            language: 语言 ('zh' 或 'en')
+            **kwargs: 模板变量
+        """
+        templates = {
+            'blood_pressure_anomaly': {
+                'zh': {
+                    'title': '血压异常警报',
+                    'message': f'系统分析患者最近3天血压数据，发现收缩压持续偏高(平均{{value}}mmHg)'
+                },
+                'en': {
+                    'title': 'Blood Pressure Anomaly Alert',
+                    'message': f'System analyzed patient blood pressure data for the past 3 days and found sustained high systolic pressure (average {{value}}mmHg)'
+                }
+            },
+            'heart_rate_alert': {
+                'zh': {
+                    'title': '心率异常告警',
+                    'message': f'患者心率{{value}}bpm，超出正常范围'
+                },
+                'en': {
+                    'title': 'Heart Rate Alert',
+                    'message': f'Patient heart rate {{value}}bpm exceeds normal range'
+                }
+            },
+            'missed_medication': {
+                'zh': {
+                    'title': '用药依从性异常',
+                    'message': f'系统检测患者最近3天{{medication_name}}依从性下降至{{compliance_rate}}%'
+                },
+                'en': {
+                    'title': 'Medication Compliance Alert',
+                    'message': f'System detected decreased medication adherence for {{medication_name}} over the past 3 days, compliance rate: {{compliance_rate}}%'
+                }
+            },
+            'patient_inactivity': {
+                'zh': {
+                    'title': '患者活动异常',
+                    'message': '系统检测患者最近3天数据上传活跃度异常，仅1次记录'
+                },
+                'en': {
+                    'title': 'Patient Activity Anomaly',
+                    'message': 'System detected abnormal data upload activity over the past 3 days, only 1 record'
+                }
+            },
+            'glucose_high_rising': {
+                'zh': {
+                    'title': '血糖偏高且上升 ↗',
+                    'message': f'系统分析患者最近3天血糖数据，发现平均值{{value}}mmol/L偏高，且呈上升趋势(+{{trend}})'
+                },
+                'en': {
+                    'title': 'Glucose High and Rising ↗',
+                    'message': f'System analyzed patient glucose data for the past 3 days, found average {{value}}mmol/L is high and showing rising trend (+{{trend}})'
+                }
+            },
+            'glucose_high_falling': {
+                'zh': {
+                    'title': '血糖偏高但改善中 ↘',
+                    'message': f'系统分析患者最近3天血糖数据，发现平均值{{value}}mmol/L偏高，但呈下降改善趋势(-{{trend}})'
+                },
+                'en': {
+                    'title': 'Glucose High but Improving ↘',
+                    'message': f'System analyzed patient glucose data for the past 3 days, found average {{value}}mmol/L is high but showing improving trend (-{{trend}})'
+                }
+            },
+            'glucose_high_stable': {
+                'zh': {
+                    'title': '血糖持续偏高 →',
+                    'message': f'系统分析患者最近3天血糖数据，发现平均值{{value}}mmol/L持续偏高'
+                },
+                'en': {
+                    'title': 'Glucose Continuously High →',
+                    'message': f'System analyzed patient glucose data for the past 3 days, found average {{value}}mmol/L to be continuously high'
+                }
+            },
+            'glucose_normal_rising': {
+                'zh': {
+                    'title': '血糖上升趋势 ↗',
+                    'message': f'系统分析患者最近3天血糖数据，发现平均值{{value}}mmol/L，呈明显上升趋势(+{{trend}})'
+                },
+                'en': {
+                    'title': 'Glucose Rising Trend ↗',
+                    'message': f'System analyzed patient glucose data for the past 3 days, found average {{value}}mmol/L showing clear rising trend (+{{trend}})'
+                }
+            }
+        }
+        
+        if alert_type not in templates:
+            # 默认返回中文
+            return {
+                'title': f'告警类型: {alert_type}',
+                'message': '系统检测到异常情况，请及时处理'
+            }
+        
+        template = templates[alert_type].get(language, templates[alert_type]['zh'])
+        
+        # 格式化消息模板
+        try:
+            formatted_message = template['message'].format(**kwargs)
+        except KeyError:
+            # 如果格式化失败，返回原始消息
+            formatted_message = template['message']
+        
+        return {
+            'title': template['title'],
+            'message': formatted_message
+        }
+
+
 class AlertAnalysisService:
     """告警分析服务 - 每3天分析患者数据生成告警"""
     
-    def __init__(self):
+    def __init__(self, language='zh'):
         self.analysis_days = 3  # 分析最近3天数据
+        self.language = language  # 当前语言设置
         
     def analyze_and_generate_alerts(self, doctor_id):
         """
@@ -151,12 +270,18 @@ class AlertAnalysisService:
             }
             
             # 创建告警记录
+            alert_content = AlertTemplates.get_alert_content(
+                'blood_pressure_anomaly', 
+                self.language, 
+                value=f"{avg_systolic:.1f}"
+            )
+            
             alert = Alert.objects.create(
                 patient=patient,
                 assigned_doctor=doctor,
-                alert_type='threshold_exceeded',
-                title='血压异常警报',
-                message=f'系统分析患者最近3天血压数据，发现收缩压持续偏高(平均{avg_systolic:.1f}mmHg)',
+                alert_type='blood_pressure_anomaly',
+                title=alert_content['title'],
+                message=alert_content['message'],
                 priority='critical' if avg_systolic > 160 else 'high',
                 status='pending'
             )
@@ -272,12 +397,19 @@ class AlertAnalysisService:
             }
             
             # 创建告警记录
+            alert_content = AlertTemplates.get_alert_content(
+                alert_type, 
+                self.language, 
+                value=f"{avg_glucose:.2f}",
+                trend=f"{abs(trend_direction):.1f}"
+            )
+            
             alert = Alert.objects.create(
                 patient=patient,
                 assigned_doctor=doctor,
                 alert_type=alert_type,
-                title=title,
-                message=message,
+                title=alert_content['title'],
+                message=alert_content['message'],
                 priority=priority,
                 status='pending'
             )
@@ -315,12 +447,18 @@ class AlertAnalysisService:
                 
                 if not is_exercise:
                     # 生成心率异常告警
+                    alert_content = AlertTemplates.get_alert_content(
+                        'heart_rate_alert', 
+                        self.language, 
+                        value=f"{hr['heart_rate']}"
+                    )
+                    
                     alert = Alert.objects.create(
                         patient=patient,
                         assigned_doctor=doctor,
-                        alert_type='threshold_exceeded',
-                        title='心率异常告警',
-                        message=f'患者心率{hr["heart_rate"]}bpm，超出正常范围',
+                        alert_type='heart_rate_alert',
+                        title=alert_content['title'],
+                        message=alert_content['message'],
                         priority='high',
                         status='pending'
                     )
@@ -347,6 +485,13 @@ class AlertAnalysisService:
             start_date__lte=end_date.date()
         )
         
+        # 如果患者没有用药计划，直接返回空列表
+        if not active_plans.exists():
+            print(f"患者 {patient.name} 没有用药计划，跳过用药依从性分析")
+            return alerts
+        
+        print(f"患者 {patient.name} 有 {active_plans.count()} 个用药计划，开始分析依从性")
+        
         for plan in active_plans:
             # 获取最近3天的用药提醒记录
             reminders = MedicationReminder.objects.filter(
@@ -356,12 +501,15 @@ class AlertAnalysisService:
             )
             
             if not reminders.exists():
+                print(f"用药计划 {plan.medication.name} 在分析期间内没有提醒记录")
                 continue
             
             # 计算依从性
             total_reminders = reminders.count()
             taken_reminders = reminders.filter(status='taken').count()
             compliance_rate = (taken_reminders / total_reminders) * 100 if total_reminders > 0 else 0
+            
+            print(f"用药计划 {plan.medication.name}: 总提醒 {total_reminders}, 已服用 {taken_reminders}, 依从性 {compliance_rate:.1f}%")
             
             # 如果依从性低于70%，生成告警
             if compliance_rate < 70:
@@ -381,8 +529,13 @@ class AlertAnalysisService:
                     patient=patient,
                     assigned_doctor=doctor,
                     alert_type='missed_medication',
-                    title='用药依从性异常',
-                    message=f'系统检测患者最近3天{plan.medication.name}依从性下降至{compliance_rate:.1f}%',
+                    title=AlertTemplates.get_alert_content('missed_medication', self.language)['title'],
+                    message=AlertTemplates.get_alert_content(
+                        'missed_medication', 
+                        self.language, 
+                        medication_name=plan.medication.name,
+                        compliance_rate=f"{compliance_rate:.1f}"
+                    )['message'],
                     priority='high' if compliance_rate < 50 else 'medium',
                     status='pending'
                 )
@@ -393,6 +546,8 @@ class AlertAnalysisService:
                 })
                 
                 print(f"生成用药告警: {patient.name} - {plan.medication.name} 依从性 {compliance_rate:.1f}%")
+            else:
+                print(f"用药计划 {plan.medication.name} 依从性良好 ({compliance_rate:.1f}%)，无需告警")
         
         return alerts
     
@@ -407,17 +562,37 @@ class AlertAnalysisService:
             measured_at__lte=end_date
         ).count()
         
-        medication_records_count = MedicationReminder.objects.filter(
-            plan__patient=patient,
-            reminder_time__gte=start_date,
-            reminder_time__lte=end_date,
-            status='taken'
-        ).count()
+        # 检查患者是否有用药计划
+        has_medication_plan = MedicationPlan.objects.filter(
+            patient=patient,
+            status='active',
+            start_date__lte=end_date.date()
+        ).exists()
+        
+        medication_records_count = 0
+        if has_medication_plan:
+            # 只有在患者有用药计划的情况下才计算用药记录
+            medication_records_count = MedicationReminder.objects.filter(
+                plan__patient=patient,
+                reminder_time__gte=start_date,
+                reminder_time__lte=end_date,
+                status='taken'
+            ).count()
+            print(f"患者 {patient.name} 有用药计划，用药记录数: {medication_records_count}")
+        else:
+            print(f"患者 {patient.name} 没有用药计划，跳过用药记录统计")
         
         total_entries = health_metrics_count + medication_records_count
-        expected_entries = self.analysis_days * 3  # 预期每天至少3条记录
+        
+        # 根据患者是否有用药计划调整预期记录数
+        if has_medication_plan:
+            expected_entries = self.analysis_days * 3  # 有用药计划：预期每天至少3条记录
+        else:
+            expected_entries = self.analysis_days * 2  # 无用药计划：预期每天至少2条记录（健康指标）
         
         activity_rate = (total_entries / expected_entries) * 100 if expected_entries > 0 else 0
+        
+        print(f"患者 {patient.name} 活跃度分析: 健康记录 {health_metrics_count}, 用药记录 {medication_records_count}, 总计 {total_entries}, 预期 {expected_entries}, 活跃度 {activity_rate:.1f}%")
         
         # 如果活跃度低于30%，生成告警
         if activity_rate < 30:
@@ -428,15 +603,16 @@ class AlertAnalysisService:
                 'actualEntries': total_entries,
                 'activityRate': f"{activity_rate:.1f}%",
                 'healthRecords': health_metrics_count,
-                'medicationRecords': medication_records_count
+                'medicationRecords': medication_records_count,
+                'hasMedicationPlan': has_medication_plan
             }
             
             alert = Alert.objects.create(
                 patient=patient,
                 assigned_doctor=doctor,
                 alert_type='patient_inactivity',
-                title='患者活动异常',
-                message=f'系统检测患者最近3天数据上传活跃度异常，仅{activity_rate:.1f}%',
+                title=AlertTemplates.get_alert_content('patient_inactivity', self.language)['title'],
+                message=AlertTemplates.get_alert_content('patient_inactivity', self.language)['message'],
                 priority='low',
                 status='pending'
             )
@@ -447,6 +623,8 @@ class AlertAnalysisService:
             })
             
             print(f"生成活跃度告警: {patient.name} - 活跃度 {activity_rate:.1f}%")
+        else:
+            print(f"患者 {patient.name} 活跃度良好 ({activity_rate:.1f}%)，无需告警")
         
         return alerts
     
@@ -502,3 +680,37 @@ class AlertAnalysisService:
                 'stats': {},
                 'error': str(e)
             }
+
+
+# 使用示例
+def create_alert_service_with_language(language='zh'):
+    """
+    创建指定语言的告警分析服务
+    
+    Args:
+        language: 语言设置 ('zh' 或 'en')
+    
+    Returns:
+        AlertAnalysisService: 配置了语言的告警分析服务
+    """
+    return AlertAnalysisService(language=language)
+
+
+# 示例用法
+if __name__ == "__main__":
+    # 创建中文告警服务
+    zh_service = create_alert_service_with_language('zh')
+    
+    # 创建英文告警服务
+    en_service = create_alert_service_with_language('en')
+    
+    # 测试模板
+    print("中文告警模板:")
+    zh_content = AlertTemplates.get_alert_content('blood_pressure_anomaly', 'zh', value='160.0')
+    print(f"标题: {zh_content['title']}")
+    print(f"消息: {zh_content['message']}")
+    
+    print("\n英文告警模板:")
+    en_content = AlertTemplates.get_alert_content('blood_pressure_anomaly', 'en', value='160.0')
+    print(f"Title: {en_content['title']}")
+    print(f"Message: {en_content['message']}")

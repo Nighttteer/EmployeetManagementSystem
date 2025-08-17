@@ -766,12 +766,6 @@ class PatientUpdateView(generics.RetrieveUpdateAPIView):
             patient.refresh_from_db()
             new_risk = patient.get_disease_risk_level()
             
-            # 记录日志
-            print(f"🔄 患者疾病信息更新:")
-            print(f"   患者: {patient.name} (ID: {patient.id})")
-            print(f"   疾病: {old_diseases} → {patient.chronic_diseases}")
-            print(f"   风险: {old_risk} → {new_risk}")
-            
             # 自定义响应
             if response.status_code == 200:
                 return Response({

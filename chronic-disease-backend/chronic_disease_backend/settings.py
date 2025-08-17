@@ -215,17 +215,17 @@ SIMPLE_JWT = {
     'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
 }
 
-# CORS settings - 允许React Native应用访问
+# CORS settings - Allow React Native apps to access
 # In production, keep this list tight and avoid `CORS_ALLOW_ALL_ORIGINS`.
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:8081",  # Expo默认端口
+    "http://localhost:8081",  # Expode fault port
     "http://127.0.0.1:8081",
-    "http://localhost:19006",  # Expo web端口
+    "http://localhost:19006",  # Expo web port
     "http://127.0.0.1:19006",
 ]
 
 # Development convenience only; must be False in production.
-CORS_ALLOW_ALL_ORIGINS = DEBUG  # 仅在开发环境中允许所有源
+CORS_ALLOW_ALL_ORIGINS = DEBUG  # Allow all sources only in the development environment
 
 CORS_ALLOW_CREDENTIALS = True
 

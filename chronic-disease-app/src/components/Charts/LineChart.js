@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Dimensions } from 'react-native';
 import { Text } from 'react-native-paper';
 import Svg, { Path, Circle, Line, Text as SvgText } from 'react-native-svg';
+import { useTranslation } from 'react-i18next';
 
 // 工具函数：验证数字是否有效
 const isValidNumber = (num) => {
@@ -26,6 +27,29 @@ const LineChart = ({
   title = '',
   series = null // 新增：支持多条线数据
 }) => {
+  const { t } = useTranslation();
+  
+  // 安全的t函数包装器
+  const safeT = (key) => {
+    if (typeof t !== 'function') {
+      // 返回默认中文文本
+      return key.includes('common.noData') ? '暂无数据' :
+             key.includes('common.noValidData') ? '无有效数据' :
+             key.includes('common.invalidDataRange') ? '数据范围无效' :
+             key.includes('common.cannotGenerateChart') ? '无法生成图表' :
+             key;
+    }
+    try {
+      return t(key);
+    } catch (error) {
+      console.error('❌ LineChart t函数调用失败:', error, 'key:', key);
+      return key.includes('common.noData') ? '暂无数据' :
+             key.includes('common.noValidData') ? '无有效数据' :
+             key.includes('common.invalidDataRange') ? '数据范围无效' :
+             key.includes('common.cannotGenerateChart') ? '无法生成图表' :
+             key;
+    }
+  };
   const screenWidth = width || Dimensions.get('window').width - 40;
   const padding = 80; // 增加padding为Y轴标签留出更多空间
   const chartWidth = screenWidth - padding * 2;
@@ -54,7 +78,7 @@ const LineChart = ({
       (chartData.length === 1 && (!chartData[0].data || chartData[0].data.length === 0))) {
     return (
       <View style={{ width: screenWidth, height, justifyContent: 'center', alignItems: 'center' }}>
-        <Text>No data available</Text>
+        <Text>{safeT('common.noData')}</Text>
       </View>
     );
   }
@@ -66,7 +90,7 @@ const LineChart = ({
   if (validValues.length === 0) {
     return (
       <View style={{ width: screenWidth, height, justifyContent: 'center', alignItems: 'center' }}>
-        <Text>No valid data</Text>
+        <Text>{safeT('common.noValidData')}</Text>
       </View>
     );
   }
@@ -79,7 +103,7 @@ const LineChart = ({
   if (!isValidNumber(minY) || !isValidNumber(maxY) || !isValidNumber(yRange)) {
     return (
       <View style={{ width: screenWidth, height, justifyContent: 'center', alignItems: 'center' }}>
-        <Text>数据范围无效</Text>
+        <Text>{safeT('common.invalidDataRange')}</Text>
       </View>
     );
   }
@@ -124,7 +148,7 @@ const LineChart = ({
   if (seriesData.length === 0) {
     return (
       <View style={{ width: screenWidth, height, justifyContent: 'center', alignItems: 'center' }}>
-        <Text>无法生成图表</Text>
+        <Text>{safeT('common.cannotGenerateChart')}</Text>
       </View>
     );
   }

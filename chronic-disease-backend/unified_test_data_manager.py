@@ -6,7 +6,8 @@
 import os
 import sys
 import django
-from datetime import datetime, timedelta
+from datetime import timedelta
+from django.utils import timezone
 import random
 import json
 from django.test import Client
@@ -37,6 +38,16 @@ class UnifiedTestDataManager:
                 return False
         
         print("🗑️  正在清除数据库数据...")
+
+        # 清理前确保数据库结构存在（迁移）
+        try:
+            from django.core.management import call_command
+            print("   🔧 检查并应用数据库迁移...")
+            call_command('makemigrations', 'accounts', 'health', 'medication', interactive=False, verbosity=0)
+            call_command('migrate', interactive=False, verbosity=0)
+            print("   ✅ 迁移完成")
+        except Exception as e:
+            print(f"   ⚠️  迁移检查失败（继续清理数据）: {e}")
         
         # 清除告警数据
         Alert.objects.all().delete()
@@ -292,7 +303,7 @@ class UnifiedTestDataManager:
             
             assigned_doctor = patient_data.pop('assigned_doctor', None)
             patient = User.objects.create_user(**patient_data)
-            patient.last_login = datetime.now() - timedelta(days=random.randint(1, 30))
+            patient.last_login = timezone.now() - timedelta(days=random.randint(1, 30))
             patient.save()
             
             created_patients.append((patient, assigned_doctor))
@@ -338,8 +349,11 @@ class UnifiedTestDataManager:
         # 使用Django管理命令创建完整测试数据
         try:
             from django.core.management import call_command
-            call_command('create_test_data')
-            print("   ✅ 通过管理命令创建健康数据")
+            # 支持通过环境变量配置规模
+            patients_count = int(os.environ.get('TEST_PATIENTS', '12'))
+            days = int(os.environ.get('TEST_DAYS', '7'))
+            call_command('create_test_data', patients=patients_count, days=days)
+            print(f"   ✅ 通过管理命令创建健康数据（患者: {patients_count}，天数: {days}）")
         except Exception as e:
             print(f"   ❌ 管理命令失败: {e}")
             print("   📝 请手动运行: python manage.py create_test_data")

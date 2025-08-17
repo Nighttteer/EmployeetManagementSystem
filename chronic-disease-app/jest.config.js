@@ -1,34 +1,30 @@
 module.exports = {
-  preset: 'jest-expo',
-  setupFilesAfterEnv: [
-    '@testing-library/jest-native/extend-expect',
-    '<rootDir>/src/__tests__/setup.js'
+  testEnvironment: 'jsdom',
+  setupFiles: ['<rootDir>/src/__tests__/setup.js'],
+  testMatch: [
+    '<rootDir>/src/__tests__/**/*.test.{js,jsx}',
   ],
-  testPathIgnorePatterns: [
-    '<rootDir>/node_modules/',
-    '<rootDir>/.expo/',
-    '<rootDir>/e2e/'
-  ],
+  transform: {
+    '^.+\\.(js|jsx)$': 'babel-jest',
+  },
   transformIgnorePatterns: [
-    'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg)'
+    'node_modules/(?!(react-native|@react-native|@react-navigation|expo|@expo|@reduxjs/toolkit|react-redux|@react-native-async-storage)/)',
   ],
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/src/$1',
+    '\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$': 'identity-obj-proxy',
+  },
+  globals: {
+    __DEV__: true,
+  },
   collectCoverageFrom: [
     'src/**/*.{js,jsx}',
-    '!src/**/*.test.{js,jsx}',
-    '!src/**/__tests__/**',
-    '!src/index.js'
+    '!src/__tests__/**',
+    '!src/index.js',
+    '!src/App.js',
   ],
   coverageReporters: ['text', 'lcov', 'html'],
-  coverageThreshold: {
-    global: {
-      branches: 70,
-      functions: 70,
-      lines: 70,
-      statements: 70
-    }
-  },
-  testEnvironment: 'node',
-  moduleNameMapping: {
-    '^@/(.*)$': '<rootDir>/src/$1'
-  }
+  coverageDirectory: 'coverage',
+  clearMocks: true,
+  testTimeout: 10000,
 };

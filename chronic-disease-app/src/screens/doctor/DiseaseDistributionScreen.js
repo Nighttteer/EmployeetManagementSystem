@@ -229,7 +229,7 @@ const DiseaseDistributionScreen = ({ navigation }) => {
         style={styles.chartTypeChip}
         compact={true}
       >
-        {t('common.pieChart') || 'Pie Chart'}
+        {t('common.pieChart')}
       </Chip>
       <Chip 
         selected={chartType === 'bar'} 
@@ -237,7 +237,7 @@ const DiseaseDistributionScreen = ({ navigation }) => {
         style={styles.chartTypeChip}
         compact={true}
       >
-        {t('common.barChart') || 'Bar Chart'}
+        {t('common.barChart')}
       </Chip>
       <Chip 
         selected={chartType === 'trend'} 
@@ -245,7 +245,7 @@ const DiseaseDistributionScreen = ({ navigation }) => {
         style={styles.chartTypeChip}
         compact={true}
       >
-        {t('common.trendChart') || 'Trend Chart'}
+        {t('common.trendChart')}
       </Chip>
     </View>
   );
@@ -274,7 +274,7 @@ const DiseaseDistributionScreen = ({ navigation }) => {
           <BarChart
             data={chartData}
             height={250}
-            yAxisLabel={t('patients.patientCount') || 'Patient Count'}
+            yAxisLabel={t('patients.patientCount')}
             onPress={(item) => {
               const disease = diseaseData.diseaseDistribution.find(d => d.name === item.label);
               setSelectedDisease(disease);
@@ -285,12 +285,12 @@ const DiseaseDistributionScreen = ({ navigation }) => {
         // 对于趋势图，我们显示选中疾病的患者数量变化（这里简化为静态数据）
         const trendData = selectedDisease ? 
           Array.from({length: 6}, (_, i) => ({
-            label: `${i + 1}${t('common.month') || 'M'}`,
+            label: `${i + 1}${t('common.month')}`,
             value: Math.max(0, selectedDisease.value + Math.floor(Math.random() * 5) - 2)
           })) :
           diseaseData.diseaseDistribution.length > 0 ?
           Array.from({length: 6}, (_, i) => ({
-            label: `${i + 1}${t('common.month') || 'M'}`,
+            label: `${i + 1}${t('common.month')}`,
             value: Math.max(0, diseaseData.diseaseDistribution[0].value + Math.floor(Math.random() * 5) - 2)
           })) : [];
         
@@ -298,10 +298,10 @@ const DiseaseDistributionScreen = ({ navigation }) => {
           <LineChart
             data={trendData}
             height={250}
-            yAxisLabel={t('patients.patientCount') || 'Patient Count'}
+            yAxisLabel={t('patients.patientCount')}
             title={selectedDisease ? 
-              `${selectedDisease.name} ${t('common.patientTrend') || 'Patient Trend'}` : 
-              `${diseaseData.diseaseDistribution[0]?.name || t('diseases.hypertension')} ${t('common.patientTrend') || 'Patient Trend'}`
+              `${selectedDisease.name} ${t('common.patientTrend')}` : 
+              `${diseaseData.diseaseDistribution[0]?.name || t('diseases.hypertension')} ${t('common.patientTrend')}`
             }
             color={selectedDisease ? selectedDisease.color : '#FF6B6B'}
           />
@@ -338,7 +338,7 @@ const DiseaseDistributionScreen = ({ navigation }) => {
           <Card.Content>
             <View style={styles.diseaseDetailHeader}>
               <Text style={styles.diseaseDetailTitle}>
-                {selectedDisease.name} {t('common.detailedAnalysis') || 'Detailed Analysis'}
+                {selectedDisease.name} {t('common.detailedAnalysis')}
               </Text>
               <IconButton
                 icon="close"
@@ -354,7 +354,7 @@ const DiseaseDistributionScreen = ({ navigation }) => {
               </View>
               <View style={styles.statItem}>
                 <Text style={styles.statValue}>{selectedDisease.percentage}%</Text>
-                <Text style={styles.statLabel}>{t('common.percentage') || 'Percentage'}</Text>
+                <Text style={styles.statLabel}>{t('common.percentage')}</Text>
               </View>
             </View>
 
@@ -484,7 +484,7 @@ const DiseaseDistributionScreen = ({ navigation }) => {
               <View style={styles.summaryItem}>
                 <Text style={styles.summaryValue}>{diseaseData.totalWithDiseases}</Text>
                 <Text style={styles.summaryLabel}>
-                  {t('common.withChronicDiseases') || 'With Chronic Diseases'}
+                  {t('common.withChronicDiseases')}
                 </Text>
               </View>
               <View style={styles.summaryItem}>
@@ -495,7 +495,7 @@ const DiseaseDistributionScreen = ({ navigation }) => {
                   }%
                 </Text>
                 <Text style={styles.summaryLabel}>
-                  {t('common.prevalenceRate') || 'Prevalence Rate'}
+                  {t('common.prevalenceRate')}
                 </Text>
               </View>
             </View>
@@ -510,10 +510,10 @@ const DiseaseDistributionScreen = ({ navigation }) => {
           <Card.Content>
             <Text style={styles.chartTitle}>
               {chartType === 'pie' ? 
-                t('common.diseaseDistributionRatio') || 'Disease Distribution Ratio' : 
+                t('common.diseaseDistributionRatio') : 
                chartType === 'bar' ? 
-                t('common.diseasePatientCount') || 'Disease Patient Count' : 
-               t('common.diseaseTrendChange') || 'Disease Trend Change'
+                t('common.diseasePatientCount') : 
+               t('common.diseaseTrendChange')
               }
             </Text>
             {diseaseData.diseaseDistribution.length > 0 ? renderChart() : (

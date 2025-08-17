@@ -21,6 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LineChart } from '../../components/Charts';
 import CustomCard from '../../components/CustomCard';
 import { fetchUserProfile, fetchHealthTrends } from '../../store/slices/userSlice';
+import { patientsAPI, messagesAPI } from '../../services/api';
 import { 
   METRIC_TYPES,
   evaluateHealthStatus,
@@ -29,13 +30,15 @@ import {
 } from '../../utils/dataModels';
 
 const PatientHomeScreen = ({ navigation }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const dispatch = useDispatch();
   const { user, profile } = useSelector((state) => state.auth);
   const { healthMetrics, loading } = useSelector((state) => state.user);
   
   const [refreshing, setRefreshing] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
+  const [adviceList, setAdviceList] = useState([]);
+  const [adviceDialogVisible, setAdviceDialogVisible] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -47,8 +50,47 @@ const PatientHomeScreen = ({ navigation }) => {
         dispatch(fetchUserProfile()),
         dispatch(fetchHealthTrends('week'))
       ]);
+      // 加载我的医生建议
+      if (user?.id) {
+        const res = await patientsAPI.getPatientAdvice(user.id);
+        if (res.data && res.data.success) {
+          setAdviceList(res.data.data || []);
+        } else if (Array.isArray(res.data)) {
+          setAdviceList(res.data);
+        }
+      }
     } catch (error) {
       console.error('数据加载失败:', error);
+    }
+  };
+  const openChatWithDoctor = async (doctorId, doctorName) => {
+    try {
+      if (!doctorId) {
+        navigation.navigate('Messages');
+        return;
+      }
+      let conversationId = null;
+      try {
+        const conv = await messagesAPI.getConversationWithUser(doctorId);
+        conversationId = conv?.data?.id;
+      } catch (err) {
+        if (err?.response?.status === 404) {
+          const created = await messagesAPI.startConversationWithUser(doctorId);
+          conversationId = created?.data?.conversation?.id;
+        } else {
+          throw err;
+        }
+      }
+      navigation.navigate('Messages', {
+        screen: 'Chat',
+        params: {
+          conversationId,
+          otherUser: { id: doctorId, name: doctorName || '', role: 'doctor' },
+        },
+      });
+    } catch (e) {
+      console.error('打开聊天失败:', e);
+      navigation.navigate('Messages');
     }
   };
 
@@ -360,13 +402,13 @@ const PatientHomeScreen = ({ navigation }) => {
         <View style={styles.header}>
           <Text variant="headlineMedium" style={styles.greeting}>
             {`${user?.first_name || ''} ${user?.last_name || ''}`.trim() ? 
-              `您好，${user.first_name}${user.last_name}` : 
-              user?.name ? `您好，${user.name}` : '您好'
+              t('patient.hello', { name: `${user.first_name}${user.last_name}` }) : 
+              user?.name ? t('patient.hello', { name: user.name }) : t('patient.hello', { name: '' })
             }
           </Text>
           <Text variant="bodyLarge" style={styles.subGreeting}>
             {t('patient.todayIs', { 
-              date: new Date().toLocaleDateString('zh-CN', { 
+              date: new Date().toLocaleDateString(i18n.language === 'zh' ? 'zh-CN' : 'en-US', { 
                 month: 'long', 
                 day: 'numeric',
                 weekday: 'long'
@@ -439,18 +481,20 @@ const PatientHomeScreen = ({ navigation }) => {
           subtitle={t('patient.latestHealthGuidance')}
           content={
             <View style={styles.adviceContainer}>
-              <Text style={styles.adviceText}>
-                {profile?.lastAdvice || t('patient.noNewAdvice')}
-              </Text>
-              <Text style={styles.adviceTime}>
-                {profile?.lastAdviceTime ? 
-                  new Date(profile.lastAdviceTime).toLocaleDateString('zh-CN') : 
-                  ''
-                }
-              </Text>
+              {adviceList.length > 0 ? (
+                <>
+                  <Text style={styles.adviceText}>{adviceList[0].content}</Text>
+                  <Text style={styles.adviceTime}>
+                    {adviceList[0].advice_time ? new Date(adviceList[0].advice_time).toLocaleDateString('zh-CN') : ''}
+                    {adviceList[0].doctor_name ? ` · ${adviceList[0].doctor_name}` : ''}
+                  </Text>
+                </>
+              ) : (
+                <Text style={styles.adviceText}>{t('patient.noNewAdvice')}</Text>
+              )}
             </View>
           }
-          onPress={() => navigation.navigate('Messages')}
+          onPress={() => setAdviceDialogVisible(true)}
         />
 
         {/* 健康趋势图表 */}
@@ -475,6 +519,43 @@ const PatientHomeScreen = ({ navigation }) => {
           }
         />
       </ScrollView>
+
+      {/* 医生建议弹窗 */}
+      <Portal>
+        <Dialog visible={adviceDialogVisible} onDismiss={() => setAdviceDialogVisible(false)}>
+          <Dialog.Title>{t('patient.doctorAdvice')}</Dialog.Title>
+          <Dialog.Content>
+            {adviceList.length === 0 ? (
+              <Text>{t('patient.noNewAdvice')}</Text>
+            ) : (
+              <ScrollView style={{ maxHeight: 280 }}>
+                {adviceList.slice(0, 5).map((item) => (
+                  <View key={item.id} style={{ marginBottom: 12 }}>
+                    <Text style={{ fontWeight: '600', marginBottom: 4 }}>
+                      {item.doctor_name ? `${t('patients.doctor')}: ${item.doctor_name}` : ''}
+                    </Text>
+                    <Text style={{ color: '#666', marginBottom: 6 }}>
+                      {item.advice_time ? new Date(item.advice_time).toLocaleString() : ''}
+                    </Text>
+                    <Text style={{ lineHeight: 20 }}>{item.content}</Text>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+          </Dialog.Content>
+          <Dialog.Actions>
+            {adviceList.length > 0 && (
+              <Button onPress={() => {
+                setAdviceDialogVisible(false);
+                openChatWithDoctor(adviceList[0].doctor, adviceList[0].doctor_name);
+              }}>
+                {t('patient.contactDoctor')}
+              </Button>
+            )}
+            <Button onPress={() => setAdviceDialogVisible(false)}>{t('common.close')}</Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
 
       {/* 悬浮操作按钮 */}
       <FAB

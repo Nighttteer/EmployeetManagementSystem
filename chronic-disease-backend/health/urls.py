@@ -28,6 +28,9 @@ urlpatterns = [
     path('alerts/doctor/<int:doctor_id>/analyze/', alert_views.analyze_patient_data, name='analyze_patient_data'),
     path('alerts/<int:alert_id>/handle/', alert_views.handle_alert, name='handle_alert_db'),
     path('patients/<int:patient_id>/health-data/', alert_views.get_patient_health_data, name='get_patient_health_data'),
+    # 患者建议（DoctorAdvice）
+    path('patients/<int:patient_id>/advice/', views.patient_advice, name='patient_advice'),
+    path('advice/<int:advice_id>/', views.advice_detail, name='advice_detail'),
     
     # 医生仪表板API (替换前端硬编码数据)
     path('doctor/<int:doctor_id>/dashboard/', doctor_dashboard_views.doctor_dashboard_stats, name='doctor_dashboard_stats'),

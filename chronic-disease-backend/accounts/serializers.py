@@ -6,22 +6,7 @@ from .models import User, UserProfile, SMSVerificationCode
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     """
-    用户注册序列化器
-
     User registration serializer.
-
-    Responsibilities:
-    - Validate core identity fields and basic profile attributes
-    - Enforce password confirmation matching and strength validation
-    - Create the user via Django's built-in user factory to ensure the
-      password is hashed using the configured password hasher
-      (PBKDF2 by default in Django).
-
-    Security notes:
-    - Never store plaintext passwords; `create_user` will call
-      `set_password` internally, hashing the password safely.
-    - Email and username uniqueness checks help prevent account takeover
-      via ambiguous identifiers.
     """
     password = serializers.CharField(write_only=True, validators=[validate_password])
     password_confirm = serializers.CharField(write_only=True)
@@ -927,8 +912,6 @@ class PatientUpdateSerializer(serializers.ModelSerializer):
         
         # 记录日志
         new_diseases = instance.chronic_diseases
-        print(f"💾 患者信息序列化器更新: {instance.name}")
-        print(f"   疾病状态: {old_diseases} → {new_diseases}")
-        print(f"   风险等级: {instance.get_disease_risk_level()}")
+
         
         return instance 

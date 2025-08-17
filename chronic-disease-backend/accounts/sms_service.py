@@ -4,6 +4,7 @@ SMS短信服务模块
 """
 import logging
 from typing import Tuple
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -30,10 +31,64 @@ class DemoSMSService(BaseSMSService):
     
     def send_sms(self, phone: str, message: str) -> Tuple[bool, str]:
         """
-        模拟发送短信（仅在控制台输出）
+        模拟发送短信（在控制台突出显示验证码）
         """
+        # 检查是否支持彩色输出
+        supports_color = os.environ.get('TERM') is not None and os.environ.get('TERM') != 'dumb'
+        
+        if supports_color:
+            # 彩色输出
+            print("\n" + "="*80)
+            print("📱 SMS验证码发送（模拟）")
+            print("="*80)
+            print(f"📞 发送到: {phone}")
+            print(f"💬 短信内容: {message}")
+            print("="*80)
+            
+            # 提取验证码并突出显示
+            if "验证码是" in message:
+                code_start = message.find("验证码是") + 4
+                code_end = message.find("，", code_start)
+                if code_end == -1:
+                    code_end = message.find("，5分钟内有效")
+                if code_end == -1:
+                    code_end = len(message)
+                
+                verification_code = message[code_start:code_end].strip()
+                print(f"🔐 验证码: \033[1;33;40m{verification_code}\033[0m")
+                print(f"⏰ 有效期: 5分钟")
+                print("="*80)
+                print("💡 提示: 这是模拟环境，验证码仅用于测试")
+                print("="*80 + "\n")
+            else:
+                print("="*80 + "\n")
+        else:
+            # 普通输出（不支持彩色）
+            print("\n" + "="*80)
+            print("📱 SMS验证码发送（模拟）")
+            print("="*80)
+            print(f"📞 发送到: {phone}")
+            print(f"💬 短信内容: {message}")
+            
+            # 提取验证码
+            if "验证码是" in message:
+                code_start = message.find("验证码是") + 4
+                code_end = message.find("，", code_start)
+                if code_end == -1:
+                    code_end = message.find("，5分钟内有效")
+                if code_end == -1:
+                    code_end = len(message)
+                
+                verification_code = message[code_start:code_end].strip()
+                print(f"🔐 验证码: {verification_code}")
+                print(f"⏰ 有效期: 5分钟")
+            
+            print("💡 提示: 这是模拟环境，验证码仅用于测试")
+            print("="*80 + "\n")
+        
+        # 同时记录到日志
         logger.info(f"📱 [模拟SMS] 发送到 {phone}: {message}")
-        print(f"📱 [模拟SMS] 发送到 {phone}: {message}")
+        
         return True, "短信发送成功（模拟）"
 
 

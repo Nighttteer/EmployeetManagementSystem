@@ -49,6 +49,8 @@ urlpatterns = [
     
     # 各应用API路由
     path('api/auth/', include(('accounts.urls', 'accounts'), namespace='auth')),
+    # 兼容别名：部分前端使用 /api/accounts/ 前缀，这里额外挂载同一路由，避免 404
+    path('api/accounts/', include(('accounts.urls', 'accounts'), namespace='accounts')),
     path('api/user/', include('accounts.user_urls')),  # 使用专门的user路由配置
     path('api/health/', include('health.urls')),
     path('api/communication/', include('communication.urls')),

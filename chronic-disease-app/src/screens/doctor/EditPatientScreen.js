@@ -20,6 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../services/api';
+import { resolvePatientRiskLevel } from '../../utils/riskUtils';
 
 const EditPatientScreen = ({ route, navigation }) => {
   const { patient } = route.params || {};
@@ -181,13 +182,25 @@ const EditPatientScreen = ({ route, navigation }) => {
       const response = await api.put(`/accounts/patients/${patient.id}/update/`, updateData);
       
       if (response.data.success) {
+        // 计算统一风险等级并回传给上级页面，确保卡片与详情一致
+        const updatedPatient = {
+          ...patient,
+          chronic_diseases: processedDiseases,
+          risk_level: resolvePatientRiskLevel({ chronic_diseases: processedDiseases })
+        };
+
         Alert.alert(
           t('common.success'),
           '患者疾病信息已更新',
           [
             {
               text: t('common.confirm'),
-              onPress: () => navigation.goBack()
+              onPress: () => {
+                if (route.params && typeof route.params.onSaved === 'function') {
+                  try { route.params.onSaved(updatedPatient); } catch (_) {}
+                }
+                navigation.goBack();
+              }
             }
           ]
         );

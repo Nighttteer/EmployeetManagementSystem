@@ -19,22 +19,93 @@ import {
 } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { searchUnassignedPatients, bindPatientToDoctor } from '../../store/slices/patientsSlice';
+import { resolvePatientRiskLevel, getRiskColor, getRiskText } from '../../utils/riskUtils';
 
 const AddPatientScreen = () => {
+  const { t, ready } = useTranslation();
   const dispatch = useDispatch();
   const navigation = useNavigation();
   const { unassignedPatients, loading, error } = useSelector((state) => state.patients);
-  const { user } = useSelector((state) => state.auth);
+  const { user } = useSelector(state => state.auth);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPatients, setSelectedPatients] = useState([]);
+
+  // 等待国际化系统准备就绪
+  if (!ready || typeof t !== 'function') {
+    console.log('⏳ 等待国际化系统准备就绪...', { ready, tFunctionExists: typeof t === 'function' });
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#2196F3" />
+        <Text>正在加载国际化资源...</Text>
+      </View>
+    );
+  }
+
+  // 调试国际化系统状态
+  console.log('✅ 国际化系统已准备就绪');
+  console.log('🔍 t函数类型:', typeof t);
+  console.log('🔍 测试关键键值:');
+  console.log('  common.phone:', t('common.phone'));
+  console.log('  common.yearsOld:', t('common.yearsOld'));
+  console.log('  common.male:', t('common.male'));
+  console.log('  common.female:', t('common.female'));
+
+  // 安全的t函数包装器
+  const safeT = (key, options) => {
+    if (typeof t !== 'function') {
+      console.error('❌ t函数未定义，使用默认值:', key);
+      // 返回默认值或键名
+      return key.includes('common.phone') ? '手机' : 
+             key.includes('common.yearsOld') ? '岁' :
+             key.includes('common.male') ? '男' :
+             key.includes('common.female') ? '女' :
+             key.includes('common.highRisk') ? '高风险' :
+             key.includes('common.mediumRisk') ? '中风险' :
+             key.includes('common.lowRisk') ? '低风险' :
+             key.includes('common.healthy') ? '健康' :
+             key.includes('common.unassessed') ? '未评估' :
+             key.includes('patients.addPatient') ? '添加患者' :
+             key.includes('patients.searchPatientPlaceholder') ? '搜索患者姓名或诊断' :
+             key.includes('patients.selectedPatients') ? '已选择患者' :
+             key.includes('patients.searchingPatients') ? '正在搜索患者...' :
+             key.includes('patients.noMatchingPatients') ? '没有匹配的患者' :
+             key.includes('patients.noUnassignedPatients') ? '没有未分配的患者' :
+             key.includes('patients.tryOtherSearchCriteria') ? '请尝试其他搜索条件' :
+             key.includes('patients.allPatientsAssigned') ? '所有患者都已分配医生' :
+             key.includes('patients.pleaseSelectAtLeastOnePatient') ? '请选择至少一个患者' :
+             key.includes('patients.successfullyAddedPatients') ? '成功添加患者' :
+             key.includes('patients.partialAddFailed') ? '部分添加失败' :
+             key.includes('patients.partialAddFailedMessage') ? '部分患者添加失败' :
+             key.includes('patients.addFailed') ? '添加失败' :
+             key.includes('patients.addPatientError') ? '添加患者时发生错误' :
+             key.includes('common.notice') ? '提示' :
+             key.includes('common.success') ? '成功' :
+             key.includes('common.confirm') ? '确定' :
+             key;
+    }
+    try {
+      return t(key, options);
+    } catch (error) {
+      console.error('❌ t函数调用失败:', error, 'key:', key);
+      return key; // 返回键名作为回退
+    }
+  };
 
   useEffect(() => {
     // 组件加载时搜索所有未分配的患者
     dispatch(searchUnassignedPatients(''));
   }, [dispatch]);
+
+  // 页面返回聚焦时，刷新数据以避免风险标签使用旧数据
+  useFocusEffect(
+    React.useCallback(() => {
+      dispatch(searchUnassignedPatients(searchQuery || ''));
+    }, [dispatch, searchQuery])
+  );
 
   // 搜索患者
   const handleSearch = (query) => {
@@ -57,7 +128,7 @@ const AddPatientScreen = () => {
   // 添加选中的患者
   const handleAddPatients = async () => {
     if (selectedPatients.length === 0) {
-      Alert.alert('提示', '请选择至少一个患者');
+      Alert.alert(safeT('common.notice'), safeT('patients.pleaseSelectAtLeastOnePatient'));
       return;
     }
 
@@ -77,22 +148,25 @@ const AddPatientScreen = () => {
       
       if (failedBindings.length === 0) {
         Alert.alert(
-          '添加成功',
-          `成功添加了 ${selectedPatients.length} 名患者`,
+          safeT('common.success'),
+          safeT('patients.successfullyAddedPatients', { count: selectedPatients.length }),
           [
             {
-              text: '确定',
+              text: safeT('common.confirm'),
               onPress: () => navigation.goBack(),
             },
           ]
         );
       } else {
         Alert.alert(
-          '部分添加失败',
-          `成功添加了 ${selectedPatients.length - failedBindings.length} 名患者，${failedBindings.length} 名患者添加失败`,
+          safeT('patients.partialAddFailed'),
+          safeT('patients.partialAddFailedMessage', { 
+            successCount: selectedPatients.length - failedBindings.length, 
+            failedCount: failedBindings.length 
+          }),
           [
             {
-              text: '确定',
+              text: safeT('common.confirm'),
               onPress: () => navigation.goBack(),
             },
           ]
@@ -100,39 +174,30 @@ const AddPatientScreen = () => {
       }
     } catch (error) {
       console.error('添加患者失败:', error);
-      Alert.alert('添加失败', '添加患者时发生错误');
+      Alert.alert(safeT('patients.addFailed'), safeT('patients.addPatientError'));
     }
   };
 
-  // 获取患者风险级别颜色
-  const getRiskColor = (patient) => {
-    const conditions = patient.bio?.toLowerCase() || '';
-    if (conditions.includes('高血压') || conditions.includes('糖尿病') || conditions.includes('心脏病')) {
-      return '#f44336';
-    } else if (conditions.includes('肥胖') || conditions.includes('血脂')) {
-      return '#ff9800';
-    } else {
-      return '#4caf50';
-    }
-  };
-
-  // 获取患者风险级别文本
-  const getRiskText = (patient) => {
-    const conditions = patient.bio?.toLowerCase() || '';
-    if (conditions.includes('高血压') || conditions.includes('糖尿病') || conditions.includes('心脏病')) {
-      return '高风险';
-    } else if (conditions.includes('肥胖') || conditions.includes('血脂')) {
-      return '中风险';
-    } else {
-      return '低风险';
+  // 获取卡片风险等级
+  const getCardRiskLevel = (patient) => resolvePatientRiskLevel(patient);
+  
+  // 获取风险等级文本（国际化）
+  const getLocalizedRiskText = (level) => {
+    switch (level) {
+      case 'high': return safeT('common.highRisk');
+      case 'medium': return safeT('common.mediumRisk');
+      case 'low': return safeT('common.lowRisk');
+      case 'healthy': return safeT('common.healthy');
+      default: return safeT('common.unassessed');
     }
   };
 
   // 渲染患者卡片
   const renderPatientCard = ({ item: patient }) => {
     const isSelected = selectedPatients.some(p => p.id === patient.id);
-    const riskColor = getRiskColor(patient);
-    const riskText = getRiskText(patient);
+    const level = getCardRiskLevel(patient);
+    const riskColor = getRiskColor(level);
+    const riskText = getLocalizedRiskText(level);
 
     return (
       <Card 
@@ -144,18 +209,18 @@ const AddPatientScreen = () => {
       >
         <Card.Content>
           <View style={styles.patientHeader}>
-            <Avatar.Text
-              size={50}
-              label={patient.name?.charAt(0) || '患'}
-              style={styles.avatar}
+            <Avatar.Text 
+              size={40} 
+              label={patient.name?.charAt(0) || safeT('patients.patient')}
+              style={[styles.avatar, { backgroundColor: getRiskColor(level) }]}
             />
             <View style={styles.patientInfo}>
               <Text style={styles.patientName}>{patient.name}</Text>
-              <Text style={styles.patientDetail}>
-                {patient.age}岁 • {patient.gender === 'male' ? '男' : '女'}
+              <Text style={styles.patientDetails}>
+                {patient.age}{safeT('common.yearsOld')} • {patient.gender === 'male' ? safeT('common.male') : safeT('common.female')}
               </Text>
-              <Text style={styles.patientDetail}>
-                手机: {patient.phone}
+              <Text style={styles.patientPhone}>
+                {safeT('common.phone')}: {patient.phone}
               </Text>
               {patient.bio && (
                 <Text style={styles.patientBio} numberOfLines={2}>
@@ -188,10 +253,10 @@ const AddPatientScreen = () => {
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
       <Text style={styles.emptyText}>
-        {searchQuery ? '未找到匹配的患者' : '暂无未分配的患者'}
+        {searchQuery ? safeT('patients.noMatchingPatients') : safeT('patients.noUnassignedPatients')}
       </Text>
       <Text style={styles.emptySubtext}>
-        {searchQuery ? '请尝试其他搜索条件' : '所有患者都已分配医生'}
+        {searchQuery ? safeT('patients.tryOtherSearchCriteria') : safeT('patients.allPatientsAssigned')}
       </Text>
     </View>
   );
@@ -200,7 +265,7 @@ const AddPatientScreen = () => {
     <SafeAreaView style={styles.container}>
       <Appbar.Header>
         <Appbar.BackAction onPress={() => navigation.goBack()} />
-        <Appbar.Content title="添加患者" />
+        <Appbar.Content title={safeT('patients.addPatient')} />
         {selectedPatients.length > 0 && (
           <Appbar.Action
             icon="check"
@@ -212,7 +277,7 @@ const AddPatientScreen = () => {
 
       <View style={styles.content}>
         <Searchbar
-          placeholder="搜索患者姓名、手机号或症状..."
+          placeholder={safeT('patients.searchPatientPlaceholder')}
           onChangeText={handleSearch}
           value={searchQuery}
           style={styles.searchBar}
@@ -221,7 +286,7 @@ const AddPatientScreen = () => {
         {selectedPatients.length > 0 && (
           <View style={styles.selectedContainer}>
             <Text style={styles.selectedText}>
-              已选择 {selectedPatients.length} 名患者
+              {safeT('patients.selectedPatients', { count: selectedPatients.length })}
             </Text>
             <Button
               mode="contained"
@@ -229,7 +294,7 @@ const AddPatientScreen = () => {
               disabled={loading}
               style={styles.addButton}
             >
-              {loading ? <ActivityIndicator size="small" color="#fff" /> : '添加患者'}
+              {loading ? <ActivityIndicator size="small" color="#fff" /> : safeT('patients.addPatient')}
             </Button>
           </View>
         )}
@@ -239,7 +304,7 @@ const AddPatientScreen = () => {
         {loading && !unassignedPatients.length ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#2196F3" />
-            <Text style={styles.loadingText}>正在搜索患者...</Text>
+            <Text style={styles.loadingText}>{safeT('patients.searchingPatients')}</Text>
           </View>
         ) : (
           <FlatList
@@ -316,7 +381,12 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     color: '#333',
   },
-  patientDetail: {
+  patientDetails: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 2,
+  },
+  patientPhone: {
     fontSize: 14,
     color: '#666',
     marginBottom: 2,

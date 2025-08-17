@@ -163,6 +163,26 @@ export const patientsAPI = {
     });
   },
 
+  // 获取指定患者的医生建议列表
+  getPatientAdvice: (patientId) => {
+    return apiClient.get(`/health/patients/${patientId}/advice/`);
+  },
+
+  // 医生为患者新增建议
+  createPatientAdvice: (patientId, advice) => {
+    return apiClient.post(`/health/patients/${patientId}/advice/`, advice);
+  },
+
+  // 更新建议（仅作者医生）
+  updatePatientAdvice: (adviceId, updates) => {
+    return apiClient.patch(`/health/advice/${adviceId}/`, updates);
+  },
+
+  // 删除建议（仅作者医生）
+  deletePatientAdvice: (adviceId) => {
+    return apiClient.delete(`/health/advice/${adviceId}/`);
+  },
+
   // 获取特定患者详情
   getPatientDetails: (patientId) => {
     return apiClient.get(`/accounts/patients/${patientId}/update/`);

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Dimensions, TouchableOpacity } from 'react-native';
+import { View, Dimensions, TouchableOpacity, ScrollView } from 'react-native';
 import { Text } from 'react-native-paper';
 import Svg, { Rect, Text as SvgText, Line } from 'react-native-svg';
 
@@ -24,19 +24,21 @@ const BarChart = ({
   title = '',
   yAxisLabel = '',
   xAxisLabel = '',
-  onPress = null
+  onPress = null,
+  // 新增：长数据时横向滚动与标签截断控制
+  enableHorizontalScroll = true,
+  barUnitWidth = 70,
+  maxLabelLength = 8
 }) => {
   const screenWidth = width || Dimensions.get('window').width - 40;
   const padding = 70; // 增加padding为Y轴标签留出空间
-  const bottomPadding = 40; // 为X轴标签留出更多空间
-  const chartWidth = screenWidth - padding * 2;
-  const chartHeight = height - padding - bottomPadding;
+  const bottomPadding = 48; // 为X轴标签留出更多空间
 
   // 数据验证和清理
   if (!data || data.length === 0) {
     return (
       <View style={{ width: screenWidth, height, justifyContent: 'center', alignItems: 'center' }}>
-        <Text>No data available</Text>
+        <Text>{t('common.noData')}</Text>
       </View>
     );
   }
@@ -53,7 +55,7 @@ const BarChart = ({
   if (validData.length === 0) {
     return (
       <View style={{ width: screenWidth, height, justifyContent: 'center', alignItems: 'center' }}>
-        <Text>No valid data</Text>
+        <Text>{t('common.noValidData')}</Text>
       </View>
     );
   }
@@ -67,13 +69,20 @@ const BarChart = ({
   if (!isValidNumber(maxValue) || !isValidNumber(minValue)) {
     return (
       <View style={{ width: screenWidth, height, justifyContent: 'center', alignItems: 'center' }}>
-        <Text>Invalid data range</Text>
+        <Text>{t('common.invalidDataRange')}</Text>
       </View>
     );
   }
 
-  const barWidth = chartWidth / validData.length * 0.6;
-  const barSpacing = chartWidth / validData.length * 0.4;
+  // 根据数据量动态计算内容宽度（允许横向滚动）
+  const desiredContentWidth = padding * 2 + Math.max(barUnitWidth, 50) * validData.length;
+  const contentWidth = enableHorizontalScroll ? Math.max(screenWidth, desiredContentWidth) : screenWidth;
+  const chartWidth = contentWidth - padding * 2;
+  const chartHeight = height - padding - bottomPadding;
+
+  // 固定每组宽度，保证可读性
+  const barWidth = Math.min(32, Math.max(14, barUnitWidth * 0.6));
+  const barSpacing = Math.max(8, barUnitWidth - barWidth);
 
   // 验证图表尺寸
   if (!isValidNumber(barWidth) || !isValidNumber(barSpacing) || barWidth <= 0) {
@@ -104,6 +113,87 @@ const BarChart = ({
     }
   }
 
+  const ChartSvg = (
+    <Svg width={contentWidth} height={height}>
+      {/* 网格线 */}
+      {gridLines}
+      
+      {/* Y轴标签 */}
+      {[...Array(gridSteps + 1)].map((_, i) => {
+        const value = maxValue - (i / gridSteps) * maxValue;
+        const y = padding + (i / gridSteps) * chartHeight;
+        return (
+          <SvgText
+            key={`y-label-${i}`}
+            x={padding - 10}
+            y={y + 5}
+            fontSize="10"
+            fill="#666"
+            textAnchor="end"
+          >
+            {value.toFixed(0)}
+          </SvgText>
+        );
+      })}
+      
+      {/* 柱状图 */}
+      {validData.map((item, index) => {
+        const barHeight = Math.max((item.value / maxValue) * chartHeight, 2); // 确保至少有2px高度
+        const x = padding + index * (barWidth + barSpacing) + barSpacing / 2;
+        const y = padding + chartHeight - barHeight;
+        
+        // 验证坐标值
+        if (!isValidNumber(x) || !isValidNumber(y) || !isValidNumber(barHeight)) {
+          console.warn('Invalid coordinates for bar chart:', { x, y, barHeight, item });
+          return null;
+        }
+        const displayLabel = (item.label || 'Unknown');
+        const shortLabel = displayLabel.length > maxLabelLength ? `${displayLabel.slice(0, maxLabelLength)}…` : displayLabel;
+        
+        return (
+          <React.Fragment key={`bar-${index}`}>
+            <Rect
+              x={x.toFixed(2)}
+              y={y.toFixed(2)}
+              width={barWidth.toFixed(2)}
+              height={barHeight.toFixed(2)}
+              fill={Array.isArray(color) ? color[index % color.length] : color}
+              rx="4"
+              stroke="#fff"
+              strokeWidth="1"
+            />
+            
+            {/* 数值标签 */}
+            {showValues && (
+              <SvgText
+                x={(x + barWidth / 2).toFixed(2)}
+                y={(y - 8).toFixed(2)}
+                fontSize="11"
+                fill="#333"
+                textAnchor="middle"
+                fontWeight="bold"
+              >
+                {isValidNumber(item.value) ? item.value.toString() : '0'}
+              </SvgText>
+            )}
+            
+            {/* X轴标签（截断以避免重叠） */}
+            <SvgText
+              x={(x + barWidth / 2).toFixed(2)}
+              y={(padding + chartHeight + 20).toFixed(2)}
+              fontSize="11"
+              fill="#666"
+              textAnchor="middle"
+              fontWeight="500"
+            >
+              {shortLabel}
+            </SvgText>
+          </React.Fragment>
+        );
+      }).filter(bar => bar !== null)}
+    </Svg>
+  );
+
   return (
     <View>
       {title && (
@@ -111,83 +201,18 @@ const BarChart = ({
           {title}
         </Text>
       )}
-      
-      <Svg width={screenWidth} height={height}>
-        {/* 网格线 */}
-        {gridLines}
-        
-        {/* Y轴标签 */}
-        {[...Array(gridSteps + 1)].map((_, i) => {
-          const value = maxValue - (i / gridSteps) * maxValue;
-          const y = padding + (i / gridSteps) * chartHeight;
-          return (
-            <SvgText
-              key={`y-label-${i}`}
-              x={padding - 10}
-              y={y + 5}
-              fontSize="10"
-              fill="#666"
-              textAnchor="end"
-            >
-              {value.toFixed(0)}
-            </SvgText>
-          );
-        })}
-        
-        {/* 柱状图 */}
-        {validData.map((item, index) => {
-          const barHeight = Math.max((item.value / maxValue) * chartHeight, 2); // 确保至少有2px高度
-          const x = padding + index * (barWidth + barSpacing) + barSpacing / 2;
-          const y = padding + chartHeight - barHeight;
-          
-          // 验证坐标值
-          if (!isValidNumber(x) || !isValidNumber(y) || !isValidNumber(barHeight)) {
-            console.warn('Invalid coordinates for bar chart:', { x, y, barHeight, item });
-            return null;
-          }
-          
-          return (
-            <React.Fragment key={`bar-${index}`}>
-              <Rect
-                x={x.toFixed(2)}
-                y={y.toFixed(2)}
-                width={barWidth.toFixed(2)}
-                height={barHeight.toFixed(2)}
-                fill={Array.isArray(color) ? color[index % color.length] : color}
-                rx="4"
-                stroke="#fff"
-                strokeWidth="1"
-              />
-              
-              {/* 数值标签 */}
-              {showValues && (
-                <SvgText
-                  x={(x + barWidth / 2).toFixed(2)}
-                  y={(y - 8).toFixed(2)}
-                  fontSize="11"
-                  fill="#333"
-                  textAnchor="middle"
-                  fontWeight="bold"
-                >
-                  {isValidNumber(item.value) ? item.value.toString() : '0'}
-                </SvgText>
-              )}
-              
-              {/* X轴标签 */}
-              <SvgText
-                x={(x + barWidth / 2).toFixed(2)}
-                y={(padding + chartHeight + 20).toFixed(2)}
-                fontSize="11"
-                fill="#666"
-                textAnchor="middle"
-                fontWeight="500"
-              >
-                {item.label}
-              </SvgText>
-            </React.Fragment>
-          );
-        }).filter(bar => bar !== null)}
-      </Svg>
+
+      {enableHorizontalScroll && contentWidth > screenWidth ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ width: contentWidth }}
+        >
+          {ChartSvg}
+        </ScrollView>
+      ) : (
+        ChartSvg
+      )}
       
       {/* 轴标签 */}
       {yAxisLabel && (

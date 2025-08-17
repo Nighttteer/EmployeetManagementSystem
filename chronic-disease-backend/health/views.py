@@ -211,6 +211,67 @@ def health_dashboard(request):
     return Response(response_data)
 
 
+@api_view(['GET', 'POST'])
+@permission_classes([permissions.IsAuthenticated])
+def patient_advice(request, patient_id):
+    """
+    患者建议列表/创建接口
+    GET: 返回指定患者的所有建议（患者看自己的；医生看自己管理的患者）
+    POST: 医生为该患者新增建议（自动绑定 doctor 和 patient）
+    """
+    user = request.user
+    has_access, _ = check_patient_data_access(user, patient_id)
+    if not has_access:
+        # 隐藏权限细节，返回404
+        return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        qs = DoctorAdvice.objects.filter(patient_id=patient_id).order_by('-advice_time')
+        serializer = DoctorAdviceSerializer(qs, many=True)
+        return Response({'success': True, 'data': serializer.data})
+
+    # POST
+    if not getattr(user, 'is_doctor', False):
+        return Response({'detail': '只有医生可以创建建议'}, status=status.HTTP_403_FORBIDDEN)
+
+    payload = request.data.copy()
+    payload['patient'] = int(patient_id)
+    payload['doctor'] = user.id
+    serializer = DoctorAdviceSerializer(data=payload)
+    if serializer.is_valid():
+        instance = serializer.save()
+        return Response({'success': True, 'data': DoctorAdviceSerializer(instance).data}, status=status.HTTP_201_CREATED)
+    return Response({'success': False, 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['PATCH', 'DELETE'])
+@permission_classes([permissions.IsAuthenticated])
+def advice_detail(request, advice_id):
+    """
+    医生编辑/删除建议；仅作者医生可操作。
+    """
+    user = request.user
+    try:
+        advice = DoctorAdvice.objects.get(id=advice_id)
+    except DoctorAdvice.DoesNotExist:
+        return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'PATCH':
+        if not getattr(user, 'is_doctor', False) or advice.doctor_id != user.id:
+            return Response({'detail': '无权限编辑'}, status=status.HTTP_403_FORBIDDEN)
+        serializer = DoctorAdviceSerializer(advice, data=request.data, partial=True)
+        if serializer.is_valid():
+            instance = serializer.save()
+            return Response({'success': True, 'data': DoctorAdviceSerializer(instance).data})
+        return Response({'success': False, 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+    # DELETE
+    if not getattr(user, 'is_doctor', False) or advice.doctor_id != user.id:
+        return Response({'detail': '无权限删除'}, status=status.HTTP_403_FORBIDDEN)
+    advice.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
 def doctor_dashboard(request):

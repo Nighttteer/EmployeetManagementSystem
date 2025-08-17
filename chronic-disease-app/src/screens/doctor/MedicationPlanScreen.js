@@ -100,17 +100,12 @@ const MedicationPlanScreen = ({ route, navigation }) => {
       setLoading(true);
       
       // 首先测试API连接
-      console.log('🔍 测试medication API连接...');
       const testResponse = await medicationAPI.testConnection();
-      console.log('✅ API测试成功:', testResponse.data);
       
       const [plansResponse, statsResponse] = await Promise.all([
         medicationAPI.getMedicationPlans(patient.id),
         medicationAPI.getMedicationStats(patient.id)
       ]);
-      
-      console.log('🔍 用药计划API响应:', plansResponse.data);
-      console.log('🔍 用药统计API响应:', statsResponse.data);
       
       // 处理不同的API响应结构
       let plans = [];
@@ -124,7 +119,6 @@ const MedicationPlanScreen = ({ route, navigation }) => {
         }
       }
       
-      console.log('🔍 处理后的用药计划数量:', plans.length);
       setMedicationPlans(plans);
       setMedicationStats(statsResponse.data || {});
     } catch (error) {
@@ -490,13 +484,13 @@ const MedicationPlanScreen = ({ route, navigation }) => {
       {/* 用药列表 */}
       {medicationPlans.filter(plan => {
         // 调试信息
-        console.log('🔍 检查用药计划:', {
-          id: plan.id,
-          status: plan.status,
-          hasMedication: !!plan.medication,
-          medicationName: plan.medication?.name,
-          patientName: patient?.name
-        });
+        // console.log('🔍 检查用药计划:', {
+        //   id: plan.id,
+        //   status: plan.status,
+        //   hasMedication: !!plan.medication,
+        //   medicationName: plan.medication?.name,
+        //   patientName: patient?.name
+        // });
         
         // 显示所有有medication对象的计划（包括active, paused, stopped状态）
         // 只排除completed状态，因为那些已经完成治疗
@@ -509,14 +503,14 @@ const MedicationPlanScreen = ({ route, navigation }) => {
         const recentDoseData = getRecentDoseInfo(plan);
         
         // 调试信息：显示计算的依从性数据
-        console.log(`💊 用药计划 ${plan.medication?.name} (ID: ${plan.id}) 依从性数据:`, {
-          rate: complianceData.rate,
-          taken: complianceData.taken,
-          total: complianceData.total,
-          missed: complianceData.missed,
-          lastDose: recentDoseData.lastDose,
-          nextReminder: recentDoseData.nextReminder
-        });
+        // console.log(`💊 用药计划 ${plan.medication?.name} (ID: ${plan.id}) 依从性数据:`, {
+        //   rate: complianceData.rate,
+        //   taken: complianceData.taken,
+        //   total: complianceData.total,
+        //   missed: complianceData.missed,
+        //   lastDose: recentDoseData.lastDose,
+        //   nextReminder: recentDoseData.nextReminder
+        // });
         
         return (
         <Card key={plan.id} style={styles.card}>

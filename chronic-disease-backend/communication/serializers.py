@@ -44,15 +44,22 @@ class MessageSerializer(serializers.ModelSerializer):
     
     def validate(self, attrs):
         """验证消息数据"""
-        sender = self.context['request'].user
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            raise serializers.ValidationError("用户未认证")
+        
+        sender = request.user
         recipient = attrs.get('recipient')
         
+        if not recipient:
+            raise serializers.ValidationError("接收者不能为空")
+        
         # 验证发送者和接收者不能相同
-        if sender == recipient:
+        if sender.id == recipient.id:
             raise serializers.ValidationError("不能给自己发送消息")
         
         # 验证医患关系（医生可以给任何患者发消息，患者只能给医生发消息）
-        if sender.is_patient and recipient.is_patient:
+        if hasattr(sender, 'is_patient') and sender.is_patient and hasattr(recipient, 'is_patient') and recipient.is_patient:
             raise serializers.ValidationError("患者之间不能直接发送消息")
         
         # 验证消息内容
@@ -75,15 +82,22 @@ class MessageCreateSerializer(serializers.ModelSerializer):
     
     def validate(self, attrs):
         """验证消息数据"""
-        sender = self.context['request'].user
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            raise serializers.ValidationError("用户未认证")
+        
+        sender = request.user
         recipient = attrs.get('recipient')
         
+        if not recipient:
+            raise serializers.ValidationError("接收者不能为空")
+        
         # 验证发送者和接收者不能相同
-        if sender == recipient:
+        if sender.id == recipient.id:
             raise serializers.ValidationError("不能给自己发送消息")
         
         # 验证医患关系
-        if sender.is_patient and recipient.is_patient:
+        if hasattr(sender, 'is_patient') and sender.is_patient and hasattr(recipient, 'is_patient') and recipient.is_patient:
             raise serializers.ValidationError("患者之间不能直接发送消息")
         
         # 验证消息内容
@@ -123,13 +137,9 @@ class MessageCreateSerializer(serializers.ModelSerializer):
             conversation = Conversation.objects.create(
                 title=f"{message.sender.name} 与 {message.recipient.name}",
                 created_by=message.sender,
-                conversation_type='consultation' if message.sender.is_doctor or message.recipient.is_doctor else 'general'
+                conversation_type='consultation' if hasattr(message.sender, 'is_doctor') and message.sender.is_doctor or hasattr(message.recipient, 'is_doctor') and message.recipient.is_doctor else 'general'
             )
             conversation.participants.set(participants)
-        
-        # 关联消息到会话
-        message.conversation = conversation
-        message.save()
         
         # 更新会话的最后消息时间
         conversation.last_message_at = message.sent_at

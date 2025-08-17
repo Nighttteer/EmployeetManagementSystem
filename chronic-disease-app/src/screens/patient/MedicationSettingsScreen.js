@@ -368,10 +368,10 @@ const MedicationSettingsScreen = ({ navigation }) => {
       <ScrollView style={styles.scrollView}>
         <View style={styles.header}>
           <Text variant="headlineLarge" style={styles.title}>
-            用药提醒设置
+            {t('medication.medicationSettings')}
           </Text>
           <Text variant="bodyLarge" style={styles.subtitle}>
-            自定义您的用药提醒偏好
+            {t('medication.medicationSettingsDesc')}
           </Text>
         </View>
 
@@ -387,7 +387,7 @@ const MedicationSettingsScreen = ({ navigation }) => {
             style={styles.saveButton}
             contentStyle={styles.saveButtonContent}
           >
-            保存设置
+            {t('common.save')}
           </Button>
         </View>
       </ScrollView>

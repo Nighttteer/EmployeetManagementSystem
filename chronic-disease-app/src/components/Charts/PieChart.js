@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Dimensions, TouchableOpacity } from 'react-native';
 import { Text } from 'react-native-paper';
 import Svg, { Path, Text as SvgText, Circle } from 'react-native-svg';
+import { useTranslation } from 'react-i18next';
 
 // 工具函数：验证数字是否有效
 const isValidNumber = (num) => {
@@ -24,6 +25,7 @@ const PieChart = ({
   colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD'],
   onPress = null
 }) => {
+  const { t } = useTranslation();
   const screenWidth = width || Dimensions.get('window').width - 40;
   const radius = Math.min(screenWidth, height) / 3;
   const centerX = screenWidth / 2;
@@ -33,7 +35,7 @@ const PieChart = ({
   if (!data || data.length === 0) {
     return (
       <View style={{ width: screenWidth, height, justifyContent: 'center', alignItems: 'center' }}>
-        <Text>No data available</Text>
+        <Text>{t('common.noData')}</Text>
       </View>
     );
   }
@@ -50,7 +52,7 @@ const PieChart = ({
   if (validData.length === 0) {
     return (
       <View style={{ width: screenWidth, height, justifyContent: 'center', alignItems: 'center' }}>
-        <Text>No valid data</Text>
+        <Text>{t('common.noValidData')}</Text>
       </View>
     );
   }

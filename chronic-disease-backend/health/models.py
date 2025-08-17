@@ -211,6 +211,44 @@ class DoctorAdvice(models.Model):
         return f"Dr.{self.doctor.name} -> {self.patient.name}: {self.content[:50]}..."
 
 
+class MedicalHistory(models.Model):
+    """
+    医疗病历记录：用于 Patient Details -> Medical History 的真实数据
+
+    独立于 DoctorAdvice，结构更贴近病历卡片展示（标题/类型/内容/日期）。
+    """
+    HISTORY_TYPE_CHOICES = [
+        ('follow_up', 'Follow-up'),
+        ('examination', 'Examination'),
+        ('diagnosis', 'Diagnosis'),
+        ('treatment', 'Treatment'),
+        ('note', 'Note'),
+    ]
+
+    patient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='medical_histories', verbose_name='患者')
+    doctor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='created_medical_histories', verbose_name='创建医生')
+    title = models.CharField('标题', max_length=200)
+    content = models.TextField('内容')
+    history_type = models.CharField('类型', max_length=32, choices=HISTORY_TYPE_CHOICES, default='note')
+    occurred_date = models.DateField('发生日期')
+
+    created_at = models.DateTimeField('创建时间', auto_now_add=True)
+    updated_at = models.DateTimeField('更新时间', auto_now=True)
+
+    class Meta:
+        db_table = 'medical_history'
+        verbose_name = '病历记录'
+        verbose_name_plural = '病历记录'
+        ordering = ['-occurred_date', '-created_at']
+        indexes = [
+            models.Index(fields=['patient', 'occurred_date']),
+            models.Index(fields=['history_type', 'occurred_date']),
+        ]
+
+    def __str__(self):
+        return f"{self.title} - {self.patient.name} ({self.occurred_date})"
+
+
 class DoctorPatientRelation(models.Model):
     """
     医患绑定关系（可选，用于医生筛选所管理患者）

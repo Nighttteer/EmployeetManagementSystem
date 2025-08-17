@@ -24,112 +24,100 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useSelector, useDispatch } from 'react-redux';
 import * as Notifications from 'expo-notifications';
+import i18n from 'i18next';
 
 const MedicationScreen = ({ navigation }) => {
-  const { t } = useTranslation();
+  const { t, ready, i18n } = useTranslation();
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
+  const currentLanguage = useSelector((state) => state.language.currentLanguage);
   const [refreshing, setRefreshing] = useState(false);
+  const [i18nReady, setI18nReady] = useState(false);
 
   // 获取模拟用药数据的函数
-  const getMedicationData = () => ({
-    todayMedications: [
-      {
-        id: 1,
-        name: 'Amlodipine Tablets',
-        dosage: '5mg',
-        time: '08:00',
-        status: 'pending',
-        taken: false,
-        category: t('common.antihypertensive'),
-        instructions: t('common.afterBreakfast'),
-        sideEffects: t('common.maycauseDizzinessSwelling'),
-      },
-      {
-        id: 2,
-        name: 'Metformin Tablets',
-        dosage: '500mg',
-        time: '12:30',
-        status: 'pending',
-        taken: false,
-        category: t('common.antidiabetic'),
-        instructions: t('common.withMeals'),
-        sideEffects: t('common.maycauseGastrointestinalDiscomfort'),
-      },
-      {
-        id: 3,
-        name: 'Aspirin Enteric-coated Tablets',
-        dosage: '100mg',
-        time: '20:00',
-        status: 'pending',
-        taken: false,
-        category: t('common.anticoagulant'),
-        instructions: t('common.afterDinner'),
-        sideEffects: t('common.mayCauseStomachDiscomfort'),
-      },
-    ],
-    medicationPlans: [
-      {
-        id: 1,
-        name: 'Amlodipine Tablets',
-        dosage: '5mg',
-        frequency: t('common.onceDaily'),
-        timeOfDay: t('common.afterBreakfastShort'),
-        startDate: '2024-01-01',
-        endDate: null,
-        status: 'active',
-        compliance: 85,
-        totalDoses: 30,
-        takenDoses: 25,
-        missedDoses: 5,
-      },
-      {
-        id: 2,
-        name: 'Metformin Tablets',
-        dosage: '500mg',
-        frequency: t('common.twiceDaily'),
-        timeOfDay: t('common.withMealsShort'),
-        startDate: '2024-01-01',
-        endDate: null,
-        status: 'active',
-        compliance: 92,
-        totalDoses: 60,
-        takenDoses: 55,
-        missedDoses: 5,
-      },
-    ],
-    medicationHistory: [
-      {
-        id: 1,
-        name: 'Nifedipine Tablets',
-        dosage: '10mg',
-        frequency: t('common.thriceDaily'),
-        startDate: '2023-06-01',
-        endDate: '2023-12-31',
-        reason: t('common.replacedDueToPoorControl'),
-        compliance: 78,
-      },
-    ],
-  });
-
-  // 初始化用药数据 - 延迟初始化避免翻译问题
-  const [medicationData, setMedicationData] = useState({
-    todayMedications: [],
-    medicationPlans: [],
-    medicationHistory: []
-  });
-
-  useEffect(() => {
-    loadMedicationData();
-    setupNotifications();
-  }, []);
-
-  // 当翻译系统准备好后重新加载数据
-  useEffect(() => {
-    if (t && typeof t === 'function') {
-      loadMedicationData();
+  const getMedicationData = () => {
+    // 检查用户是否有用药计划
+    const hasMedicationPlans = false; // 新患者默认没有用药计划
+    
+    if (hasMedicationPlans) {
+      // 如果有用药计划，返回完整的用药数据
+      return {
+        todayMedications: [
+          {
+            id: 1,
+            name: 'Amlodipine Tablets',
+            dosage: '5mg',
+            time: '08:00',
+            status: 'pending',
+            taken: false,
+            category: t('common.antihypertensive'),
+            instructions: t('common.afterBreakfast'),
+            sideEffects: t('common.maycauseDizzinessSwelling'),
+          },
+          {
+            id: 2,
+            name: 'Metformin Tablets',
+            dosage: '500mg',
+            time: '12:30',
+            status: 'pending',
+            taken: false,
+            category: t('common.antidiabetic'),
+            instructions: t('common.withMeals'),
+            sideEffects: t('common.maycauseGastrointestinalDiscomfort'),
+          },
+        ],
+        medicationPlans: [
+          {
+            id: 1,
+            name: 'Amlodipine Tablets',
+            dosage: '5mg',
+            frequency: t('common.onceDaily'),
+            timeOfDay: t('common.afterBreakfastShort'),
+            startDate: '2024-01-01',
+            endDate: null,
+            status: 'active',
+            compliance: 85,
+            totalDoses: 30,
+            takenDoses: 25,
+            missedDoses: 5,
+          },
+          {
+            id: 2,
+            name: 'Metformin Tablets',
+            dosage: '500mg',
+            frequency: t('common.twiceDaily'),
+            timeOfDay: t('common.withMealsShort'),
+            startDate: '2024-01-01',
+            endDate: null,
+            status: 'active',
+            compliance: 92,
+            totalDoses: 60,
+            takenDoses: 55,
+            missedDoses: 5,
+          },
+        ],
+        medicationHistory: [
+          {
+            id: 1,
+            name: 'Nifedipine Tablets',
+            dosage: '10mg',
+            frequency: t('common.thriceDaily'),
+            startDate: '2023-06-01',
+            endDate: '2023-12-31',
+            reason: t('common.replacedDueToPoorControl'),
+            compliance: 78,
+          },
+        ],
+      };
+    } else {
+      // 如果没有用药计划，返回空数据
+      return {
+        todayMedications: [],
+        medicationPlans: [],
+        medicationHistory: []
+      };
     }
-  }, [t]);
+  };
 
   const loadMedicationData = async () => {
     try {
@@ -160,6 +148,53 @@ const MedicationScreen = ({ navigation }) => {
       }),
     });
   };
+
+  // 初始化用药数据 - 延迟初始化避免翻译问题
+  const [medicationData, setMedicationData] = useState({
+    todayMedications: [],
+    medicationPlans: [],
+    medicationHistory: []
+  });
+
+  // 监听语言变化
+  useEffect(() => {
+    if (ready && i18n.isInitialized) {
+      setI18nReady(true);
+      console.log(`🌍 病人端用药管理界面语言: ${i18n.language}`);
+    }
+  }, [ready, i18n.isInitialized, i18n.language]);
+
+  // 监听Redux语言状态变化
+  useEffect(() => {
+    if (currentLanguage && i18n.language !== currentLanguage) {
+      console.log(`🔄 同步语言状态: Redux=${currentLanguage}, i18n=${i18n.language}`);
+      i18n.changeLanguage(currentLanguage);
+    }
+  }, [currentLanguage, i18n]);
+
+  // 等待国际化系统准备就绪
+  useEffect(() => {
+    if (ready && t && typeof t === 'function') {
+      console.log('🌍 国际化系统已准备就绪');
+      console.log('🌍 当前语言:', i18n.language);
+      console.log('🌍 测试翻译:', t('common.medicationReminder'));
+      setI18nReady(true);
+      loadMedicationData();
+      setupNotifications();
+    } else {
+      console.log('❌ 国际化系统未准备就绪');
+      setI18nReady(false);
+    }
+  }, [ready, t]);
+
+  // 等待国际化系统准备就绪
+  if (!i18nReady) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text>正在加载国际化资源...</Text>
+      </View>
+    );
+  }
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -233,69 +268,81 @@ const MedicationScreen = ({ navigation }) => {
       <Card.Content>
         <View style={styles.cardHeader}>
           <Text variant="titleLarge" style={styles.cardTitle}>
-            {t('common.todayMedication')}
+            {t('common.todayMedications')}
           </Text>
           <Chip mode="outlined" textStyle={styles.chipText}>
-            {(() => {
-              const pendingCount = medicationData.todayMedications.filter(m => m.status === 'pending').length;
-              const totalCount = medicationData.todayMedications.length;
-              console.log('📊 今日用药统计:', { total: totalCount, pending: pendingCount });
-              return pendingCount;
-            })()} {t('common.pending')}
+            {medicationData.todayMedications.length} {t('common.medications')}
           </Chip>
         </View>
         
-        <Text style={styles.sectionNote}>
-                        {t('common.planMadeByDoctor')}
-        </Text>
-        
-        {medicationData.todayMedications.map((medication) => (
-          <View key={medication.id} style={styles.medicationItem}>
-            <View style={styles.medicationInfo}>
-              <View style={styles.medicationHeader}>
-                <Text variant="titleMedium" style={styles.medicationName}>
-                  {medication.name}
+        {medicationData.todayMedications.length > 0 ? (
+          medicationData.todayMedications.map((medication) => (
+            <View key={medication.id} style={styles.medicationItem}>
+              <View style={styles.medicationInfo}>
+                <View style={styles.medicationHeader}>
+                  <Text variant="titleMedium" style={styles.medicationName}>
+                    {medication.name}
+                  </Text>
+                  <Chip 
+                    style={[styles.statusChip, styles.elevatedChip, { backgroundColor: getStatusColor(medication.status) }]}
+                    contentStyle={styles.statusChipContent}
+                    textStyle={styles.statusChipText}
+                    compact={true}
+                  >
+                    {getStatusText(medication.status)}
+                  </Chip>
+                </View>
+                
+                <Text style={styles.medicationDetails}>
+                  {medication.dosage} · {medication.category} · {medication.time}
                 </Text>
-                <Chip 
-                  style={[styles.statusChip, { backgroundColor: getStatusColor(medication.status) }]}
-                  textStyle={styles.statusChipText}
-                  compact={true}
-                >
-                  {getStatusText(medication.status)}
-                </Chip>
+                
+                <Text style={styles.medicationInstructions}>
+                  {medication.instructions}
+                </Text>
               </View>
               
-              <Text style={styles.medicationDetails}>
-                {medication.dosage} · {medication.category} · {medication.time}
-              </Text>
-              
-              <Text style={styles.medicationInstructions}>
-                {medication.instructions}
-              </Text>
+              {medication.status === 'pending' && (
+                <View style={styles.actionButtons}>
+                  <Button
+                    mode="contained"
+                    onPress={() => markAsTaken(medication.id)}
+                    style={[styles.actionButton, styles.takeButton]}
+                    labelStyle={styles.actionButtonText}
+                  >
+                    {t('common.taken')}
+                  </Button>
+                  <Button
+                    mode="outlined"
+                    onPress={() => skipMedication(medication.id)}
+                    style={[styles.actionButton, styles.skipButton]}
+                    labelStyle={styles.skipButtonText}
+                  >
+                    {t('medication.skip')}
+                  </Button>
+                </View>
+              )}
             </View>
-            
-            {medication.status === 'pending' && (
-              <View style={styles.actionButtons}>
-                <Button
-                  mode="contained"
-                  onPress={() => markAsTaken(medication.id)}
-                  style={[styles.actionButton, styles.takeButton]}
-                  labelStyle={styles.actionButtonText}
-                >
-                  {t('common.taken')}
-                </Button>
-                <Button
-                  mode="outlined"
-                  onPress={() => skipMedication(medication.id)}
-                  style={[styles.actionButton, styles.skipButton]}
-                  labelStyle={styles.skipButtonText}
-                >
-                  跳过
-                </Button>
-              </View>
-            )}
+          ))
+        ) : (
+          <View style={styles.emptyState}>
+            <Ionicons name="medical-outline" size={48} color="#ccc" style={styles.emptyStateIcon} />
+            <Text style={styles.emptyStateText}>
+              {t('medication.noMedicationPlans')}
+            </Text>
+            <Text style={styles.emptyStateSubtext}>
+              {t('medication.contactDoctorForPlan')}
+            </Text>
+            <Button
+              mode="outlined"
+              onPress={() => navigation.navigate('Chat')}
+              style={styles.contactDoctorButton}
+              icon="message"
+            >
+              {t('common.contactDoctor')}
+            </Button>
           </View>
-        ))}
+        )}
       </Card.Content>
     </Card>
   );
@@ -315,57 +362,67 @@ const MedicationScreen = ({ navigation }) => {
         {medicationData.medicationPlans.length > 0 ? (
           medicationData.medicationPlans.map((plan) => (
             <View key={plan.id} style={styles.planItem}>
-            <View style={styles.planHeader}>
-              <View style={styles.planInfo}>
-                <Text variant="titleMedium" style={styles.planName}>
-                  {plan.name}
-                </Text>
-                <Text style={styles.planDetails}>
-                  {plan.dosage} · {plan.frequency} · {plan.timeOfDay}
-                </Text>
-                <Text style={styles.planDate}>
-                  {plan.startDate} - {plan.endDate || t('common.longTerm')}
-                </Text>
+              <View style={styles.planHeader}>
+                <View style={styles.planInfo}>
+                  <Text variant="titleMedium" style={styles.planName}>
+                    {plan.name}
+                  </Text>
+                  <Text style={styles.planDetails}>
+                    {plan.dosage} · {plan.frequency} · {plan.timeOfDay}
+                  </Text>
+                  <Text style={styles.planDate}>
+                    {plan.startDate} - {plan.endDate || t('common.longTerm')}
+                  </Text>
+                </View>
+                
+                <Chip 
+                  style={[styles.statusChip, styles.elevatedChip, { backgroundColor: plan.status === 'active' ? '#4CAF50' : '#9E9E9E' }]}
+                  contentStyle={styles.statusChipContent}
+                  textStyle={styles.statusChipText}
+                  compact={true}
+                >
+                  {plan.status === 'active' ? t('common.active') : t('common.stopped')}
+                </Chip>
               </View>
               
-              <Chip 
-                style={[styles.statusChip, { backgroundColor: plan.status === 'active' ? '#4CAF50' : '#9E9E9E' }]}
-                textStyle={styles.statusChipText}
-                compact={true}
-              >
-                {plan.status === 'active' ? t('common.active') : t('common.stopped')}
-              </Chip>
-            </View>
-            
-            <View style={styles.complianceContainer}>
-              <Text style={styles.complianceLabel}>
-                依从性: {plan.compliance}%
-              </Text>
-              <View style={styles.complianceBar}>
-                <View 
-                  style={[
-                    styles.complianceProgress, 
-                    { 
-                      width: `${plan.compliance}%`,
-                      backgroundColor: getComplianceColor(plan.compliance)
-                    }
-                  ]} 
-                />
+              <View style={styles.complianceContainer}>
+                <Text style={styles.complianceLabel}>
+                  {t('medication.compliance')}: {plan.compliance}%
+                </Text>
+                <View style={styles.complianceBar}>
+                  <View 
+                    style={[
+                      styles.complianceProgress, 
+                      { 
+                        width: `${plan.compliance}%`,
+                        backgroundColor: plan.compliance >= 80 ? '#4CAF50' : plan.compliance >= 60 ? '#FF9800' : '#F44336'
+                      }
+                    ]} 
+                  />
+                </View>
+                <Text style={styles.complianceDetails}>
+                  {t('medication.taken')}: {plan.takenDoses}/{plan.totalDoses} · {t('medication.missed')}: {plan.missedDoses}
+                </Text>
               </View>
-              <Text style={styles.complianceStats}>
-                {plan.takenDoses}/{plan.totalDoses} 次 (漏服 {plan.missedDoses} 次)
-              </Text>
             </View>
-          </View>
-        ))
+          ))
         ) : (
           <View style={styles.emptyState}>
+            <Ionicons name="calendar-outline" size={48} color="#ccc" style={styles.emptyStateIcon} />
             <Text style={styles.emptyStateText}>
-  {t('common.noMedicationPlan')}
+              {t('medication.noMedicationPlans')}
             </Text>
             <Text style={styles.emptyStateSubtext}>
-  {t('common.contactDoctorForPlan')}
+              {t('medication.contactDoctorForPlan')}
             </Text>
+            <Button
+              mode="outlined"
+              onPress={() => navigation.navigate('Chat')}
+              style={styles.contactDoctorButton}
+              icon="message"
+            >
+              {t('common.contactDoctor')}
+            </Button>
           </View>
         )}
       </Card.Content>
@@ -375,40 +432,40 @@ const MedicationScreen = ({ navigation }) => {
   const renderMedicationHistory = () => (
     <Card style={styles.card}>
       <Card.Content>
-        <Text variant="titleLarge" style={styles.cardTitle}>
-          用药历史
-        </Text>
+        <View style={styles.cardHeader}>
+          <Text variant="titleLarge" style={styles.cardTitle}>
+            {t('medication.medicationHistory')}
+          </Text>
+          <Chip mode="outlined" textStyle={styles.chipText}>
+            {medicationData.medicationHistory.length} {t('common.records')}
+          </Chip>
+        </View>
         
         {medicationData.medicationHistory.length > 0 ? (
           medicationData.medicationHistory.map((history) => (
-          <View key={history.id} style={styles.historyItem}>
-            <View style={styles.historyHeader}>
-              <Text variant="titleMedium" style={styles.historyName}>
-                {history.name}
+            <View key={history.id} style={styles.historyItem}>
+              <Text style={styles.historyName}>
+                {history.name} ({history.dosage})
               </Text>
-              <Text style={styles.historyCompliance}>
-                依从性: {history.compliance}%
+              <Text style={styles.historyDetails}>
+                {history.frequency} · {history.compliance}% {t('medication.compliance')}
+              </Text>
+              <Text style={styles.historyDate}>
+                {history.startDate} - {history.endDate}
+              </Text>
+              <Text style={styles.historyReason}>
+                {t('medication.discontinuationReason')}: {history.reason}
               </Text>
             </View>
-            
-            <Text style={styles.historyDetails}>
-              {history.dosage} · {history.frequency}
-            </Text>
-            <Text style={styles.historyPeriod}>
-              {history.startDate} - {history.endDate}
-            </Text>
-            <Text style={styles.historyReason}>
-              停药原因: {history.reason}
-            </Text>
-          </View>
-        ))
+          ))
         ) : (
           <View style={styles.emptyState}>
+            <Ionicons name="time-outline" size={48} color="#ccc" style={styles.emptyStateIcon} />
             <Text style={styles.emptyStateText}>
-              暂无用药历史
+              {t('medication.noHistory')}
             </Text>
             <Text style={styles.emptyStateSubtext}>
-              开始用药后将显示历史记录
+              {t('medication.historyWillShowAfterStart')}
             </Text>
           </View>
         )}
@@ -549,15 +606,34 @@ const styles = StyleSheet.create({
     textAlignVertical: 'center',
   },
   statusChip: {
-    height: 24,
+    height: 36,
+    minWidth: 76,
+    paddingHorizontal: 14,
     justifyContent: 'center',
     alignItems: 'center',
+    borderRadius: 18,
+  },
+  elevatedChip: {
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 1.5,
+    elevation: 1,
+  },
+  statusChipContent: {
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 0,
   },
   statusChipText: {
-    fontSize: 10,
+    fontSize: 13,
     color: '#fff',
     textAlign: 'center',
     textAlignVertical: 'center',
+    lineHeight: 22,
+    includeFontPadding: false,
   },
   planItem: {
     marginBottom: 16,
@@ -610,6 +686,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#888888',
   },
+  complianceDetails: {
+    fontSize: 12,
+    color: '#888888',
+    marginTop: 4,
+  },
   historyItem: {
     marginBottom: 16,
     paddingBottom: 16,
@@ -645,6 +726,11 @@ const styles = StyleSheet.create({
     color: '#888888',
     fontStyle: 'italic',
   },
+  historyDate: {
+    fontSize: 12,
+    color: '#888888',
+    marginTop: 2,
+  },
   emptyState: {
     alignItems: 'center',
     paddingVertical: 32,
@@ -661,6 +747,18 @@ const styles = StyleSheet.create({
     color: '#888888',
     textAlign: 'center',
     textAlignVertical: 'center',
+  },
+  emptyStateIcon: {
+    marginBottom: 16,
+  },
+  contactDoctorButton: {
+    marginTop: 20,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
   },
 });
 

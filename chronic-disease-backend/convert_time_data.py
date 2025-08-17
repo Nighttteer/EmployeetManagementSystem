@@ -40,7 +40,6 @@ def convert_time_of_day():
         if old_time in time_mapping:
             # 转换旧的字符串格式
             new_time = json.dumps(time_mapping[old_time])
-            print(f"转换计划 {plan.id}: {old_time} -> {time_mapping[old_time]}")
         elif old_time and ':' in str(old_time):
             # 如果已经是时间格式，转换为数组
             if isinstance(old_time, str) and old_time.startswith('['):
@@ -48,20 +47,15 @@ def convert_time_of_day():
                 continue
             else:
                 new_time = json.dumps([str(old_time)])
-                print(f"转换计划 {plan.id}: {old_time} -> [{old_time}]")
         else:
             # 未知格式，使用默认值
             new_time = json.dumps(['08:00'])
-            print(f"转换计划 {plan.id}: {old_time} (未知) -> ['08:00']")
         
         if new_time:
             # 直接更新数据库
             MedicationPlan.objects.filter(id=plan.id).update(time_of_day=new_time)
             updated_count += 1
     
-    print(f"总共转换了 {updated_count} 个用药计划的时间数据")
 
 if __name__ == '__main__':
-    print("开始转换time_of_day数据...")
     convert_time_of_day()
-    print("数据转换完成！")

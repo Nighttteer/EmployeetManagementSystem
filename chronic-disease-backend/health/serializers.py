@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.utils import timezone
-from .models import HealthMetric, HealthRecord, ThresholdSetting, DoctorAdvice, Alert
+from .models import HealthMetric, HealthRecord, ThresholdSetting, DoctorAdvice, Alert, MedicalHistory
 from accounts.models import User
 
 

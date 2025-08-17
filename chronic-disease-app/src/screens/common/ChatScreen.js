@@ -25,7 +25,7 @@ import ImagePreviewModal from '../../components/ImagePreviewModal';
 
 const ChatScreen = ({ route, navigation }) => {
   const { t } = useTranslation();
-  const { conversationId, otherUser } = route.params || {};
+  const { conversationId, otherUser, returnTo } = route.params || {};
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -607,7 +607,13 @@ const ChatScreen = ({ route, navigation }) => {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <TouchableOpacity onPress={() => {
+            if (returnTo) {
+              navigation.navigate(returnTo);
+            } else {
+              navigation.goBack();
+            }
+          }} style={styles.backButton}>
             <Ionicons name="chevron-back" size={24} color="#007AFF" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>
@@ -629,7 +635,13 @@ const ChatScreen = ({ route, navigation }) => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <TouchableOpacity onPress={() => {
+            if (returnTo) {
+              navigation.navigate(returnTo);
+            } else {
+              navigation.goBack();
+            }
+          }} style={styles.backButton}>
             <Ionicons name="chevron-back" size={24} color="#007AFF" />
           </TouchableOpacity>
           <View style={styles.headerInfo}>

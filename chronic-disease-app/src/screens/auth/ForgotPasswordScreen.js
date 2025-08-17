@@ -3,10 +3,12 @@ import { View, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert } f
 import { Text, TextInput, Button, ActivityIndicator, Card, HelperText } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import { API_BASE_URL } from '../../services/api';
 import CountryCodePicker from '../../components/CountryCodePicker';
 
 const ForgotPasswordScreen = ({ navigation }) => {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   
   // 状态管理
@@ -26,16 +28,16 @@ const ForgotPasswordScreen = ({ navigation }) => {
   // 验证手机号格式
   const validatePhone = (phoneNumber) => {
     const cleanPhone = phoneNumber.replace(/\s+/g, '');
-    if (!cleanPhone) return '请输入手机号';
-    if (cleanPhone.length < 10 || cleanPhone.length > 11) return '手机号格式不正确';
-    if (!/^\d+$/.test(cleanPhone)) return '手机号只能包含数字';
+    if (!cleanPhone) return t('auth.phoneRequired');
+    if (cleanPhone.length < 10 || cleanPhone.length > 11) return t('auth.phoneFormatError');
+    if (!/^\d+$/.test(cleanPhone)) return t('auth.phoneNumericOnly');
     return null;
   };
   
   // 验证密码强度
   const validatePassword = (password) => {
-    if (!password) return '请输入密码';
-    if (password.length < 8) return '密码长度至少8位';
+    if (!password) return t('auth.passwordRequired');
+    if (password.length < 8) return t('auth.passwordTooShort');
     return null;
   };
   
@@ -68,12 +70,12 @@ const ForgotPasswordScreen = ({ navigation }) => {
         setCodeSent(true);
         setStep(2);
         startCountdown();
-        Alert.alert('验证码已发送', '请查收短信验证码');
+        Alert.alert(t('auth.codeSent'), t('auth.checkSmsCode'));
       } else {
-        setErrors({ general: data.error || data.phone?.[0] || '发送验证码失败' });
+        setErrors({ general: data.error || data.phone?.[0] || t('auth.sendCodeFailed') });
       }
     } catch (error) {
-      setErrors({ general: '网络错误，请重试' });
+      setErrors({ general: t('auth.networkError') });
     } finally {
       setLoading(false);
     }
@@ -96,7 +98,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
   // 验证验证码
   const verifyCode = () => {
     if (!code || code.length !== 6) {
-      setErrors({ code: '请输入6位验证码' });
+      setErrors({ code: t('auth.codeRequired') });
       return;
     }
     
@@ -113,7 +115,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
     }
     
     if (newPassword !== confirmPassword) {
-      setErrors({ confirmPassword: '两次输入的密码不一致' });
+      setErrors({ confirmPassword: t('auth.passwordMismatch') });
       return;
     }
     
@@ -139,21 +141,21 @@ const ForgotPasswordScreen = ({ navigation }) => {
       
       if (response.ok) {
         Alert.alert(
-          '密码重置成功',
-          '您的密码已重置，请使用新密码登录',
+          t('auth.passwordResetSuccess'),
+          t('auth.passwordResetSuccess'),
           [
             {
-              text: '确定',
+              text: t('common.confirm'),
               onPress: () => navigation.navigate('Login'),
             },
           ]
         );
       } else {
-        const errorMsg = data.error || data.non_field_errors?.[0] || '密码重置失败';
+        const errorMsg = data.error || data.non_field_errors?.[0] || t('auth.passwordResetFailed');
         setErrors({ general: errorMsg });
       }
     } catch (error) {
-      setErrors({ general: '网络错误，请重试' });
+      setErrors({ general: t('auth.networkError') });
     } finally {
       setLoading(false);
     }
@@ -173,10 +175,10 @@ const ForgotPasswordScreen = ({ navigation }) => {
   const renderPhoneStep = () => (
     <View style={styles.stepContainer}>
       <Text variant="headlineMedium" style={styles.stepTitle}>
-        找回密码
+        {t('auth.forgotPassword')}
       </Text>
       <Text variant="bodyMedium" style={styles.stepDescription}>
-        请输入您注册时使用的手机号码
+        {t('auth.enterRegisteredPhone')}
       </Text>
       
       <View style={styles.phoneContainer}>
@@ -187,7 +189,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
         />
         <TextInput
           mode="outlined"
-          label="手机号码"
+          label={t('auth.phoneNumber')}
           value={phone}
           onChangeText={setPhone}
           keyboardType="phone-pad"
@@ -210,7 +212,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
         disabled={loading}
         style={styles.submitButton}
       >
-        发送验证码
+        {t('auth.sendCode')}
       </Button>
     </View>
   );
@@ -219,15 +221,15 @@ const ForgotPasswordScreen = ({ navigation }) => {
   const renderCodeStep = () => (
     <View style={styles.stepContainer}>
       <Text variant="headlineMedium" style={styles.stepTitle}>
-        验证手机号
+        {t('auth.verifyPhone')}
       </Text>
       <Text variant="bodyMedium" style={styles.stepDescription}>
-        验证码已发送至 {countryCode} {phone}
+        {t('auth.codeSentTo')} {countryCode} {phone}
       </Text>
       
       <TextInput
         mode="outlined"
-        label="验证码"
+        label={t('auth.verificationCode')}
         value={code}
         onChangeText={setCode}
         keyboardType="number-pad"
@@ -250,7 +252,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
           disabled={countdown > 0 || loading}
           loading={loading}
         >
-          {countdown > 0 ? `重新发送 (${countdown}s)` : '重新发送'}
+          {countdown > 0 ? t('auth.resendWithCountdown', { countdown }) : t('auth.resend')}
         </Button>
       </View>
       
@@ -260,7 +262,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
         disabled={code.length !== 6}
         style={styles.submitButton}
       >
-        下一步
+        {t('auth.nextStep')}
       </Button>
     </View>
   );
@@ -269,15 +271,15 @@ const ForgotPasswordScreen = ({ navigation }) => {
   const renderPasswordStep = () => (
     <View style={styles.stepContainer}>
       <Text variant="headlineMedium" style={styles.stepTitle}>
-        设置新密码
+        {t('auth.setNewPassword')}
       </Text>
       <Text variant="bodyMedium" style={styles.stepDescription}>
-        请设置您的新密码
+        {t('auth.setNewPasswordDesc')}
       </Text>
       
       <TextInput
         mode="outlined"
-        label="新密码"
+        label={t('auth.newPassword')}
         value={newPassword}
         onChangeText={setNewPassword}
         secureTextEntry
@@ -294,7 +296,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
       
       <TextInput
         mode="outlined"
-        label="确认新密码"
+        label={t('auth.confirmNewPassword')}
         value={confirmPassword}
         onChangeText={setConfirmPassword}
         secureTextEntry
@@ -315,7 +317,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
         disabled={loading || !newPassword || !confirmPassword}
         style={styles.submitButton}
       >
-        确定修改
+        {t('auth.confirmModify')}
       </Button>
     </View>
   );
@@ -373,7 +375,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
               onPress={goBack}
               style={styles.backButton}
             >
-              {step === 1 ? '返回登录' : '上一步'}
+              {step === 1 ? t('auth.backToLogin') : t('auth.previousStep')}
             </Button>
           </View>
         </ScrollView>

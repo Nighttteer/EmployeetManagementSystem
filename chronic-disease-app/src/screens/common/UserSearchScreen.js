@@ -14,7 +14,6 @@ import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../services/api';
-import { debugAuthStatus } from '../../utils/debugAuth';
 
 const UserSearchScreen = ({ navigation }) => {
   const { t } = useTranslation();
@@ -25,8 +24,7 @@ const UserSearchScreen = ({ navigation }) => {
   const { user } = useSelector(state => state.auth);
 
   useEffect(() => {
-    // 组件加载时检查认证状态
-    debugAuthStatus();
+    // 组件加载时的初始化逻辑
   }, []);
 
   useEffect(() => {
@@ -187,9 +185,6 @@ const UserSearchScreen = ({ navigation }) => {
           <Ionicons name="chevron-back" size={24} color="#007AFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>新建聊天</Text>
-        <TouchableOpacity onPress={debugAuthStatus} style={styles.debugButton}>
-          <Ionicons name="bug" size={20} color="#007AFF" />
-        </TouchableOpacity>
       </View>
 
 
@@ -249,10 +244,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
   },
-  debugButton: {
-    padding: 8,
-  },
-
   searchContainer: {
     padding: 16,
     backgroundColor: '#fff',

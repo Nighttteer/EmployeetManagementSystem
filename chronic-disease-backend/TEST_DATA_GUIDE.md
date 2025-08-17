@@ -45,7 +45,7 @@ python unified_test_data_manager.py
 2. 清除数据库数据（保留表结构）
 3. 创建基本测试用户（3医生+3患者）
 4. 创建完整测试用户（3医生+8患者）
-5. 创建健康数据和告警
+5. 创建健康数据和告警（默认患者=12，天数=7；可用环境变量 TEST_PATIENTS/TEST_DAYS 调整）
 6. 运行智能告警分析
 7. 测试搜索功能
 8. 分析告警摘要
@@ -65,8 +65,12 @@ python unified_test_data_manager.py basic
 # 创建完整用户
 python unified_test_data_manager.py full
 
-# 创建健康数据
-python unified_test_data_manager.py health
+# 创建健康数据（可调规模）
+# 使用环境变量控制数量，例如：
+# Windows PowerShell
+$env:TEST_PATIENTS=20; $env:TEST_DAYS=10; python unified_test_data_manager.py health
+# macOS/Linux
+TEST_PATIENTS=20 TEST_DAYS=10 python unified_test_data_manager.py health
 
 # 运行智能告警分析
 python unified_test_data_manager.py analyze
@@ -103,7 +107,7 @@ python unified_test_data_manager.py setup
 - ✅ 自动清理重复用户
 
 ### **数据生成**
-- ✅ 调用Django管理命令创建健康数据
+- ✅ 调用Django管理命令创建健康数据（支持 --patients 与 --days 参数）
 - ✅ 生成智能告警
 - ✅ 创建用药记录
 

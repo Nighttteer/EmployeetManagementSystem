@@ -39,8 +39,13 @@ def get_doctor_alerts(request, doctor_id):
                 'error': '无权限访问其他医生的告警数据'
             }, status=status.HTTP_403_FORBIDDEN)
         
-        # 使用告警分析服务获取数据
-        alert_service = AlertAnalysisService()
+        # 获取语言参数，默认为中文
+        language = request.GET.get('language', 'zh')
+        if language not in ['zh', 'en']:
+            language = 'zh'  # 如果不支持的语言，默认使用中文
+        
+        # 使用告警分析服务获取数据，传递语言参数
+        alert_service = AlertAnalysisService(language=language)
         alert_data = alert_service.get_doctor_alerts(doctor_id)
         
         if 'error' in alert_data:
@@ -52,7 +57,8 @@ def get_doctor_alerts(request, doctor_id):
             'success': True,
             'data': alert_data,
             'message': f'获取到 {len(alert_data["alerts"])} 条告警数据',
-            'dataSource': '数据库: Alert表 + HealthMetric表 + MedicationReminder表'
+            'dataSource': '数据库: Alert表 + HealthMetric表 + MedicationReminder表',
+            'language': language
         })
         
     except ValueError:
@@ -87,8 +93,13 @@ def analyze_patient_data(request, doctor_id):
                 'error': '无权限执行数据分析'
             }, status=status.HTTP_403_FORBIDDEN)
         
-        # 执行数据分析
-        alert_service = AlertAnalysisService()
+        # 获取语言参数，默认为中文
+        language = request.data.get('language', request.GET.get('language', 'zh'))
+        if language not in ['zh', 'en']:
+            language = 'zh'  # 如果不支持的语言，默认使用中文
+        
+        # 执行数据分析，传递语言参数
+        alert_service = AlertAnalysisService(language=language)
         generated_alerts = alert_service.analyze_and_generate_alerts(doctor_id)
         
         # 返回分析结果
@@ -97,7 +108,8 @@ def analyze_patient_data(request, doctor_id):
             'message': f'数据分析完成，生成 {len(generated_alerts)} 个告警',
             'generatedAlerts': len(generated_alerts),
             'analysisTime': timezone.now().isoformat(),
-            'dataSource': '分析数据: HealthMetric表 + MedicationReminder表 + DoctorPatientRelation表'
+            'dataSource': '分析数据: HealthMetric表 + MedicationReminder表 + DoctorPatientRelation表',
+            'language': language
         })
         
     except ValueError:

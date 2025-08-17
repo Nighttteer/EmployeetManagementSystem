@@ -246,7 +246,7 @@ const IntelligentAlertsCard = ({
         ) : (
           <View style={styles.emptyState}>
             <Ionicons name="checkmark-circle" size={48} color="#4CAF50" />
-            <Text style={styles.emptyTitle}>暂无异常提醒</Text>
+            <Text style={styles.emptyTitle}>{t('alerts.noAbnormalAlerts')}</Text>
             <Text style={styles.emptySubtitle}>
               {patientId ? '该患者目前没有需要关注的异常情况' : '所有患者情况正常'}
             </Text>

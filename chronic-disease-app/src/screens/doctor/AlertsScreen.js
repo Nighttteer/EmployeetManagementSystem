@@ -28,10 +28,10 @@ import PieChart from '../../components/Charts/PieChart';
 import BarChart from '../../components/Charts/BarChart';
 import StatsCard from '../../components/StatsCard';
 
-import { API_BASE_URL } from '../../services/api';
+import { API_BASE_URL, messagesAPI } from '../../services/api';
 
 const AlertsScreen = ({ navigation }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const dispatch = useDispatch();
   const [loading, setLoading] = useState(true);
   
@@ -44,6 +44,244 @@ const AlertsScreen = ({ navigation }) => {
   const [filterPriority, setFilterPriority] = useState('all'); // all, critical, high, medium, low
   const [showStats, setShowStats] = useState(true);
 
+
+
+
+
+
+
+
+
+
+
+  // 根据告警类型获取国际化的标题和消息
+  const getLocalizedAlertContent = (alert) => {
+    const type = alert?.type || '';
+    const patientName = alert?.patientName || '';
+    const patientAge = alert?.patientAge || '';
+    
+    console.log('🔍 告警数据:', { type, title: alert.title, message: alert.message, relatedMetric: alert.relatedMetric });
+    
+    // 首先检查是否有预定义的键值（在alerts.cardContent命名空间中）
+    if (alert.title && alert.title.includes('_')) {
+      const titleKey = `alerts.cardContent.${alert.title}`;
+      const messageKey = `alerts.cardContent.${alert.message}`;
+      
+      console.log('🔍 尝试使用预定义键值:', { titleKey, messageKey });
+      console.log('🔍 当前语言:', i18n.language);
+      console.log('🔍 可用命名空间:', Object.keys(i18n.options.resources[i18n.language]?.translation || {}));
+      
+      try {
+        const localizedTitle = t(titleKey);
+        const localizedMessage = t(messageKey, { value: alert.value || '', name: patientName, age: patientAge });
+        
+        console.log('🔍 国际化结果:', { localizedTitle, localizedMessage });
+        console.log('🔍 原始键值:', { titleKey, messageKey });
+        
+        // 如果国际化成功，返回本地化内容
+        if (localizedTitle !== titleKey && localizedMessage !== messageKey) {
+          console.log('✅ 使用预定义键值成功');
+          return {
+            title: localizedTitle,
+            message: localizedMessage
+          };
+        } else {
+          console.log('❌ 预定义键值国际化失败，回退到类型匹配');
+          console.log('❌ 标题键值:', titleKey, '结果:', localizedTitle);
+          console.log('❌ 消息键值:', messageKey, '结果:', localizedMessage);
+        }
+      } catch (e) {
+        console.log('❌ 预定义键值国际化异常:', e);
+        // 国际化键值不存在，使用类型匹配
+      }
+    }
+    
+    // 如果没有预定义键值或国际化失败，使用类型匹配
+    console.log('🔍 使用类型匹配:', type);
+    switch (type) {
+      case 'threshold_exceeded':
+        // 优先使用relatedMetric判断
+        if (alert.relatedMetric === 'bloodPressure' || alert.relatedMetric === '血压') {
+          return {
+            title: t('alerts.cardContent.bloodPressureAlert'),
+            message: t('alerts.cardContent.bloodPressureMessage')
+          };
+        } else if (alert.relatedMetric === 'heartRate' || alert.relatedMetric === '心率') {
+          return {
+            title: t('alerts.cardContent.heartRateAlert'),
+            message: t('alerts.cardContent.bloodPressureMessage')
+          };
+        } else if (alert.relatedMetric === 'glucose' || alert.relatedMetric === '血糖') {
+          return {
+            title: t('alerts.cardContent.glucose_high_alert'),
+            message: t('alerts.cardContent.glucose_high_message', { value: alert.value || '8.40mmol/L' })
+          };
+        }
+        
+        // 如果relatedMetric缺失，根据标题内容进行智能判断
+        if (alert.title && typeof alert.title === 'string') {
+          if (alert.title.includes('血压')) {
+            return {
+              title: t('alerts.cardContent.blood_pressure_anomaly_alert'),
+              message: t('alerts.cardContent.blood_pressure_anomaly_message', { value: alert.value || '160.0mmHg' })
+            };
+          } else if (alert.title.includes('血糖')) {
+            return {
+              title: t('alerts.cardContent.glucose_high_alert'),
+              message: t('alerts.cardContent.glucose_high_message', { value: alert.value || '8.40mmol/L' })
+            };
+          } else if (alert.title.includes('心率')) {
+            return {
+              title: t('alerts.cardContent.heart_rate_alert'),
+              message: t('alerts.cardContent.heart_rate_message')
+            };
+          }
+        }
+        
+        // 如果所有判断都失败，使用通用的阈值超标键值
+        return {
+          title: t('alerts.cardContent.thresholdExceeded'),
+          message: alert.message || t('alerts.cardContent.thresholdExceededMessage')
+        };
+        
+      case 'missed_medication':
+        return {
+          title: t('alerts.cardContent.missedMedicationAlert'),
+          message: t('alerts.cardContent.missedMedicationMessage')
+        };
+        
+      case 'improvement_trend':
+        if (alert.relatedMetric === 'glucose' || alert.relatedMetric === '血糖') {
+          return {
+            title: t('alerts.cardContent.glucoseImprovementAlert'),
+            message: t('alerts.cardContent.glucoseImprovementMessage')
+          };
+        }
+        break;
+        
+      case 'glucose_high':
+        return {
+          title: t('alerts.cardContent.glucose_high_alert'),
+          message: t('alerts.cardContent.glucose_high_message', { value: alert.value || '8.40mmol/L' })
+        };
+        
+      case 'glucose_high_stable':
+        return {
+          title: t('alerts.cardContent.glucose_high_alert'),
+          message: t('alerts.cardContent.glucose_high_message', { value: alert.value || '8.40mmol/L' })
+        };
+        
+      case 'blood_pressure_anomaly':
+        return {
+          title: t('alerts.cardContent.blood_pressure_anomaly_alert'),
+          message: t('alerts.cardContent.blood_pressure_anomaly_message', { value: alert.value || '160.0mmHg' })
+        };
+        
+      case 'heart_rate_alert':
+        return {
+          title: t('alerts.cardContent.heart_rate_alert'),
+          message: t('alerts.cardContent.heart_rate_message')
+        };
+        
+      case 'patient_inactivity':
+        return {
+          title: t('alerts.cardContent.patientInactivityAlert'),
+          message: t('alerts.cardContent.patientInactivityMessage')
+        };
+        
+      case 'medication_side_effect':
+        return {
+          title: t('alerts.cardContent.medicationSideEffectAlert'),
+          message: t('alerts.cardContent.medicationSideEffectMessage')
+        };
+        
+      case 'new_patient':
+        return {
+          title: t('alerts.cardContent.newPatientEvaluationAlert'),
+          message: t('alerts.cardContent.newPatientEvaluationMessage', { name: patientName, age: patientAge })
+        };
+        
+      case 'high_risk':
+        return {
+          title: t('alerts.cardContent.highRiskPatientAlert'),
+          message: t('alerts.cardContent.highRiskPatientMessage', { name: patientName })
+        };
+        
+      case 'medium_risk':
+        return {
+          title: t('alerts.cardContent.mediumRiskPatientAlert'),
+          message: t('alerts.cardContent.mediumRiskPatientMessage', { name: patientName })
+        };
+        
+      case 'elderly_care':
+        return {
+          title: t('alerts.cardContent.elderlyPatientAlert'),
+          message: t('alerts.cardContent.elderlyPatientMessage', { name: patientName, age: patientAge })
+        };
+        
+      case 'chronic_disease':
+        if (alert.relatedMetric === 'hypertension' || alert.relatedMetric === '高血压') {
+          return {
+            title: t('alerts.cardContent.hypertensionAlert'),
+            message: t('alerts.cardContent.hypertensionMessage', { name: patientName })
+          };
+        } else if (alert.relatedMetric === 'diabetes' || alert.relatedMetric === '糖尿病') {
+          return {
+            title: t('alerts.cardContent.diabetesAlert'),
+            message: t('alerts.cardContent.diabetesMessage', { name: patientName })
+          };
+        } else if (alert.relatedMetric === 'heart_disease' || alert.relatedMetric === '心脏病') {
+          return {
+            title: t('alerts.cardContent.heartDiseaseAlert'),
+            message: t('alerts.cardContent.heartDiseaseMessage', { name: patientName })
+          };
+        }
+        break;
+        
+      default:
+        // 如果没有匹配的类型，尝试使用通用的国际化键值
+        if (alert.title && typeof alert.title === 'string') {
+          const titleKey = `alerts.cardContent.${alert.title}`;
+          const messageKey = `alerts.cardContent.${alert.message}`;
+          
+          try {
+            const localizedTitle = t(titleKey);
+            const localizedMessage = t(messageKey, { 
+              name: patientName, 
+              age: patientAge,
+              value: alert.value || ''
+            });
+            
+            // 如果国际化成功，返回本地化内容
+            if (localizedTitle !== titleKey && localizedMessage !== messageKey) {
+              console.log('✅ 使用通用键值成功');
+              return {
+                title: localizedTitle,
+                message: localizedMessage
+              };
+            } else {
+              console.log('❌ 通用键值国际化失败，回退到原始');
+            }
+                } catch (e) {
+        // 通用国际化键值不存在
+      }
+        }
+        
+        // 如果所有国际化都失败，返回原始的标题和消息
+        console.log('❌ 所有国际化失败，返回原始');
+        return {
+          title: alert.title,
+          message: alert.message
+        };
+    }
+    
+    // 如果没有匹配的类型，返回原始的标题和消息
+    console.log('❌ 没有匹配的类型，返回原始');
+    return {
+      title: alert.title,
+      message: alert.message
+    };
+  };
 
   // 系统定期分析患者数据生成的告警
   const [alertsData, setAlertsData] = useState({
@@ -64,14 +302,14 @@ const AlertsScreen = ({ navigation }) => {
     alerts: [
       {
         id: 1,
-        patientId: 1,
+        patientId: 1, // 李四
         patientName: '李四',
         patientAge: 65,
         doctorId: 1,
         assignedAt: '2023-12-01T00:00:00Z',
-        type: 'threshold_exceeded',
-        title: '血压异常告警',
-        message: '系统分析患者最近3天血压数据，发现收缩压持续偏高',
+        type: 'blood_pressure_anomaly', // 血压异常警报类型
+        title: 'blood_pressure_anomaly_alert', // 使用国际化键值
+        message: 'blood_pressure_anomaly_message', // 使用国际化键值
         priority: 'critical',
         status: 'pending',
         createdAt: '2024-01-15T10:30:00Z',
@@ -87,50 +325,53 @@ const AlertsScreen = ({ navigation }) => {
           trend: '连续上升',
           avgValue: '177.7/93.7'
         },
-        relatedMetric: '血压',
-        value: '180/95 mmHg',
+        relatedMetric: 'bloodPressure', // 添加相关指标
+        value: '160.0mmHg', // 修改为正确的值格式
         threshold: '< 140/90 mmHg',
         thresholdSetBy: '医生设定'
       },
       {
         id: 2,
-        patientId: 2,
+        patientId: 2, // 王五
         patientName: '王五',
         patientAge: 58,
         doctorId: 1,
         assignedAt: '2023-11-15T00:00:00Z',
-        type: 'missed_medication',
-        title: '连续漏服药物',
-        message: '系统检测到最近3天用药依从性下降，连续2天无用药记录',
-        priority: 'high',
+        type: 'glucose_high', // 修改为新患者更可能的情况：血糖异常
+        title: 'glucose_high_alert', // 使用国际化键值
+        message: 'glucose_high_message', // 使用国际化键值
+        priority: 'medium',
         status: 'pending',
         createdAt: '2024-01-15T09:15:00Z',
-        // 系统分析的用药数据
+        // 系统分析的血糖数据
         analysisData: {
           dataRange: '2024-01-13 至 2024-01-15',
-          analysisType: '用药依从性分析',
-          expectedDoses: 3, // 3天应服用次数
-          recordedDoses: 1, // 实际记录次数
-          complianceRate: '33.3%', // 依从性
-          missedPattern: '连续漏服',
-          lastTaken: '2024-01-13 08:00'
+          analysisType: '血糖趋势分析',
+          patientEntries: [
+            { date: '2024-01-13', value: 8.5, type: '空腹' },
+            { date: '2024-01-14', value: 8.8, type: '餐后2小时' },
+            { date: '2024-01-15', value: 9.2, type: '空腹' }
+          ],
+          avgValue: 8.83,
+          trend: '持续上升',
+          exceedsTarget: true,
+          targetRange: '4.4-7.0'
         },
-        medicationName: 'Amlodipine Tablets',
-        dosage: '5mg',
-        frequency: 'Once daily',
-        missedDoses: 2,
-        consecutiveMissed: true
+        relatedMetric: 'glucose', // 血糖相关指标
+        value: '9.2mmol/L',
+        targetRange: '4.4-7.0 mmol/L',
+        trendDirection: 'up'
       },
       {
         id: 3,
-        patientId: 3,
+        patientId: 3, // 赵六
         patientName: '赵六',
         patientAge: 72,
         doctorId: 1,
         assignedAt: '2023-10-20T00:00:00Z',
-        type: 'improvement_trend',
-        title: '血糖改善趋势',
-        message: '系统分析患者最近3天血糖数据，平均值8.00mmol/L，呈下降趋势',
+        type: 'glucose_high', // 修改类型以匹配国际化逻辑
+        title: 'glucose_high_alert', // 使用国际化键值
+        message: 'glucose_high_message', // 使用国际化键值
         priority: 'low',
         status: 'pending',
         createdAt: '2024-01-14T16:45:00Z',
@@ -150,20 +391,20 @@ const AlertsScreen = ({ navigation }) => {
           exceedsTarget: true,
           targetRange: '4.4-7.0'
         },
-        relatedMetric: '血糖',
+        relatedMetric: 'glucose', // 使用英文键值
         targetRange: '4.4-7.0 mmol/L',
         trendDirection: 'up'
       },
       {
         id: 4,
-        patientId: 4,
-        patientName: '赵六',
+        patientId: 4, // 张三
+        patientName: '张三',
         patientAge: 60,
         doctorId: 1,
         assignedAt: '2023-09-05T00:00:00Z',
         type: 'patient_inactivity',
-        title: '患者活动异常',
-        message: '系统检测患者最近3天数据上传活跃度异常，仅1次记录',
+        title: 'patient_inactivity_alert', // 使用国际化键值
+        message: 'patient_inactivity_message', // 使用国际化键值
         priority: 'low',
         status: 'pending',
         createdAt: '2024-01-14T14:20:00Z',
@@ -177,19 +418,20 @@ const AlertsScreen = ({ navigation }) => {
           lastActive: '2024-01-11 22:30',
           inactiveDays: 3
         },
+        relatedMetric: 'activity', // 添加相关指标
         expectedFrequency: '每日数据上传',
         lastDataSync: '2024-01-11T22:30:00Z'
       },
       {
         id: 5,
-        patientId: 1,
+        patientId: 1, // 李四
         patientName: '李四',
         patientAge: 65,
         doctorId: 1,
         assignedAt: '2023-12-01T00:00:00Z',
-        type: 'threshold_exceeded',
-        title: '心率异常告警',
-        message: '系统分析患者3天心率数据，运动状态下110bpm属正常范围',
+        type: 'heart_rate_alert', // 修改类型以匹配国际化逻辑
+        title: 'heart_rate_alert', // 使用国际化键值
+        message: 'heart_rate_message', // 使用国际化键值
         priority: 'high',
         status: 'dismissed',
         createdAt: '2024-01-13T11:30:00Z',
@@ -208,51 +450,52 @@ const AlertsScreen = ({ navigation }) => {
           contextAnalysis: '运动状态下心率正常',
           riskLevel: '低风险'
         },
-        relatedMetric: '心率',
-        normalRange: '60-100 bpm',
-        threshold: '< 100 bpm (静息状态)'
+        relatedMetric: 'heartRate', // 添加相关指标
+        value: '110bpm',
+        context: '运动后',
+        normalRange: '60-100 bpm'
       },
       {
         id: 6,
-        patientId: 5,
-        patientName: '钱七',
-        patientAge: 55,
+        patientId: 2, // 王五
+        patientName: '王五',
+        patientAge: 58,
         doctorId: 1,
-        assignedAt: '2023-08-10T00:00:00Z',
-        type: 'medication_side_effect',
-        title: '用药反应报告',
-        message: '系统检测患者最近3天症状报告，发现用药后轻微不适',
-        priority: 'low',
-        status: 'dismissed',
-        createdAt: '2024-01-12T09:15:00Z',
-        dismissedBy: '当前医生',
-        dismissedAt: '2024-01-12T10:30:00Z',
-        dismissReason: '已电话随访，轻微反应，继续观察',
-        // 系统分析的症状数据
+        assignedAt: '2023-11-15T00:00:00Z',
+        type: 'blood_pressure_anomaly', // 修改为新患者更可能的情况：高血压趋势
+        title: 'blood_pressure_anomaly_alert', // 使用国际化键值
+        message: 'blood_pressure_anomaly_message', // 使用国际化键值
+        priority: 'medium',
+        status: 'pending',
+        createdAt: '2024-01-12T09:45:00Z',
+        // 系统分析的血压数据
         analysisData: {
           dataRange: '2024-01-10 至 2024-01-12',
-          analysisType: '副作用监测分析',
-          symptomReports: [
-            { date: '2024-01-10', symptoms: '无', medication: '氨氯地平片' },
-            { date: '2024-01-11', symptoms: '轻微头晕', medication: '氨氯地平片' },
-            { date: '2024-01-12', symptoms: '头晕，想吐', medication: '氨氯地平片' }
+          analysisType: '血压趋势分析',
+          patientEntries: [
+            { date: '2024-01-10', value: '145/88', time: '08:00', context: '空腹' },
+            { date: '2024-01-11', value: '148/90', time: '08:30', context: '空腹' },
+            { date: '2024-01-12', value: '152/92', time: '09:00', context: '空腹' }
           ],
-          pattern: '服药后轻微副作用',
-          severity: '可耐受',
-          recommendation: '继续观察'
+          trend: '持续上升',
+          avgValue: '148.3/90.0',
+          exceedsTarget: true,
+          targetRange: '< 140/90 mmHg'
         },
-        medicationName: 'Amlodipine Tablets',
-        sideEffectType: '常见副作用',
-        followUpNeeded: false
+        relatedMetric: 'bloodPressure', // 血压相关指标
+        value: '152/92mmHg',
+        threshold: '< 140/90 mmHg',
+        trendDirection: 'up'
       }
     ]
   });
 
   useEffect(() => {
-    loadAlerts();
-    // 获取患者数据
-    dispatch(fetchPatientsList());
-  }, []);
+    // 组件加载时的初始化逻辑
+    if (user && user.role === 'doctor') {
+      loadAlerts();
+    }
+  }, [user]);
 
   // 监听患者数据变化，当有新患者时自动分析
   useEffect(() => {
@@ -267,18 +510,9 @@ const AlertsScreen = ({ navigation }) => {
       // 检查认证状态
       if (!isAuthenticated || !token || !user) {
         console.error('用户未认证，无法获取告警数据');
-        console.log('使用模拟数据...');
-  
         setLoading(false);
         return;
       }
-
-      console.log('🔐 用户认证信息:', { 
-        isAuthenticated, 
-        userId: user?.id, 
-        role, 
-        hasToken: !!token 
-      });
       
       // 系统每3天自动分析患者数据联动流程：
       // 1. 查询医患关系表(DoctorPatientRelation)获取当前医生的患者
@@ -289,9 +523,8 @@ const AlertsScreen = ({ navigation }) => {
       
       // 实际API调用 - 从数据库获取告警数据
       const doctorId = user.id || alertsData.doctorId;
-      const apiUrl = `${API_BASE_URL.replace('/api', '')}/api/health/alerts/doctor/${doctorId}/`;
-      
-      console.log('📡 API请求:', apiUrl);
+      const currentLanguage = i18n.language || 'en'; // 获取当前语言设置
+      const apiUrl = `${API_BASE_URL.replace('/api', '')}/api/health/alerts/doctor/${doctorId}/?language=${currentLanguage}`;
       
       const response = await fetch(apiUrl, {
         method: 'GET',
@@ -303,7 +536,6 @@ const AlertsScreen = ({ navigation }) => {
       
       if (response.ok) {
         const result = await response.json();
-        console.log('从数据库获取告警数据:', result);
         
         if (result.success && result.data) {
           // 更新告警数据
@@ -314,9 +546,6 @@ const AlertsScreen = ({ navigation }) => {
             lastAnalysisTime: result.data.lastAnalysisTime,
             dataSource: result.data.dataSource
           }));
-          
-          console.log(`成功获取 ${result.data.alerts.length} 条数据库告警数据`);
-          console.log(`数据来源: ${result.dataSource}`);
         }
         
         // 处理告警数据
@@ -326,17 +555,13 @@ const AlertsScreen = ({ navigation }) => {
         const errorText = await response.text();
         console.error('错误详情:', errorText);
         // 降级使用模拟数据
-        console.log('降级使用模拟数据...');
   
       }
       
       setLoading(false);
     } catch (error) {
       console.error('获取数据库告警数据失败:', error);
-      console.error('错误类型:', error.name);
-      console.error('错误消息:', error.message);
       // 降级使用模拟数据
-      console.log('使用模拟数据...');
 
       setLoading(false);
     }
@@ -397,6 +622,16 @@ const AlertsScreen = ({ navigation }) => {
     }
   };
 
+  // 获取状态颜色
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'pending': return '#FF5722';
+      case 'handled': return '#4CAF50';
+      case 'dismissed': return '#9E9E9E';
+      default: return '#757575';
+    }
+  };
+
   // 获取优先级文本
   const getPriorityText = (priority) => {
     switch (priority) {
@@ -405,16 +640,6 @@ const AlertsScreen = ({ navigation }) => {
       case 'medium': return t('common.medium');
       case 'low': return t('common.low');
       default: return t('common.unknown');
-    }
-  };
-
-  // 获取状态颜色
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'pending': return '#FF5722';
-      case 'handled': return '#4CAF50';
-      case 'dismissed': return '#9E9E9E';
-      default: return '#757575';
     }
   };
 
@@ -495,12 +720,10 @@ const AlertsScreen = ({ navigation }) => {
       low: alerts.filter(a => a.priority === 'low').length
     };
     
-    console.log('📊 统计数据更新:', stats);
     return stats;
   };
 
   const markAsHandled = (alertId) => {
-    console.log('Handle alert:', alertId);
     
     // 更新告警状态为已处理
     setAlertsData(prevData => {
@@ -530,7 +753,6 @@ const AlertsScreen = ({ navigation }) => {
   };
 
   const dismissAlert = (alertId) => {
-    console.log('Dismiss alert:', alertId);
     
     // 更新告警状态为已忽略
     setAlertsData(prevData => {
@@ -615,59 +837,37 @@ const AlertsScreen = ({ navigation }) => {
       const shouldAnalyze = (isNewPatient || !patient.created_at) && existingAlerts.length === 0;
       
       if (shouldAnalyze) {
-        console.log(`🔍 分析新患者: ${patient.name}`);
-        console.log(`📋 患者数据:`, {
-          id: patient.id,
-          name: patient.name,
-          age: patient.age,
-          chronic_diseases: patient.chronic_diseases,
-          created_at: patient.created_at,
-          existingAlertsCount: existingAlerts.length
-        });
-        
         // 基于患者慢性疾病生成告警
         if (patient.chronic_diseases && patient.chronic_diseases.length > 0) {
-          console.log(`🏥 患者有慢性疾病: ${patient.chronic_diseases.join(', ')}`);
           patient.chronic_diseases.forEach(disease => {
             const alert = generateDiseaseAlert(patient, disease, nextAlertId++);
             if (alert) {
-              console.log(`✅ 生成疾病告警: ${alert.title}`);
               newAlerts.push(alert);
             }
           });
-        } else {
-          console.log(`💚 患者无慢性疾病`);
         }
 
         // 基于风险等级生成告警
         const riskLevel = getRiskLevelFromDiseases(patient.chronic_diseases);
-        console.log(`⚖️ 风险等级: ${riskLevel}`);
         if (riskLevel === 'high' || riskLevel === 'medium') {
           const riskAlert = generateRiskAlert(patient, riskLevel, nextAlertId++);
           if (riskAlert) {
-            console.log(`✅ 生成风险告警: ${riskAlert.title}`);
             newAlerts.push(riskAlert);
           }
         }
 
         // 基于年龄生成告警（老年患者）
         if (patient.age >= 65) {
-          console.log(`👴 老年患者，年龄: ${patient.age}`);
           const ageAlert = generateAgeAlert(patient, nextAlertId++);
           if (ageAlert) {
-            console.log(`✅ 生成年龄告警: ${ageAlert.title}`);
             newAlerts.push(ageAlert);
           }
-        } else {
-          console.log(`👤 非老年患者，年龄: ${patient.age}`);
         }
 
         // 为新患者生成欢迎/评估提醒（即使没有慢性疾病）
         if (newAlerts.length === 0) {
-          console.log(`👋 为新患者生成欢迎提醒`);
           const welcomeAlert = generateWelcomeAlert(patient, nextAlertId++);
           if (welcomeAlert) {
-            console.log(`✅ 生成欢迎告警: ${welcomeAlert.title}`);
             newAlerts.push(welcomeAlert);
           }
         }
@@ -682,7 +882,7 @@ const AlertsScreen = ({ navigation }) => {
         stats: recalculateStats([...prevData.alerts, ...newAlerts])
       }));
       
-      console.log(`🚨 为新患者生成了 ${newAlerts.length} 个告警`);
+
     }
   };
 
@@ -810,103 +1010,226 @@ const AlertsScreen = ({ navigation }) => {
     };
   };
 
+  // 从告警解析出精确患者（尽量与 Redux 列表对齐）
+  const resolvePatientFromAlert = (alertObj) => {
+    if (!alertObj) {
+      return null;
+    }
+    
+    // 首先尝试通过 patientId 精确匹配
+    if (alertObj.patientId && Array.isArray(patientsList)) {
+      const byId = patientsList.find(p => p.id === alertObj.patientId);
+      if (byId) {
+        return byId;
+      }
+    }
+    
+    // 如果 patientId 匹配失败，尝试通过名称精确匹配
+    if (alertObj.patientName && Array.isArray(patientsList)) {
+      const byName = patientsList.find(p => p.name === alertObj.patientName);
+      if (byName) {
+        return byName;
+      }
+    }
+    
+    // 如果都匹配失败，返回告警中的基本信息
+    const fallbackPatient = {
+      id: alertObj.patientId,
+      name: alertObj.patientName,
+      age: alertObj.patientAge
+    };
+    
+    return fallbackPatient;
+  };
+
+  // 告警点击跳转规则
+  const handleAlertPress = async (alert) => {
+    try {
+      const type = (alert?.type || '').toLowerCase();
+      const isEvaluation = type.includes('new_patient') || type.includes('high_risk') || type.includes('medium_risk') || type.includes('chronic_disease');
+      const isNumeric = type.includes('threshold') || type.includes('blood_pressure') || type.includes('glucose') || type.includes('heart') || type.includes('trend');
+      const isMedication = type.includes('medication') || type.includes('adherence') || type.includes('missed');
+
+      // 确保使用正确的患者信息
+      const resolvedPatient = resolvePatientFromAlert(alert);
+      
+
+
+      if (isEvaluation || isNumeric) {
+        // 使用解析后的患者信息，如果没有则使用告警中的信息
+        const patient = resolvedPatient || { 
+          id: alert.patientId, 
+          name: alert.patientName,
+          age: alert.patientAge
+        };
+        
+
+        navigation.navigate('Patients', { 
+          screen: 'PatientDetails', 
+          params: { patient, originTab: 'Alerts' } 
+        });
+        return;
+      }
+
+      if (isMedication) {
+        // 确保使用正确的患者ID
+        const patientId = resolvedPatient?.id || alert.patientId;
+        const patientName = resolvedPatient?.name || alert.patientName;
+        
+
+        
+        let conversationId = null;
+        try {
+          const conv = await messagesAPI.getConversationWithUser(patientId);
+          conversationId = conv?.data?.id;
+        } catch (err) {
+          if (err?.response?.status === 404) {
+            const created = await messagesAPI.startConversationWithUser(patientId);
+            conversationId = created?.data?.conversation?.id;
+          } else {
+            throw err;
+          }
+        }
+
+        if (!conversationId) {
+          Alert.alert(t('common.error'), t('chat.createConversationFailed'));
+          return;
+        }
+
+        const medName = alert?.medicationName || alert?.medication?.name || t('medication.unknownMedicine');
+        const content = `检测到您未按时服用${medName}，请尽快按医嘱服用。如有不适请及时联系医生。`;
+
+        try {
+          await messagesAPI.sendMessage({ conversation: conversationId, content });
+        } catch (sendErr) {
+          try { await messagesAPI.sendMessage({ conversation_id: conversationId, content }); } catch (_) {}
+        }
+
+        navigation.navigate('Messages', {
+          screen: 'Chat',
+          params: {
+            conversationId,
+            otherUser: { 
+              id: patientId, 
+              name: patientName, 
+              role: 'patient' 
+            },
+            returnTo: 'Alerts',
+          },
+        });
+        return;
+      }
+
+      // 其它类型默认进入告警详情
+      navigation.navigate('AlertDetails', { alert });
+    } catch (e) {
+      console.error('处理告警点击失败:', e);
+      Alert.alert(t('common.error'), t('common.operationFailed'));
+    }
+  };
+
   // 渲染告警卡片
-  const renderAlertCard = ({ item: alert }) => (
-    <TouchableOpacity onPress={() => navigation.navigate('AlertDetails', { alert })}>
-      <Card style={[styles.alertCard, { 
-        borderLeftColor: getPriorityColor(alert.priority),
-        borderLeftWidth: 4 
-      }]}>
-        <Card.Content>
-          <View style={styles.alertHeader}>
-            <View style={styles.alertInfo}>
-              <View style={styles.alertTitleRow}>
-                <Ionicons 
-                  name={getAlertIcon(alert.type)} 
-                  size={20} 
-                  color={getPriorityColor(alert.priority)} 
-                />
-                <Text variant="titleMedium" style={styles.alertTitle}>
-                  {alert.title}
+  const renderAlertCard = ({ item: alert }) => {
+    // 获取国际化的告警内容
+    const localizedContent = getLocalizedAlertContent(alert);
+    
+    return (
+      <TouchableOpacity onPress={() => handleAlertPress(alert)}>
+        <Card style={[styles.alertCard, { 
+          borderLeftColor: getPriorityColor(alert.priority),
+          borderLeftWidth: 4 
+        }]}>
+          <Card.Content>
+            <View style={styles.alertHeader}>
+              <View style={styles.alertInfo}>
+                <View style={styles.alertTitleRow}>
+                  <Ionicons 
+                    name={getAlertIcon(alert.type)} 
+                    size={20} 
+                    color={getPriorityColor(alert.priority)} 
+                  />
+                  <Text variant="titleMedium" style={styles.alertTitle}>
+                    {localizedContent.title}
+                  </Text>
+
+                </View>
+                <Text style={styles.patientName}>
+                  {alert.patientName} · {alert.patientAge}{t('common.yearsOld')} · {t('common.myPatient')}
                 </Text>
-
               </View>
-              <Text style={styles.patientName}>
-                {alert.patientName} · {alert.patientAge}{t('common.yearsOld')} · {t('common.myPatient')}
-              </Text>
+              
+              <View style={styles.alertBadges}>
+                <Chip 
+                  textStyle={styles.priorityChipText}
+                  style={[styles.priorityChip, { 
+                    backgroundColor: getPriorityColor(alert.priority) 
+                  }]}
+                  compact={true}
+                >
+                  {getPriorityText(alert.priority)}
+                </Chip>
+                <Chip 
+                  textStyle={styles.statusChipText}
+                  style={[styles.statusChip, { 
+                    backgroundColor: getStatusColor(alert.status) 
+                  }]}
+                  compact={true}
+                >
+                  {getStatusText(alert.status)}
+                </Chip>
+              </View>
             </View>
             
-            <View style={styles.alertBadges}>
-              <Chip 
-                textStyle={styles.priorityChipText}
-                style={[styles.priorityChip, { 
-                  backgroundColor: getPriorityColor(alert.priority) 
-                }]}
-                compact={true}
-              >
-                {getPriorityText(alert.priority)}
-              </Chip>
-              <Chip 
-                textStyle={styles.statusChipText}
-                style={[styles.statusChip, { 
-                  backgroundColor: getStatusColor(alert.status) 
-                }]}
-                compact={true}
-              >
-                {getStatusText(alert.status)}
-              </Chip>
-            </View>
-          </View>
-          
-          <Text style={styles.alertMessage}>{alert.message}</Text>
+            <Text style={styles.alertMessage}>{localizedContent.message}</Text>
 
 
-          
-          {/* 告警详细信息 */}
-          {alert.relatedMetric && (
-            <View style={styles.alertDetails}>
-              <Text style={styles.detailLabel}>{t('alerts.relatedMetric')}:</Text>
-              <Text style={styles.detailValue}>
-                {alert.relatedMetric}: {alert.value}
-              </Text>
-            </View>
-          )}
-          
-          {alert.medicationName && (
-            <View style={styles.alertDetails}>
-              <Text style={styles.detailLabel}>相关药物:</Text>
-              <Text style={styles.detailValue}>
-                {alert.medicationName} (漏服{alert.missedDoses}次)
-              </Text>
-            </View>
-          )}
-          
-          <View style={styles.alertFooter}>
-            <Text style={styles.alertTime}>{formatTime(alert.createdAt)}</Text>
             
-            {alert.status === 'pending' && (
-              <Button 
-                mode="contained" 
-                compact 
-                onPress={() => handleAlert(alert.id)}
-                style={styles.actionButton}
-                contentStyle={styles.actionButtonContent}
-                labelStyle={styles.actionButtonLabel}
-              >
-                {t('alerts.handle')}
-              </Button>
+            {/* 告警详细信息 */}
+            {alert.relatedMetric && (
+              <View style={styles.alertDetails}>
+                <Text style={styles.detailLabel}>{t('alerts.relatedMetric')}:</Text>
+                <Text style={styles.detailValue}>
+                  {t(`alerts.metrics.${alert.relatedMetric.toLowerCase()}`) || alert.relatedMetric}: {alert.value}
+                </Text>
+              </View>
             )}
             
-            {alert.status === 'handled' && alert.handledBy && (
-              <Text style={styles.handledBy}>
-                {t('alerts.handledBy', { handler: alert.handledBy })}
-              </Text>
+            {alert.medicationName && (
+              <View style={styles.alertDetails}>
+                <Text style={styles.detailLabel}>{t('alerts.commonTexts.relatedMedicine')}:</Text>
+                <Text style={styles.detailValue}>
+                  {alert.medicationName} ({t('alerts.commonTexts.missedDosesCount', { count: alert.missedDoses })})
+                </Text>
+              </View>
             )}
-          </View>
-        </Card.Content>
-      </Card>
-    </TouchableOpacity>
-  );
+            
+            <View style={styles.alertFooter}>
+              <Text style={styles.alertTime}>{formatTime(alert.createdAt)}</Text>
+              
+              {alert.status === 'pending' && (
+                <Button 
+                  mode="contained" 
+                  compact 
+                  onPress={() => handleAlert(alert.id)}
+                  style={styles.actionButton}
+                  contentStyle={styles.actionButtonContent}
+                  labelStyle={styles.actionButtonLabel}
+                >
+                  {t('alerts.handle')}
+                </Button>
+              )}
+              
+              {alert.status === 'handled' && alert.handledBy && (
+                <Text style={styles.handledBy}>
+                  {t('alerts.handledBy', { handler: alert.handledBy })}
+                </Text>
+              )}
+            </View>
+          </Card.Content>
+        </Card>
+      </TouchableOpacity>
+    );
+  };
 
   // 渲染统计数据
   const renderStats = () => {
@@ -993,7 +1316,7 @@ const AlertsScreen = ({ navigation }) => {
   // 渲染过滤器
   const renderFilters = () => (
     <View>
-      <Text style={styles.filterTitle}>{t('common.statusFilter')}</Text>
+      <Text style={styles.filterTitle}>{t('alerts.statusFilter')}</Text>
       <View style={styles.statusFiltersContainer}>
         <Chip 
           mode="outlined"
@@ -1007,7 +1330,7 @@ const AlertsScreen = ({ navigation }) => {
             filterStatus === 'all' && styles.selectedStatusChipText
           ]}
         >
-          {t('common.all')} ({alertsData.stats.total})
+          {t('alerts.all')} ({alertsData.stats.total})
         </Chip>
         <Chip 
           mode="outlined"
@@ -1053,7 +1376,7 @@ const AlertsScreen = ({ navigation }) => {
         </Chip>
       </View>
 
-      <Text style={styles.filterTitle}>{t('common.priorityFilter')}</Text>
+      <Text style={styles.filterTitle}>{t('alerts.priorityFilter')}</Text>
       <View style={styles.filtersContainer}>
         <Chip 
           mode="outlined"
@@ -1067,7 +1390,7 @@ const AlertsScreen = ({ navigation }) => {
             filterPriority === 'all' && styles.selectedPriorityChipText
           ]}
         >
-          {t('common.all')}
+          {t('alerts.all')}
         </Chip>
         <Chip 
           mode="outlined"

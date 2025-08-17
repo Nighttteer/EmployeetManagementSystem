@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { Audio } from 'expo-av';
+import { Audio } from 'expo-audio';
 import { Ionicons } from '@expo/vector-icons';
 
 const AudioTest = () => {
@@ -127,6 +127,7 @@ const AudioTest = () => {
         <Text style={styles.infoText}>• 检查控制台输出</Text>
         <Text style={styles.infoText}>• 确认网络连接</Text>
         <Text style={styles.infoText}>• 检查音频权限</Text>
+        <Text style={styles.infoText}>• 已更新为expo-audio</Text>
       </View>
     </View>
   );

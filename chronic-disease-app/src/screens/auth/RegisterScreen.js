@@ -85,7 +85,7 @@ const RegisterScreen = ({ navigation }) => {
     const phoneError = getPhoneValidationError(formData.phone.trim(), formData.countryCode);
     if (phoneError) {
       setErrors(prev => ({ ...prev, phone: phoneError }));
-      Alert.alert('手机号错误', phoneError);
+      Alert.alert(t('auth.phoneError'), phoneError);
       return;
     }
 
@@ -99,10 +99,10 @@ const RegisterScreen = ({ navigation }) => {
       
       setSmsCodeSent(true);
       setSmsCountdown(60); // 60秒倒计时
-      Alert.alert('发送成功', '验证码已发送到您的手机，请注意查收');
+      Alert.alert(t('auth.sendSuccess'), t('auth.codeSentToPhone'));
     } catch (error) {
       console.error('发送验证码失败:', error);
-      Alert.alert('发送失败', error.response?.data?.message || '验证码发送失败，请重试');
+              Alert.alert(t('auth.sendFailed'), error.response?.data?.message || t('auth.codeSendFailed'));
     } finally {
       setSmsCodeSending(false);
     }
@@ -255,9 +255,9 @@ const RegisterScreen = ({ navigation }) => {
                 console.log('注册成功，用户信息：', response.data);
                 // 根据角色导航到相应的主页面
                 if (formData.role === USER_ROLES.PATIENT) {
-                  navigation.replace('PatientMain');
+                  navigation.replace('PatientApp');
                 } else if (formData.role === USER_ROLES.DOCTOR) {
-                  navigation.replace('DoctorMain');
+                  navigation.replace('DoctorApp');
                 } else {
                   navigation.replace('AuthStack');
                 }
@@ -303,7 +303,7 @@ const RegisterScreen = ({ navigation }) => {
               if (error.includes('已存在') || error.includes('already exists')) {
                 friendlyError = `${fieldName}已被使用，请更换`;
               } else if (error.includes('密码长度太短')) {
-                friendlyError = '密码至少需要8个字符';
+                friendlyError = t('auth.passwordTooShort');
               } else if (error.includes('格式无效') || error.includes('invalid format')) {
                 friendlyError = `${fieldName}格式不正确`;
               }
@@ -320,7 +320,7 @@ const RegisterScreen = ({ navigation }) => {
         errorMessage = error.message;
       }
       
-      Alert.alert('注册失败', errorMessage);
+              Alert.alert(t('auth.registerFailed'), errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -379,7 +379,7 @@ const RegisterScreen = ({ navigation }) => {
   // 渲染性别选择
   const renderGenderSelection = () => (
     <View style={styles.genderContainer}>
-      <Text style={styles.inputLabel}>性别</Text>
+      <Text style={styles.inputLabel}>{t('auth.gender')}</Text>
       <View style={styles.genderOptions}>
         <Chip
           mode={formData.gender === 'male' ? 'flat' : 'outlined'}
@@ -387,7 +387,7 @@ const RegisterScreen = ({ navigation }) => {
           onPress={() => updateField('gender', 'male')}
           style={[styles.genderChip, formData.gender === 'male' && styles.selectedChip]}
         >
-          男
+          {t('auth.male')}
         </Chip>
         <Chip
           mode={formData.gender === 'female' ? 'flat' : 'outlined'}
@@ -395,7 +395,7 @@ const RegisterScreen = ({ navigation }) => {
           onPress={() => updateField('gender', 'female')}
           style={[styles.genderChip, formData.gender === 'female' && styles.selectedChip]}
         >
-          女
+          {t('auth.female')}
         </Chip>
       </View>
     </View>
@@ -457,7 +457,7 @@ const RegisterScreen = ({ navigation }) => {
 
               {/* 手机号 */}
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>手机号 *</Text>
+                <Text style={styles.inputLabel}>{t('auth.phone')} *</Text>
                 <View style={styles.phoneInputContainer}>
                   <CountryCodePicker
                     selectedCountry={selectedCountry}
@@ -496,20 +496,20 @@ const RegisterScreen = ({ navigation }) => {
                   <HelperText type="error">{errors.phone}</HelperText>
                 ) : (
                   <HelperText type="info">
-                    示例：{selectedCountry.example}
+                    {t('auth.example')}：{selectedCountry.example}
                   </HelperText>
                 )}
               </View>
 
               {/* SMS验证码 */}
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>短信验证码 *</Text>
+                <Text style={styles.inputLabel}>{t('auth.smsCode')} *</Text>
                 <View style={styles.smsInputContainer}>
                   <TextInput
                     style={[styles.input, styles.smsInput]}
                     value={formData.smsCode}
                     onChangeText={(value) => updateField('smsCode', value)}
-                    placeholder="请输入6位验证码"
+                    placeholder={t('auth.enterSmsCode')}
                     mode="outlined"
                     keyboardType="numeric"
                     maxLength={6}
@@ -525,7 +525,7 @@ const RegisterScreen = ({ navigation }) => {
                       style={styles.smsButton}
                       compact
                     >
-                      {smsCountdown > 0 ? `${smsCountdown}s` : (smsCodeSent ? '重新发送' : '发送验证码')}
+                      {smsCountdown > 0 ? `${smsCountdown}s` : (smsCodeSent ? t('auth.resendCode') : t('auth.sendCode'))}
                     </Button>
                     
                     {smsCodeSent && !smsCodeVerified && (
@@ -536,7 +536,7 @@ const RegisterScreen = ({ navigation }) => {
                         style={styles.verifyButton}
                         compact
                       >
-                        验证
+                        {t('auth.verify')}
                       </Button>
                     )}
                   </View>
@@ -546,15 +546,15 @@ const RegisterScreen = ({ navigation }) => {
                   <HelperText type="error">{errors.smsCode}</HelperText>
                 ) : smsCodeVerified ? (
                   <HelperText type="info" style={styles.successText}>
-                    ✓ 手机号验证通过
+                    {t('auth.phoneVerified')}
                   </HelperText>
                 ) : smsCodeSent ? (
                   <HelperText type="info">
-                    验证码已发送，请查收短信
+                    {t('auth.codeSent')}
                   </HelperText>
                 ) : (
                   <HelperText type="info">
-                    请先输入手机号，然后点击发送验证码
+                    {t('auth.enterPhoneFirst')}
                   </HelperText>
                 )}
               </View>
@@ -562,12 +562,12 @@ const RegisterScreen = ({ navigation }) => {
               {/* 年龄和性别 */}
               <View style={styles.row}>
                 <View style={[styles.inputGroup, styles.halfWidth]}>
-                  <Text style={styles.inputLabel}>年龄 *</Text>
+                  <Text style={styles.inputLabel}>{t('auth.age')} *</Text>
                   <TextInput
                     style={styles.input}
                     value={formData.age}
                     onChangeText={(value) => updateField('age', value)}
-                    placeholder="年龄"
+                    placeholder={t('auth.age')}
                     mode="outlined"
                     keyboardType="numeric"
                     maxLength={3}
@@ -586,16 +586,16 @@ const RegisterScreen = ({ navigation }) => {
           {/* 密码设置 */}
           <Card style={styles.card}>
             <Card.Content>
-              <Text style={styles.cardTitle}>密码设置</Text>
+              <Text style={styles.cardTitle}>{t('auth.passwordSettings')}</Text>
               
               {/* 密码 */}
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>密码 *</Text>
+                <Text style={styles.inputLabel}>{t('auth.password')} *</Text>
                 <TextInput
                   style={styles.input}
                   value={formData.password}
                   onChangeText={(value) => updateField('password', value)}
-                  placeholder="请输入密码（至少8位）"
+                                      placeholder={t('auth.enterPassword')}
                   mode="outlined"
                   secureTextEntry
                   error={!!errors.password}
@@ -605,12 +605,12 @@ const RegisterScreen = ({ navigation }) => {
 
               {/* 确认密码 */}
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>确认密码 *</Text>
+                <Text style={styles.inputLabel}>{t('auth.confirmPassword')} *</Text>
                 <TextInput
                   style={styles.input}
                   value={formData.confirmPassword}
                   onChangeText={(value) => updateField('confirmPassword', value)}
-                  placeholder="请再次输入密码"
+                                      placeholder={t('auth.reEnterPassword')}
                   mode="outlined"
                   secureTextEntry
                   error={!!errors.confirmPassword}
@@ -629,18 +629,18 @@ const RegisterScreen = ({ navigation }) => {
             style={styles.registerButton}
             contentStyle={styles.registerButtonContent}
           >
-            {isLoading ? '注册中...' : '创建账户'}
+            {isLoading ? t('auth.registering') : t('auth.createAccount')}
           </Button>
 
           {/* 登录链接 */}
           <View style={styles.loginLinkContainer}>
-            <Text style={styles.loginLinkText}>已有账户？</Text>
+            <Text style={styles.loginLinkText}>{t('auth.alreadyHaveAccount')}</Text>
             <Button
               mode="text"
               onPress={() => navigation.navigate('Login')}
               labelStyle={styles.loginLinkButton}
             >
-              立即登录
+              {t('auth.loginNow')}
             </Button>
           </View>
         </ScrollView>

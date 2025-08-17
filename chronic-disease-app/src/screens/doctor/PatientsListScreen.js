@@ -15,8 +15,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector, useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { fetchPatientsList, setSearchQuery } from '../../store/slices/patientsSlice';
+import { resolvePatientRiskLevel, getRiskColor as getUnifiedRiskColor, getRiskText as getUnifiedRiskText } from '../../utils/riskUtils';
 import { api } from '../../services/api';
-import { switchToEnglish, switchToChinese, getCurrentLanguage } from '../../utils/languageHelper';
+
 
 const PatientsListScreen = ({ navigation }) => {
   const { t } = useTranslation();
@@ -36,34 +37,19 @@ const PatientsListScreen = ({ navigation }) => {
   const [filterType, setFilterType] = useState('all'); // all, critical, stable
   const [chatLoading, setChatLoading] = useState(false);
   
-  // 语言切换功能
-  const handleLanguageSwitch = async () => {
-    const currentLang = getCurrentLanguage();
-    if (currentLang === 'zh') {
-      await switchToEnglish();
-    } else {
-      await switchToChinese();
-    }
-    // 强制重新渲染
-    setTimeout(() => {
-      dispatch(fetchPatientsList());
-    }, 100);
-  };
+
   
 
 
   
   useEffect(() => {
     // 组件加载时获取患者列表
-    console.log('🔍 PatientsListScreen 加载，开始获取患者列表...');
-    console.log('🔐 认证状态:', { isAuthenticated, user: user?.name, role, hasToken: !!token });
     dispatch(fetchPatientsList());
   }, [dispatch]);
 
   // 使用useFocusEffect在页面聚焦时刷新患者列表
   useFocusEffect(
     React.useCallback(() => {
-      console.log('🔄 PatientsListScreen 聚焦，刷新患者列表...');
       dispatch(fetchPatientsList());
     }, [dispatch])
   );
@@ -158,55 +144,20 @@ const PatientsListScreen = ({ navigation }) => {
     
     switch (filterType) {
       case 'unassessed':
-        return patients.filter(patient => patient?.risk_level === 'unassessed');
+        return patients.filter(patient => resolvePatientRiskLevel(patient) === 'unassessed');
       case 'healthy':
-        return patients.filter(patient => patient?.risk_level === 'healthy');
+        return patients.filter(patient => resolvePatientRiskLevel(patient) === 'healthy');
       case 'low':
-        return patients.filter(patient => patient?.risk_level === 'low');
+        return patients.filter(patient => resolvePatientRiskLevel(patient) === 'low');
       case 'medium':
-        return patients.filter(patient => patient?.risk_level === 'medium');
+        return patients.filter(patient => resolvePatientRiskLevel(patient) === 'medium');
       case 'high':
-        return patients.filter(patient => patient?.risk_level === 'high');
+        return patients.filter(patient => resolvePatientRiskLevel(patient) === 'high');
       default:
         return patients;
     }
   };
   
-  // 获取风险等级颜色（5级风险系统）
-  const getRiskLevelColor = (riskLevel) => {
-    switch (riskLevel) {
-      case 'high':
-        return '#F44336';      // 高风险 - 红色
-      case 'medium':
-        return '#FF9800';      // 中风险 - 橙色  
-      case 'low':
-        return '#4CAF50';      // 低风险 - 绿色
-      case 'healthy':
-        return '#00E676';      // 健康 - 亮绿色
-      case 'unassessed':
-        return '#9E9E9E';      // 未评估 - 灰色
-      default:
-        return '#9E9E9E';
-    }
-  };
-  
-  // 获取风险等级文本（5级风险系统）
-  const getRiskLevelText = (riskLevel) => {
-    switch (riskLevel) {
-      case 'high':
-        return t('common.highRisk');
-      case 'medium':
-        return t('common.mediumRisk');
-      case 'low':
-        return t('common.lowRisk');
-      case 'healthy':
-        return t('common.healthy');
-      case 'unassessed':
-        return t('common.unassessed');
-      default:
-        return t('common.unassessed');
-    }
-  };
   
   // 格式化最后活跃时间
   const formatLastActive = (dateString) => {
@@ -230,7 +181,7 @@ const PatientsListScreen = ({ navigation }) => {
   
   // 渲染患者卡片
   const renderPatientCard = ({ item: patient }) => (
-    <TouchableOpacity onPress={() => navigation.navigate('PatientDetails', { patient })}>
+    <TouchableOpacity onPress={() => navigation.navigate('PatientDetails', { patient, originTab: 'Patients' })}>
       <Card style={styles.patientCard}>
         <Card.Content>
           <View style={styles.patientHeader}>
@@ -252,12 +203,12 @@ const PatientsListScreen = ({ navigation }) => {
             </View>
             <Chip 
               style={[styles.riskChip, { 
-                backgroundColor: getRiskLevelColor(patient.risk_level) 
+                backgroundColor: getUnifiedRiskColor(resolvePatientRiskLevel(patient)) 
               }]}
               textStyle={styles.riskChipText}
               compact={true}
             >
-              {getRiskLevelText(patient.risk_level)}
+              {getUnifiedRiskText(resolvePatientRiskLevel(patient), t)}
             </Chip>
           </View>
           
@@ -323,7 +274,7 @@ const PatientsListScreen = ({ navigation }) => {
           ]}
           textStyle={filterType === 'unassessed' ? styles.selectedFilterText : {}}
         >
-          {t('common.unassessed')} ({patients.filter(p => p.risk_level === 'unassessed').length})
+          {t('common.unassessed')} ({patients.filter(p => resolvePatientRiskLevel(p) === 'unassessed').length})
         </Chip>
         <Chip 
           onPress={() => setFilterType('healthy')}
@@ -333,7 +284,7 @@ const PatientsListScreen = ({ navigation }) => {
           ]}
           textStyle={filterType === 'healthy' ? styles.selectedFilterText : {}}
         >
-          {t('common.healthy')} ({patients.filter(p => p.risk_level === 'healthy').length})
+          {t('common.healthy')} ({patients.filter(p => resolvePatientRiskLevel(p) === 'healthy').length})
         </Chip>
         <Chip 
           onPress={() => setFilterType('low')}
@@ -343,7 +294,7 @@ const PatientsListScreen = ({ navigation }) => {
           ]}
           textStyle={filterType === 'low' ? styles.selectedFilterText : {}}
         >
-          {t('common.lowRisk')} ({patients.filter(p => p.risk_level === 'low').length})
+          {t('common.lowRisk')} ({patients.filter(p => resolvePatientRiskLevel(p) === 'low').length})
         </Chip>
         <Chip 
           onPress={() => setFilterType('medium')}
@@ -353,7 +304,7 @@ const PatientsListScreen = ({ navigation }) => {
           ]}
           textStyle={filterType === 'medium' ? styles.selectedFilterText : {}}
         >
-          {t('common.mediumRisk')} ({patients.filter(p => p.risk_level === 'medium').length})
+          {t('common.mediumRisk')} ({patients.filter(p => resolvePatientRiskLevel(p) === 'medium').length})
         </Chip>
         <Chip 
           onPress={() => setFilterType('high')}
@@ -363,7 +314,7 @@ const PatientsListScreen = ({ navigation }) => {
           ]}
           textStyle={filterType === 'high' ? styles.selectedFilterText : {}}
         >
-          {t('common.highRisk')} ({patients.filter(p => p.risk_level === 'high').length})
+          {t('common.highRisk')} ({patients.filter(p => resolvePatientRiskLevel(p) === 'high').length})
         </Chip>
       </View>
     );
@@ -432,14 +383,7 @@ const PatientsListScreen = ({ navigation }) => {
               {t('patients.managePatientHealth')}
             </Text>
           </View>
-          <TouchableOpacity 
-            style={styles.languageButton}
-            onPress={handleLanguageSwitch}
-          >
-            <Text style={styles.languageButtonText}>
-              {getCurrentLanguage() === 'zh' ? 'EN' : '中'}
-            </Text>
-          </TouchableOpacity>
+
         </View>
       </View>
       

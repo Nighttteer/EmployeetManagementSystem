@@ -88,7 +88,6 @@ const MessagesScreen = ({ navigation }) => {
 
   const loadConversations = async () => {
     // 这里应该调用API获取真实的对话数据
-    console.log('加载对话列表');
   };
 
   const onRefresh = async () => {

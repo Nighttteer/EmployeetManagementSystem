@@ -164,8 +164,6 @@ const SettingsScreen = ({ navigation }) => {
           
           <Divider />
           
-
-          
           <List.Item
             title={t('settings.languageSettings')}
             description={t('settings.languageSettingsDesc')}
@@ -176,19 +174,18 @@ const SettingsScreen = ({ navigation }) => {
           
           <Divider />
           
-
         </Surface>
 
         {/* 健康设置 (仅患者显示) */}
         {role === 'patient' && (
           <Surface style={styles.section}>
             <Text variant="titleMedium" style={styles.sectionTitle}>
-              健康设置
+              {t('settings.healthSettings')}
             </Text>
             
             <List.Item
-              title="健康目标"
-              description="设置个人健康目标"
+              title={t('settings.healthGoals')}
+              description={t('settings.healthGoalsDesc')}
               left={(props) => <List.Icon {...props} icon="target" />}
               right={(props) => <List.Icon {...props} icon="chevron-right" />}
               onPress={() => navigation.navigate('HealthGoals')}
@@ -197,8 +194,8 @@ const SettingsScreen = ({ navigation }) => {
             <Divider />
             
             <List.Item
-              title="提醒设置"
-              description="管理用药和检查提醒"
+              title={t('settings.reminderSettings')}
+              description={t('settings.reminderSettingsDesc')}
               left={(props) => <List.Icon {...props} icon="alarm" />}
               right={(props) => <List.Icon {...props} icon="chevron-right" />}
               onPress={() => navigation.navigate('ReminderSettings')}
@@ -220,7 +217,7 @@ const SettingsScreen = ({ navigation }) => {
         {role === 'doctor' && (
           <Surface style={styles.section}>
             <Text variant="titleMedium" style={styles.sectionTitle}>
-              医生设置
+              {t('settings.doctorSettings')}
             </Text>
             
                       <List.Item
@@ -241,15 +238,7 @@ const SettingsScreen = ({ navigation }) => {
               onPress={() => navigation.navigate('WorkingHours')}
             />
             
-            <Divider />
-            
-            <List.Item
-              title={t('doctor.alertSettings')}
-              description={t('doctor.alertSettingsDesc')}
-              left={(props) => <List.Icon {...props} icon="alert-circle" />}
-              right={(props) => <List.Icon {...props} icon="chevron-right" />}
-              onPress={() => navigation.navigate('AlertSettings')}
-            />
+
           </Surface>
         )}
 
