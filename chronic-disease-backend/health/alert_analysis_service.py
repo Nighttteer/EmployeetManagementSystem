@@ -696,6 +696,314 @@ def create_alert_service_with_language(language='zh'):
     return AlertAnalysisService(language=language)
 
 
+    def analyze_single_health_metric(self, health_metric, patient, doctor):
+        """
+        分析单次健康指标输入，立即生成警告
+        
+        Args:
+            health_metric: HealthMetric对象
+            patient: 患者User对象
+            doctor: 医生User对象
+        
+        Returns:
+            list: 生成的警告列表
+        """
+        alerts = []
+        
+        try:
+            print(f"🔍 开始分析患者 {patient.name} 的单次健康数据: {health_metric.metric_type}")
+            
+            # 1. 基础异常值检测
+            basic_alerts = self._detect_basic_anomalies(health_metric, patient, doctor)
+            alerts.extend(basic_alerts)
+            
+            # 2. 与历史数据对比检测
+            historical_alerts = self._detect_historical_anomalies(health_metric, patient, doctor)
+            alerts.extend(historical_alerts)
+            
+            # 3. 多指标关联检测
+            correlation_alerts = self._detect_correlation_anomalies(health_metric, patient, doctor)
+            alerts.extend(correlation_alerts)
+            
+            print(f"✅ 单次数据分析完成，生成 {len(alerts)} 个警告")
+            return alerts
+            
+        except Exception as e:
+            print(f"❌ 单次数据分析失败: {str(e)}")
+            return []
+    
+    def _detect_basic_anomalies(self, health_metric, patient, doctor):
+        """检测基础异常值"""
+        alerts = []
+        
+        try:
+            if health_metric.metric_type == 'blood_pressure':
+                # 血压异常检测
+                if health_metric.systolic and health_metric.diastolic:
+                    # 收缩压异常
+                    if health_metric.systolic > 180:
+                        alert = self._create_immediate_alert(
+                            patient, doctor, 'blood_pressure_critical',
+                            f'血压危急警报 - 收缩压{health_metric.systolic}mmHg',
+                            f'患者收缩压{health_metric.systolic}mmHg，属于危急水平，需要立即关注',
+                            'critical'
+                        )
+                        alerts.append(alert)
+                    elif health_metric.systolic > 160:
+                        alert = self._create_immediate_alert(
+                            patient, doctor, 'blood_pressure_high',
+                            f'血压偏高警报 - 收缩压{health_metric.systolic}mmHg',
+                            f'患者收缩压{health_metric.systolic}mmHg，属于高血压水平',
+                            'high'
+                        )
+                        alerts.append(alert)
+                    
+                    # 舒张压异常
+                    if health_metric.diastolic > 110:
+                        alert = self._create_immediate_alert(
+                            patient, doctor, 'blood_pressure_critical',
+                            f'血压危急警报 - 舒张压{health_metric.diastolic}mmHg',
+                            f'患者舒张压{health_metric.diastolic}mmHg，属于危急水平',
+                            'critical'
+                        )
+                        alerts.append(alert)
+                    elif health_metric.diastolic > 100:
+                        alert = self._create_immediate_alert(
+                            patient, doctor, 'blood_pressure_high',
+                            f'血压偏高警报 - 舒张压{health_metric.diastolic}mmHg',
+                            f'患者舒张压{health_metric.diastolic}mmHg，属于高血压水平',
+                            'high'
+                        )
+                        alerts.append(alert)
+                    
+                    # 收缩压小于舒张压的生理异常
+                    if health_metric.systolic <= health_metric.diastolic:
+                        alert = self._create_immediate_alert(
+                            patient, doctor, 'blood_pressure_physiological_error',
+                            '血压数据生理异常',
+                            f'收缩压({health_metric.systolic}mmHg)小于等于舒张压({health_metric.diastolic}mmHg)，可能存在测量错误',
+                            'high'
+                        )
+                        alerts.append(alert)
+            
+            elif health_metric.metric_type == 'blood_glucose':
+                # 血糖异常检测
+                if health_metric.blood_glucose:
+                    if health_metric.blood_glucose > 16.7:
+                        alert = self._create_immediate_alert(
+                            patient, doctor, 'blood_glucose_critical',
+                            f'血糖危急警报 - {health_metric.blood_glucose}mmol/L',
+                            f'患者血糖{health_metric.blood_glucose}mmol/L，属于危急水平，可能存在酮症酸中毒风险',
+                            'critical'
+                        )
+                        alerts.append(alert)
+                    elif health_metric.blood_glucose > 11.1:
+                        alert = self._create_immediate_alert(
+                            patient, doctor, 'blood_glucose_high',
+                            f'血糖偏高警报 - {health_metric.blood_glucose}mmol/L',
+                            f'患者血糖{health_metric.blood_glucose}mmol/L，属于高血糖水平',
+                            'high'
+                        )
+                        alerts.append(alert)
+                    elif health_metric.blood_glucose < 3.9:
+                        alert = self._create_immediate_alert(
+                            patient, doctor, 'blood_glucose_low',
+                            f'血糖偏低警报 - {health_metric.blood_glucose}mmol/L',
+                            f'患者血糖{health_metric.blood_glucose}mmol/L，属于低血糖水平，需要关注',
+                            'high'
+                        )
+                        alerts.append(alert)
+            
+            elif health_metric.metric_type == 'heart_rate':
+                # 心率异常检测
+                if health_metric.heart_rate:
+                    if health_metric.heart_rate > 120:
+                        alert = self._create_immediate_alert(
+                            patient, doctor, 'heart_rate_critical',
+                            f'心率危急警报 - {health_metric.heart_rate}bpm',
+                            f'患者心率{health_metric.heart_rate}bpm，属于心动过速，需要立即关注',
+                            'critical'
+                        )
+                        alerts.append(alert)
+                    elif health_metric.heart_rate > 100:
+                        alert = self._create_immediate_alert(
+                            patient, doctor, 'heart_rate_high',
+                            f'心率偏高警报 - {health_metric.heart_rate}bpm',
+                            f'患者心率{health_metric.heart_rate}bpm，属于偏快水平',
+                            'high'
+                        )
+                        alerts.append(alert)
+                    elif health_metric.heart_rate < 50:
+                        alert = self._create_immediate_alert(
+                            patient, doctor, 'heart_rate_low',
+                            f'心率偏低警报 - {health_metric.heart_rate}bpm',
+                            f'患者心率{health_metric.heart_rate}bpm，属于心动过缓',
+                            'high'
+                        )
+                        alerts.append(alert)
+            
+            elif health_metric.metric_type == 'weight':
+                # 体重异常检测（需要结合身高计算BMI）
+                if health_metric.weight:
+                    # 这里可以添加BMI计算逻辑
+                    pass
+            
+        except Exception as e:
+            print(f"❌ 基础异常检测失败: {str(e)}")
+        
+        return alerts
+    
+    def _detect_historical_anomalies(self, health_metric, patient, doctor):
+        """检测与历史数据的异常对比"""
+        alerts = []
+        
+        try:
+            # 获取最近7天的同类指标数据
+            end_date = timezone.now()
+            start_date = end_date - timedelta(days=7)
+            
+            historical_metrics = HealthMetric.objects.filter(
+                patient=patient,
+                metric_type=health_metric.metric_type,
+                measured_at__gte=start_date,
+                measured_at__lt=end_date
+            ).exclude(id=health_metric.id).order_by('-measured_at')
+            
+            if not historical_metrics.exists():
+                return alerts
+            
+            # 计算历史平均值和标准差
+            values = []
+            for metric in historical_metrics:
+                if health_metric.metric_type == 'blood_pressure':
+                    if metric.systolic and metric.diastolic:
+                        values.append(metric.systolic)
+                elif health_metric.metric_type == 'blood_glucose':
+                    if metric.blood_glucose:
+                        values.append(metric.blood_glucose)
+                elif health_metric.metric_type == 'heart_rate':
+                    if metric.heart_rate:
+                        values.append(metric.heart_rate)
+                elif health_metric.metric_type == 'weight':
+                    if metric.weight:
+                        values.append(metric.weight)
+            
+            if len(values) < 2:
+                return alerts
+            
+            # 计算统计值
+            import statistics
+            mean_value = statistics.mean(values)
+            try:
+                std_value = statistics.stdev(values)
+            except:
+                std_value = 0
+            
+            # 检测异常变化
+            current_value = None
+            if health_metric.metric_type == 'blood_pressure':
+                current_value = health_metric.systolic
+            elif health_metric.metric_type == 'blood_glucose':
+                current_value = health_metric.blood_glucose
+            elif health_metric.metric_type == 'heart_rate':
+                current_value = health_metric.heart_rate
+            elif health_metric.metric_type == 'weight':
+                current_value = health_metric.weight
+            
+            if current_value and std_value > 0:
+                # 如果当前值偏离历史平均值超过2个标准差，认为是异常
+                z_score = abs(current_value - mean_value) / std_value
+                if z_score > 2:
+                    alert = self._create_immediate_alert(
+                        patient, doctor, 'historical_anomaly',
+                        f'{health_metric.metric_type}历史异常警报',
+                        f'患者{health_metric.metric_type}值{current_value}与历史平均值{mean_value:.2f}相比异常偏离(Z-score: {z_score:.2f})',
+                        'medium'
+                    )
+                    alerts.append(alert)
+                    
+        except Exception as e:
+            print(f"❌ 历史异常检测失败: {str(e)}")
+        
+        return alerts
+    
+    def _detect_correlation_anomalies(self, health_metric, patient, doctor):
+        """检测多指标关联异常"""
+        alerts = []
+        
+        try:
+            # 获取最近24小时内的其他指标数据
+            end_date = timezone.now()
+            start_date = end_date - timedelta(hours=24)
+            
+            recent_metrics = HealthMetric.objects.filter(
+                patient=patient,
+                measured_at__gte=start_date,
+                measured_at__lte=end_date
+            ).exclude(id=health_metric.id)
+            
+            if not recent_metrics.exists():
+                return alerts
+            
+            # 检测血压与心率的关联异常
+            if health_metric.metric_type == 'blood_pressure':
+                hr_metrics = recent_metrics.filter(metric_type='heart_rate')
+                if hr_metrics.exists():
+                    latest_hr = hr_metrics.latest('measured_at')
+                    if latest_hr.heart_rate:
+                        # 如果血压高但心率正常，可能存在问题
+                        if (health_metric.systolic > 160 or health_metric.diastolic > 100) and latest_hr.heart_rate < 80:
+                            alert = self._create_immediate_alert(
+                                patient, doctor, 'correlation_anomaly',
+                                '血压心率关联异常',
+                                f'患者血压偏高({health_metric.systolic}/{health_metric.diastolic}mmHg)但心率偏低({latest_hr.heart_rate}bpm)，可能存在心血管调节异常',
+                                'high'
+                            )
+                            alerts.append(alert)
+            
+            # 检测血糖与体重的关联异常
+            elif health_metric.metric_type == 'blood_glucose':
+                weight_metrics = recent_metrics.filter(metric_type='weight')
+                if weight_metrics.exists():
+                    latest_weight = weight_metrics.latest('measured_at')
+                    if latest_weight.weight:
+                        # 如果血糖高但体重下降，可能存在糖尿病并发症
+                        if health_metric.blood_glucose > 11.1 and latest_weight.weight < 60:
+                            alert = self._create_immediate_alert(
+                                patient, doctor, 'correlation_anomaly',
+                                '血糖体重关联异常',
+                                f'患者血糖偏高({health_metric.blood_glucose}mmol/L)且体重偏低({latest_weight.weight}kg)，需要关注是否存在糖尿病并发症',
+                                'medium'
+                            )
+                            alerts.append(alert)
+                            
+        except Exception as e:
+            print(f"❌ 关联异常检测失败: {str(e)}")
+        
+        return alerts
+    
+    def _create_immediate_alert(self, patient, doctor, alert_type, title, message, priority):
+        """创建即时警告"""
+        try:
+            alert = Alert.objects.create(
+                patient=patient,
+                assigned_doctor=doctor,
+                alert_type=alert_type,
+                title=title,
+                message=message,
+                priority=priority,
+                status='pending',
+                related_metric=None  # 可以关联到具体的健康指标
+            )
+            
+            print(f"🚨 创建即时警告: {patient.name} - {title} (优先级: {priority})")
+            return alert
+            
+        except Exception as e:
+            print(f"❌ 创建即时警告失败: {str(e)}")
+            return None
+
+
 # 示例用法
 if __name__ == "__main__":
     # 创建中文告警服务

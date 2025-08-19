@@ -350,6 +350,7 @@ class UnifiedTestDataManager:
         except Exception as e:
             print(f"   ❌ 管理命令失败: {e}")
             print("   📝 请手动运行: python manage.py create_test_data")
+            print("   💡 确保在 chronic-disease-backend 目录下运行")
     
     def create_test_data(self):
         """创建测试健康数据"""
@@ -1275,9 +1276,53 @@ def main():
             print("   API测试: test_apis")
             print("   一键设置: setup, fullsetup")
     else:
-        # 交互模式
+        # 直接执行完整设置，无需交互
+        print("🚀 开始自动执行完整系统设置...")
         manager = UnifiedTestDataManager()
-        manager.interactive_menu()
+        
+        # 显示初始状态
+        print("\n📊 当前数据库状态:")
+        manager.show_status()
+        
+        # 执行完整设置流程
+        print("\n🔄 步骤1: 清除数据库...")
+        if manager.clear_database(confirm=True):
+            print("✅ 数据库清除完成")
+            
+            print("\n👥 步骤2: 创建用户...")
+            manager.create_comprehensive_users()
+            print("✅ 用户创建完成")
+            
+            print("\n🏥 步骤3: 创建健康数据...")
+            manager.create_health_data()
+            print("✅ 健康数据创建完成")
+            
+            print("\n🧠 步骤4: 运行智能分析...")
+            manager.run_intelligent_analysis(all_doctors=True)
+            print("✅ 智能分析完成")
+            
+            print("\n⚠️  步骤5: 设置5级风险系统...")
+            manager.setup_5_level_risk_system()
+            print("✅ 5级风险系统设置完成")
+            
+            print("\n📈 步骤6: 生成告警摘要...")
+            manager.analyze_alerts_summary()
+            print("✅ 告警摘要生成完成")
+            
+            print("\n🔍 步骤7: 验证数据完整性...")
+            manager.validate_data_integrity()
+            print("✅ 数据完整性验证完成")
+            
+            print("\n📊 步骤8: 显示最终状态...")
+            manager.show_status()
+            
+            print("\n🎉 完整系统设置完成！")
+            print("💡 提示: 如需其他操作，请使用命令行参数，例如:")
+            print("   python unified_test_data_manager.py export json")
+            print("   python unified_test_data_manager.py performance stress")
+            print("   python unified_test_data_manager.py test_apis")
+        else:
+            print("❌ 数据库清除失败，操作终止")
 
 
 if __name__ == '__main__':

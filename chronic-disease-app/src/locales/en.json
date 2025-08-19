@@ -1118,7 +1118,17 @@
       "glucose_high_alert": "Glucose Continuously High",
       "glucose_high_message": "System analyzed patient's glucose data for the past 3 days and found the average value {{value}} to be continuously high",
       "blood_pressure_anomaly_alert": "Blood Pressure Anomaly Alert",
-      "blood_pressure_anomaly_message": "System analyzed patient's blood pressure data for the past 3 days and found sustained high systolic pressure (average {{value}})"
+      "blood_pressure_anomaly_message": "System analyzed patient's blood pressure data for the past 3 days and found sustained high systolic pressure (average {{value}})",
+      "thresholdExceededMessage": "Patient {{name}} blood pressure critical: {{value}}, please pay immediate attention!",
+      "glucoseHighButImproving": "Blood glucose high but improving ↘",
+      "glucoseImprovementDetailed": "System analysis of patient's blood glucose data over the past 3 days found average value {{value}} is high, but shows downward improving trend ({{trend}})",
+      "glucose_high_falling": "Blood glucose high but improving ↘",
+      "glucose_high_falling_message": "System analysis of patient's blood glucose data over the past 3 days found average value {{value}} is high, but shows downward improving trend ({{trend}})",
+      "patient_inactivity": "Patient Activity Anomaly",
+      "patient_inactivity_message": "System detected abnormal data upload activity over the past 3 days, only {{count}} records",
+      "thresholdExceeded": "Threshold Exceeded Alert",
+      "glucoseImprovementAlert": "Glucose Improvement Trend",
+      "glucoseImprovementMessage": "System analysis of patient's blood glucose data over the past 3 days found average value {{value}}, showing downward trend"
     },
     "analysisData": {
       "dataRange": "Data Range",
@@ -1191,6 +1201,38 @@
       "pattern": "Pattern",
       "severity": "Severity",
       "recommendation": "Recommendation"
+    },
+    "trends": {
+      "continuousRise": "Continuous Rise",
+      "continuousDecline": "Continuous Decline",
+      "stable": "Stable",
+      "fluctuating": "Fluctuating"
+    },
+    "analysisTypes": {
+      "patientActivityAnalysis": "Patient Activity Analysis",
+      "heartRateAnomalyDetection": "Heart Rate Anomaly Detection",
+      "bloodPressureTrendAnalysis": "Blood Pressure Trend Analysis",
+      "glucoseTrendAnalysis": "Glucose Trend Analysis"
+    },
+    "testData": {
+      "zhangSan": "Zhang San",
+      "liSi": "Li Si",
+      "wangWu": "Wang Wu"
+    },
+    "systemTexts": {
+      "dailyDataUpload": "Daily Data Upload",
+      "currentDoctor": "Current Doctor",
+      "patientAppShowsExerciseState": "Patient APP shows exercise state, heart rate normal",
+      "doctorJudgmentNoNeed": "Doctor judged no need for treatment",
+      "heartRateNormalDuringExercise": "Heart rate normal during exercise",
+      "lowRisk": "Low Risk"
+    },
+    "measurementContexts": {
+      "fasting": "Fasting",
+      "postMeal": "Post Meal",
+      "postMeal2Hours": "2 Hours Post Meal",
+      "postExercise": "Post Exercise",
+      "resting": "Resting"
     }
   }
 } 

@@ -1060,7 +1060,17 @@
       "glucose_high_alert": "血糖持续偏高",
       "glucose_high_message": "系统分析患者最近3天血糖数据，发现平均值{{value}}持续偏高",
       "blood_pressure_anomaly_alert": "血压异常警报",
-      "blood_pressure_anomaly_message": "系统分析患者最近3天血压数据，发现收缩压持续偏高(平均{{value}})"
+      "blood_pressure_anomaly_message": "系统分析患者最近3天血压数据，发现收缩压持续偏高(平均{{value}})",
+      "thresholdExceededMessage": "患者{{name}}患者血压危急: {{value}}, 请立即关注!",
+      "glucoseHighButImproving": "血糖偏高但改善中↘",
+      "glucoseImprovementDetailed": "系统分析患者最近3天血糖数据发现平均值 {{value}}偏高, 但呈下降改善趋势({{trend}})",
+      "glucose_high_falling": "血糖偏高但改善中 ↘",
+      "glucose_high_falling_message": "系统分析患者最近3天血糖数据，发现平均值{{value}}偏高，但呈下降改善趋势({{trend}})",
+      "patient_inactivity": "患者活动异常",
+      "patient_inactivity_message": "系统检测患者最近3天数据上传活跃度异常，仅{{count}}次记录",
+      "thresholdExceeded": "阈值超标告警",
+      "glucoseImprovementAlert": "血糖改善趋势",
+      "glucoseImprovementMessage": "系统分析患者最近3天血糖数据，平均值{{value}}，呈下降趋势"
     },
     "analysisData": {
       "dataRange": "数据范围",
@@ -1133,6 +1143,38 @@
       "pattern": "模式",
       "severity": "严重程度",
       "recommendation": "建议"
+    },
+    "trends": {
+      "continuousRise": "持续上升",
+      "continuousDecline": "持续下降",
+      "stable": "稳定",
+      "fluctuating": "波动"
+    },
+    "analysisTypes": {
+      "patientActivityAnalysis": "患者活跃度分析",
+      "heartRateAnomalyDetection": "心率异常检测",
+      "bloodPressureTrendAnalysis": "血压趋势分析",
+      "glucoseTrendAnalysis": "血糖趋势分析"
+    },
+    "testData": {
+      "zhangSan": "张三",
+      "liSi": "李四",
+      "wangWu": "王五"
+    },
+    "systemTexts": {
+      "dailyDataUpload": "每日数据上传",
+      "currentDoctor": "当前医生",
+      "patientAppShowsExerciseState": "患者APP显示运动状态，心率正常",
+      "doctorJudgmentNoNeed": "医生判断无需处理",
+      "heartRateNormalDuringExercise": "运动状态下心率正常",
+      "lowRisk": "低风险"
+    },
+    "measurementContexts": {
+      "fasting": "空腹",
+      "postMeal": "餐后",
+      "postMeal2Hours": "餐后2小时",
+      "postExercise": "运动后",
+      "resting": "静息"
     }
   }
 } 

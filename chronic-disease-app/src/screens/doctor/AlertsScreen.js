@@ -141,7 +141,10 @@ const AlertsScreen = ({ navigation }) => {
         // 如果所有判断都失败，使用通用的阈值超标键值
         return {
           title: t('alerts.cardContent.thresholdExceeded'),
-          message: alert.message || t('alerts.cardContent.thresholdExceededMessage')
+          message: t('alerts.cardContent.thresholdExceededMessage', { 
+            name: patientName || '患者',
+            value: alert.value || '100/150mmHg'
+          })
         };
         
       case 'missed_medication':
@@ -169,6 +172,15 @@ const AlertsScreen = ({ navigation }) => {
         return {
           title: t('alerts.cardContent.glucose_high_alert'),
           message: t('alerts.cardContent.glucose_high_message', { value: alert.value || '8.40mmol/L' })
+        };
+        
+      case 'glucose_high_falling':
+        return {
+          title: t('alerts.cardContent.glucose_high_falling'),
+          message: t('alerts.cardContent.glucose_high_falling_message', { 
+            value: alert.value || '9.10mmol/L',
+            trend: alert.trend || '-0.5'
+          })
         };
         
       case 'blood_pressure_anomaly':
@@ -346,14 +358,14 @@ const AlertsScreen = ({ navigation }) => {
         // 系统分析的血糖数据
         analysisData: {
           dataRange: '2024-01-13 至 2024-01-15',
-          analysisType: '血糖趋势分析',
+          analysisType: t('alerts.analysisTypes.glucoseTrendAnalysis'),
           patientEntries: [
-            { date: '2024-01-13', value: 8.5, type: '空腹' },
-            { date: '2024-01-14', value: 8.8, type: '餐后2小时' },
-            { date: '2024-01-15', value: 9.2, type: '空腹' }
+            { date: '2024-01-13', value: 8.5, type: t('alerts.measurementContexts.fasting') },
+            { date: '2024-01-14', value: 8.8, type: t('alerts.measurementContexts.postMeal2Hours') },
+            { date: '2024-01-15', value: 9.2, type: t('alerts.measurementContexts.fasting') }
           ],
           avgValue: 8.83,
-          trend: '持续上升',
+          trend: t('alerts.trends.continuousRise'),
           exceedsTarget: true,
           targetRange: '4.4-7.0'
         },
@@ -380,14 +392,14 @@ const AlertsScreen = ({ navigation }) => {
         // 系统分析的血糖数据
         analysisData: {
           dataRange: '2024-01-12 至 2024-01-14',
-          analysisType: '血糖趋势分析',
+          analysisType: t('alerts.analysisTypes.glucoseTrendAnalysis'),
           patientEntries: [
-            { date: '2024-01-12', value: 8.2, type: '餐后2小时' },
-            { date: '2024-01-13', value: 8.0, type: '空腹' },
-            { date: '2024-01-14', value: 7.8, type: '餐后' }
+            { date: '2024-01-12', value: 8.2, type: t('alerts.measurementContexts.postMeal2Hours') },
+            { date: '2024-01-13', value: 8.0, type: t('alerts.measurementContexts.fasting') },
+            { date: '2024-01-14', value: 7.8, type: t('alerts.measurementContexts.postMeal') }
           ],
           avgValue: 8.00,
-          trend: '持续下降',
+          trend: t('alerts.trends.continuousDecline'),
           exceedsTarget: true,
           targetRange: '4.4-7.0'
         },
@@ -411,7 +423,7 @@ const AlertsScreen = ({ navigation }) => {
         // 系统分析的活跃度数据
         analysisData: {
           dataRange: '2024-01-12 至 2024-01-14',
-          analysisType: '患者活跃度分析',
+          analysisType: t('alerts.analysisTypes.patientActivityAnalysis'),
           expectedEntries: 9, // 3天预期记录数
           actualEntries: 1, // 实际记录数
           activityRate: '11.1%',
@@ -419,7 +431,7 @@ const AlertsScreen = ({ navigation }) => {
           inactiveDays: 3
         },
         relatedMetric: 'activity', // 添加相关指标
-        expectedFrequency: '每日数据上传',
+        expectedFrequency: t('alerts.systemTexts.dailyDataUpload'),
         lastDataSync: '2024-01-11T22:30:00Z'
       },
       {
@@ -435,24 +447,24 @@ const AlertsScreen = ({ navigation }) => {
         priority: 'high',
         status: 'dismissed',
         createdAt: '2024-01-13T11:30:00Z',
-        dismissedBy: '当前医生',
+        dismissedBy: t('alerts.systemTexts.currentDoctor'),
         dismissedAt: '2024-01-13T12:00:00Z',
-        dismissReason: '患者APP显示运动状态，心率正常',
+        dismissReason: t('alerts.systemTexts.patientAppShowsExerciseState'),
         // 系统分析的心率数据
         analysisData: {
           dataRange: '2024-01-11 至 2024-01-13',
-          analysisType: '心率异常检测',
+          analysisType: t('alerts.analysisTypes.heartRateAnomalyDetection'),
           patientEntries: [
-            { date: '2024-01-11', value: 72, context: '静息' },
-            { date: '2024-01-12', value: 85, context: '餐后' },
-            { date: '2024-01-13', value: 110, context: '运动后' }
+            { date: '2024-01-11', value: 72, context: t('alerts.measurementContexts.resting') },
+            { date: '2024-01-12', value: 85, context: t('alerts.measurementContexts.postMeal') },
+            { date: '2024-01-13', value: 110, context: t('alerts.measurementContexts.postExercise') }
           ],
-          contextAnalysis: '运动状态下心率正常',
-          riskLevel: '低风险'
+          contextAnalysis: t('alerts.systemTexts.heartRateNormalDuringExercise'),
+          riskLevel: t('alerts.systemTexts.lowRisk')
         },
         relatedMetric: 'heartRate', // 添加相关指标
         value: '110bpm',
-        context: '运动后',
+        context: t('alerts.measurementContexts.postExercise'),
         normalRange: '60-100 bpm'
       },
       {
@@ -471,13 +483,13 @@ const AlertsScreen = ({ navigation }) => {
         // 系统分析的血压数据
         analysisData: {
           dataRange: '2024-01-10 至 2024-01-12',
-          analysisType: '血压趋势分析',
+          analysisType: t('alerts.analysisTypes.bloodPressureTrendAnalysis'),
           patientEntries: [
-            { date: '2024-01-10', value: '145/88', time: '08:00', context: '空腹' },
-            { date: '2024-01-11', value: '148/90', time: '08:30', context: '空腹' },
-            { date: '2024-01-12', value: '152/92', time: '09:00', context: '空腹' }
+            { date: '2024-01-10', value: '145/88', time: '08:00', context: t('alerts.measurementContexts.fasting') },
+            { date: '2024-01-11', value: '148/90', time: '08:30', context: t('alerts.measurementContexts.fasting') },
+            { date: '2024-01-12', value: '152/92', time: '09:00', context: t('alerts.measurementContexts.fasting') }
           ],
-          trend: '持续上升',
+          trend: t('alerts.trends.continuousRise'),
           avgValue: '148.3/90.0',
           exceedsTarget: true,
           targetRange: '< 140/90 mmHg'
@@ -761,9 +773,9 @@ const AlertsScreen = ({ navigation }) => {
           ? { 
               ...alert, 
               status: 'dismissed',
-              dismissedBy: '当前医生',
+              dismissedBy: t('alerts.systemTexts.currentDoctor'),
               dismissedAt: new Date().toISOString(),
-              dismissReason: '医生判断无需处理'
+              dismissReason: t('alerts.systemTexts.doctorJudgmentNoNeed')
             }
           : alert
       );

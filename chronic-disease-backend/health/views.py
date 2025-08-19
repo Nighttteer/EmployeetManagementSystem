@@ -53,7 +53,48 @@ class HealthMetricListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         """创建健康指标记录 / Persist a new metric for the current user."""
         user = self.request.user
-        serializer.save(patient=user, measured_by=user)
+        health_metric = serializer.save(patient=user, measured_by=user)
+        
+        # 如果是病人输入的数据，立即进行警告检测
+        if user.role == 'patient':
+            try:
+                # 获取病人的主治医生
+                from health.models import DoctorPatientRelation
+                doctor_relation = DoctorPatientRelation.objects.filter(
+                    patient=user,
+                    status='active',
+                    is_primary=True
+                ).first()
+                
+                if doctor_relation:
+                    # 导入并调用即时警告检测服务
+                    from health.alert_analysis_service import AlertAnalysisService
+                    alert_service = AlertAnalysisService()
+                    
+                    # 异步执行警告检测（避免阻塞响应）
+                    import threading
+                    def run_alert_analysis():
+                        try:
+                            alerts = alert_service.analyze_single_health_metric(
+                                health_metric, user, doctor_relation.doctor
+                            )
+                            if alerts:
+                                print(f"🚨 为患者 {user.name} 生成了 {len(alerts)} 个即时警告")
+                        except Exception as e:
+                            print(f"❌ 即时警告检测失败: {str(e)}")
+                    
+                    # 启动后台线程执行警告检测
+                    analysis_thread = threading.Thread(target=run_alert_analysis)
+                    analysis_thread.daemon = True
+                    analysis_thread.start()
+                    
+                    print(f"✅ 已启动患者 {user.name} 的健康数据即时警告检测")
+                else:
+                    print(f"⚠️ 患者 {user.name} 没有主治医生，跳过即时警告检测")
+                    
+            except Exception as e:
+                print(f"❌ 启动即时警告检测失败: {str(e)}")
+                # 不影响数据保存，只记录错误
 
 
 class HealthMetricDetailView(generics.RetrieveUpdateDestroyAPIView):

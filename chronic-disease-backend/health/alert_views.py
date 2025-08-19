@@ -253,6 +253,122 @@ def get_patient_health_data(request, patient_id):
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def immediate_alert_analysis(request, patient_id):
+    """
+    对患者的最新健康数据进行即时警告检测
+    
+    API路径: /api/alerts/patient/{patient_id}/immediate-analysis/
+    
+    功能说明:
+    1. 获取患者最近24小时内的健康数据
+    2. 对每条数据进行即时异常检测
+    3. 生成相应的警告记录
+    4. 返回检测结果
+    
+    请求参数:
+    - metric_type: 指标类型（可选，不传则分析所有类型）
+    - language: 语言设置（默认中文）
+    """
+    try:
+        from accounts.models import User
+        from .models import HealthMetric
+        from datetime import timedelta
+        
+        # 验证患者存在
+        try:
+            patient = User.objects.get(id=patient_id, role='patient')
+        except User.DoesNotExist:
+            return Response({
+                'error': '患者不存在'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # 获取语言参数
+        language = request.data.get('language', 'zh')
+        if language not in ['zh', 'en']:
+            language = 'zh'
+        
+        # 获取指标类型参数
+        metric_type = request.data.get('metric_type')
+        
+        # 获取最近24小时内的健康数据
+        end_date = timezone.now()
+        start_date = end_date - timedelta(hours=24)
+        
+        health_metrics_query = HealthMetric.objects.filter(
+            patient=patient,
+            measured_at__gte=start_date
+        )
+        
+        if metric_type:
+            health_metrics_query = health_metrics_query.filter(metric_type=metric_type)
+        
+        health_metrics = health_metrics_query.order_by('-measured_at')
+        
+        if not health_metrics.exists():
+            return Response({
+                'success': True,
+                'message': '没有找到需要分析的健康数据',
+                'data': {
+                    'analyzedMetrics': 0,
+                    'generatedAlerts': 0,
+                    'dataRange': f'{start_date.strftime("%Y-%m-%d %H:%M")} 至 {end_date.strftime("%Y-%m-%d %H:%M")}'
+                }
+            })
+        
+        # 获取患者的主治医生
+        from .models import DoctorPatientRelation
+        doctor_relation = DoctorPatientRelation.objects.filter(
+            patient=patient,
+            status='active',
+            is_primary=True
+        ).first()
+        
+        if not doctor_relation:
+            return Response({
+                'error': '患者没有主治医生，无法生成警告'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # 执行即时警告检测
+        alert_service = AlertAnalysisService(language=language)
+        total_alerts = []
+        
+        for metric in health_metrics:
+            try:
+                alerts = alert_service.analyze_single_health_metric(
+                    metric, patient, doctor_relation.doctor
+                )
+                total_alerts.extend(alerts)
+            except Exception as e:
+                print(f"❌ 分析指标 {metric.id} 失败: {str(e)}")
+                continue
+        
+        # 统计结果
+        alert_stats = {}
+        for alert in total_alerts:
+            priority = alert.priority
+            alert_stats[priority] = alert_stats.get(priority, 0) + 1
+        
+        return Response({
+            'success': True,
+            'message': f'即时警告检测完成，分析了 {health_metrics.count()} 条数据，生成了 {len(total_alerts)} 个警告',
+            'data': {
+                'analyzedMetrics': health_metrics.count(),
+                'generatedAlerts': len(total_alerts),
+                'alertStats': alert_stats,
+                'dataRange': f'{start_date.strftime("%Y-%m-%d %H:%M")} 至 {end_date.strftime("%Y-%m-%d %H:%M")}',
+                'metricType': metric_type or 'all',
+                'language': language
+            }
+        })
+        
+    except Exception as e:
+        return Response({
+            'error': f'即时警告检测失败: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 # 兼容旧版本的视图函数
 @csrf_exempt
 @require_http_methods(["GET"])

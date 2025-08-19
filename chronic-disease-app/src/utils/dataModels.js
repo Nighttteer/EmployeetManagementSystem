@@ -229,7 +229,8 @@ export class HealthMetric {
         const validation = config.validations[field];
         if (validation) {
           if (value < validation.min || value > validation.max) {
-            errors.push(`${config.labels[field]}值超出正常范围 (${validation.min}-${validation.max})`);
+            // 使用字段名作为错误信息，避免访问不存在的labels属性
+            errors.push(`${field}值超出正常范围 (${validation.min}-${validation.max})`);
           }
         }
       }

@@ -1081,7 +1081,10 @@ const MedicationScreen = ({ navigation }) => {
       // 基于实际服用次数计算依从性（不包括跳过的）
       if (takenCountToday > 0) {
         const compliance = Math.round((takenCountToday / totalDoses) * 100);
-        console.log(`📊 依从性计算: ${takenCountToday}/${totalDoses} = ${compliance}%`);
+        // 减少日志输出，避免重复打印
+        if (Math.random() < 0.1) { // 只输出10%的日志，减少噪音
+          console.log(`📊 依从性计算: ${takenCountToday}/${totalDoses} = ${compliance}%`);
+        }
         return Math.min(100, compliance); // 确保不超过100%
       }
       
@@ -1357,23 +1360,7 @@ const MedicationScreen = ({ navigation }) => {
             </View>
             
             <View style={styles.complianceContainer}>
-              <Text style={styles.complianceLabel}>
-                  {t('medication.compliance')}: {calculateCompliance(plan)}%
-              </Text>
-              <View style={styles.complianceBar}>
-                <View 
-                  style={[
-                    styles.complianceProgress, 
-                    { 
-                        width: `${calculateCompliance(plan)}%`,
-                        backgroundColor: getComplianceColor(calculateCompliance(plan))
-                    }
-                  ]} 
-                />
-              </View>
-                <Text style={styles.complianceDetails}>
-                  {t('medication.taken')}: {plan.taken_count_today || 0}/{Array.isArray(plan.time_of_day) ? plan.time_of_day.length : 1} · {t('medication.skipped')}: {plan.skipped_count_today || 0} · {t('medication.missed')}: {Array.isArray(plan.time_of_day) ? Math.max(0, plan.time_of_day.length - ((plan.taken_count_today || 0) + (plan.skipped_count_today || 0))) : 0}
-              </Text>
+              <ComplianceDisplay plan={plan} />
             </View>
           </View>
         ))
@@ -1749,6 +1736,87 @@ const styles = StyleSheet.create({
   timeSlotButtonText: {
     fontSize: 12,
   },
+});
+
+// 依从性显示组件 - 避免重复计算
+const ComplianceDisplay = React.memo(({ plan }) => {
+  const { t } = useTranslation();
+  
+  // 缓存计算结果
+  const complianceData = React.useMemo(() => {
+    try {
+      // 获取今天的日期
+      const today = new Date();
+      const todayStr = today.toISOString().split('T')[0];
+      
+      // 计算今天应该服用的次数
+      const timeArray = Array.isArray(plan.time_of_day) ? plan.time_of_day : [plan.time_of_day];
+      const totalDoses = timeArray.length;
+      
+      if (totalDoses === 0) return { compliance: 0, color: '#F44336', taken: 0, skipped: 0, missed: 0 };
+      
+      // 检查今天是否已经服用过
+      const hasTakenToday = plan.last_taken && 
+        new Date(plan.last_taken).toISOString().split('T')[0] === todayStr;
+      
+      // 如果今天没有服用过，依从性为0%
+      if (!hasTakenToday) {
+        return { compliance: 0, color: '#F44336', taken: 0, skipped: 0, missed: totalDoses };
+      }
+      
+      // 获取今天实际服用的次数和跳过的次数
+      const takenCountToday = plan.taken_count_today || 0;
+      const skippedCountToday = plan.skipped_count_today || 0;
+      
+      // 基于实际服用次数计算依从性（不包括跳过的）
+      if (takenCountToday > 0) {
+        const compliance = Math.round((takenCountToday / totalDoses) * 100);
+        const color = compliance >= 90 ? '#4CAF50' : 
+                     compliance >= 80 ? '#FF9800' : 
+                     compliance >= 70 ? '#F57C00' : '#F44336';
+        
+        // 只在必要时输出日志，减少噪音
+        if (Math.random() < 0.05) { // 只输出5%的日志
+          console.log(`📊 依从性计算: ${takenCountToday}/${totalDoses} = ${compliance}%`);
+        }
+        
+        return {
+          compliance: Math.min(100, compliance),
+          color,
+          taken: takenCountToday,
+          skipped: skippedCountToday,
+          missed: Math.max(0, totalDoses - takenCountToday - skippedCountToday)
+        };
+      }
+      
+      return { compliance: 0, color: '#F44336', taken: 0, skipped: skippedCountToday, missed: totalDoses };
+    } catch (error) {
+      console.error('计算依从性失败:', error);
+      return { compliance: 0, color: '#F44336', taken: 0, skipped: 0, missed: 0 };
+    }
+  }, [plan.time_of_day, plan.last_taken, plan.taken_count_today, plan.skipped_count_today]);
+  
+  return (
+    <>
+      <Text style={styles.complianceLabel}>
+          {t('medication.compliance')}: {complianceData.compliance}%
+      </Text>
+      <View style={styles.complianceBar}>
+        <View 
+          style={[
+            styles.complianceProgress, 
+            { 
+                width: `${complianceData.compliance}%`,
+                backgroundColor: complianceData.color
+            }
+          ]} 
+        />
+      </View>
+      <Text style={styles.complianceDetails}>
+        {t('medication.taken')}: {complianceData.taken}/{Array.isArray(plan.time_of_day) ? plan.time_of_day.length : 1} · {t('medication.skipped')}: {complianceData.skipped} · {t('medication.missed')}: {complianceData.missed}
+      </Text>
+    </>
+  );
 });
 
 export default MedicationScreen; 
