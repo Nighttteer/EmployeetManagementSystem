@@ -642,7 +642,14 @@
     "finalData": "最终数据",
     "refetchPatients": "重新获取患者",
     "searchPlaceholder": "搜索患者姓名或诊断...",
-    "searchPatientPlaceholder": "搜索患者姓名或诊断"
+    "searchPatientPlaceholder": "搜索患者姓名或诊断",
+    "selectedPatients": "已选择 {{count}} 名患者",
+    "searchingPatients": "正在搜索患者...",
+    "allPatientsAssigned": "所有患者都已分配",
+    "tryOtherSearchCriteria": "尝试其他搜索条件",
+    "successfullyAddedPatients": "成功添加 {{count}} 名患者",
+    "addFailed": "添加失败",
+    "addPatientError": "添加患者时发生错误"
   },
   "about": {
     "appName": "慢性病管理系统",

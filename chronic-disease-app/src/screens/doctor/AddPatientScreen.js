@@ -25,7 +25,7 @@ import { searchUnassignedPatients, bindPatientToDoctor } from '../../store/slice
 import { resolvePatientRiskLevel, getRiskColor, getRiskText } from '../../utils/riskUtils';
 
 const AddPatientScreen = () => {
-  const { t, ready, canRender } = useSafeTranslation();
+  const { t, ready } = useSafeTranslation();
   const dispatch = useDispatch();
   const navigation = useNavigation();
   const { unassignedPatients, loading, error } = useSelector((state) => state.patients);
@@ -35,8 +35,8 @@ const AddPatientScreen = () => {
   const [selectedPatients, setSelectedPatients] = useState([]);
 
   // 等待国际化系统完全准备就绪
-  if (!ready || !canRender) {
-    console.log('⏳ 等待国际化系统准备就绪...', { ready, canRender, tFunctionExists: typeof t === 'function' });
+  if (!ready) {
+    console.log('⏳ 等待国际化系统准备就绪...', { ready, tFunctionExists: typeof t === 'function' });
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#2196F3" />

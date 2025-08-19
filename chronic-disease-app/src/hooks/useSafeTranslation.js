@@ -183,10 +183,13 @@ export const useSafeTranslation = () => {
     return keyParts[keyParts.length - 1] || key;
   };
 
+  // 确保ready状态正确反映国际化系统的状态
+  const isReady = ready && typeof t === 'function' && i18n.isInitialized;
+
   return {
     t: safeT,
     i18n,
-    ready,
+    ready: isReady,
     safeT
   };
 };

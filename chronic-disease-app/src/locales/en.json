@@ -631,7 +631,14 @@
     "finalData": "Final Data",
     "refetchPatients": "Refetch Patients",
     "searchPlaceholder": "Search patient name or diagnosis",
-    "searchPatientPlaceholder": "Search patient name or diagnosis"
+    "searchPatientPlaceholder": "Search patient name or diagnosis",
+    "selectedPatients": "Selected {{count}} patients",
+    "searchingPatients": "Searching patients...",
+    "allPatientsAssigned": "All patients are assigned",
+    "tryOtherSearchCriteria": "Try other search criteria",
+    "successfullyAddedPatients": "Successfully added {{count}} patients",
+    "addFailed": "Add Failed",
+    "addPatientError": "Error occurred while adding patient"
   },
   "about": {
     "appName": "Chronic Disease Management System",
