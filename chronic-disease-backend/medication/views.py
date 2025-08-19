@@ -79,9 +79,10 @@ class MedicationPlanViewSet(APIView):
             # 获取特定患者的用药计划
             try:
                 patient = User.objects.get(id=patient_id, role='patient')
+                # 医生端显示该病人的所有用药计划（包括其他医生开的）
+                # 这样医生可以了解病人的完整用药情况
                 plans = MedicationPlan.objects.filter(
-                    patient=patient,
-                    doctor=user
+                    patient=patient
                 ).order_by('-created_at')
             except User.DoesNotExist:
                 return Response(
@@ -369,47 +370,3 @@ def get_medication_history(request, patient_id):
         )
 
 
-# 测试视图 - 用于诊断问题
-@api_view(['GET'])
-@permission_classes([permissions.IsAuthenticated])
-def test_medication_api(request):
-    """
-    测试medication API是否正常工作
-
-    Lightweight diagnostic endpoint to verify DB connectivity,
-    permissions, and basic serialization flows.
-    """
-    try:
-        # 测试1: 检查数据库连接
-        medication_count = Medication.objects.count()
-        plan_count = MedicationPlan.objects.count()
-        
-        # 测试2: 检查用户权限
-        user = request.user
-        user_info = {
-            'id': user.id,
-            'name': user.name,
-            'is_doctor': user.is_doctor,
-            'is_patient': user.is_patient
-        }
-        
-        # 测试3: 简单序列化测试
-        medications = list(Medication.objects.all()[:5].values('id', 'name', 'category'))
-        
-        return Response({
-            'status': 'success',
-            'database': {
-                'medication_count': medication_count,
-                'plan_count': plan_count
-            },
-            'user': user_info,
-            'sample_medications': medications,
-            'message': 'API正常工作'
-        })
-    except Exception as e:
-        return Response({
-            'status': 'error',
-            'error_type': str(type(e).__name__),
-            'error_message': str(e),
-            'message': 'API测试失败'
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

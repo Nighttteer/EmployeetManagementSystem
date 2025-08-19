@@ -189,30 +189,31 @@ REST_FRAMEWORK = {
 # with refresh rotation and blacklist enabled, and store signing key out
 # of code. Consider asymmetric algorithms for key separation.
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
-    'ROTATE_REFRESH_TOKENS': True,
-    'BLACKLIST_AFTER_ROTATION': True,
-    'UPDATE_LAST_LOGIN': True,
-    'ALGORITHM': 'HS256',
-    'SIGNING_KEY': SECRET_KEY,
-    'VERIFYING_KEY': None,
-    'AUDIENCE': None,
-    'ISSUER': None,
-    'JWK_URL': None,
-    'LEEWAY': 0,
-    'AUTH_HEADER_TYPES': ('Bearer',),
-    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
-    'USER_ID_FIELD': 'id',
-    'USER_ID_CLAIM': 'user_id',
-    'USER_AUTHENTICATION_RULE': 'rest_framework_simplejwt.authentication.default_user_authentication_rule',
-    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
-    'TOKEN_TYPE_CLAIM': 'token_type',
-    'TOKEN_USER_CLASS': 'rest_framework_simplejwt.models.TokenUser',
-    'JTI_CLAIM': 'jti',
-    'SLIDING_TOKEN_REFRESH_EXP_CLAIM': 'refresh_exp',
-    'SLIDING_TOKEN_LIFETIME': timedelta(minutes=5),
-    'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),        # Access token expiry time: 1 day 
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),       # Refresh token expiry time: 7 days 
+    'ALGORITHM': 'HS256',                              # JWT signing algorithm 
+    'SLIDING_TOKEN_LIFETIME': timedelta(minutes=5),    # Sliding token lifetime: 5 minutes 
+    'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1), # Sliding token refresh lifetime: 1 day 
+    'SIGNING_KEY': SECRET_KEY,                         # Secret key for signing 
+    'VERIFYING_KEY': None,                             # Public key for verification (None for symmetric) 
+    'AUDIENCE': None,                                  # Token audience claim 
+    'ISSUER': None,                                    # Token issuer claim 
+    'JWK_URL': None,                                   # JSON Web Key URL 
+    'LEEWAY': 0,                                       # Clock skew tolerance in seconds 
+    'AUTH_HEADER_TYPES': ('Bearer',),                  # Authorization header types 
+    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',          # Authorization header name 
+    'USER_ID_FIELD': 'id',                             # User model ID field 
+    'USER_ID_CLAIM': 'user_id',                        # User ID claim in token 
+    'USER_AUTHENTICATION_RULE': 'rest_framework_simplejwt.authentication.default_user_authentication_rule',  # User authentication rule 
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),  # Token classes for authentication 
+    'TOKEN_TYPE_CLAIM': 'token_type',                  # Token type claim 
+    'TOKEN_USER_CLASS': 'rest_framework_simplejwt.models.TokenUser',  # Token user class 
+    'JTI_CLAIM': 'jti',                                # JWT ID claim 
+    'SLIDING_TOKEN_REFRESH_EXP_CLAIM': 'refresh_exp',  # Sliding token refresh expiry claim 
+    'ROTATE_REFRESH_TOKENS': True,                     # Enable refresh token rotation 
+    'BLACKLIST_AFTER_ROTATION': True,                  # Blacklist old tokens after rotation 
+    'UPDATE_LAST_LOGIN': True,                         # Update last login timestamp 
+    
 }
 
 # CORS settings - Allow React Native apps to access

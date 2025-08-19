@@ -6,6 +6,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.contrib.auth import get_user_model
 from django.db.models import Q
+from django.utils import timezone
 
 from .models import User, UserProfile, SMSVerificationCode
 from .serializers import (
@@ -713,22 +714,135 @@ def user_health_metrics(request):
 @permission_classes([permissions.IsAuthenticated])
 def user_medication_plan(request):
     """获取用户用药计划"""
-    # 暂时返回空数据，后续可以集成medication应用
-    return Response({
-        'medications': [],
-        'message': '用药计划功能正在开发中'
-    })
+    user = request.user
+    
+    if user.role != 'patient':
+        return Response(
+            {"error": "只有病人可以查看自己的用药计划"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    try:
+        # 从medication应用导入模型
+        from medication.models import MedicationPlan
+        
+        # 获取医生为当前病人设置的所有用药计划
+        plans = MedicationPlan.objects.filter(
+            patient=user,
+            status='active'  # 只获取活跃的计划
+        ).select_related('medication', 'doctor').order_by('-created_at')
+        
+        # 转换为前端需要的格式
+        medications = []
+        for plan in plans:
+            medication = {
+                'id': plan.id,
+                'name': plan.medication.name,
+                'dosage': f"{plan.dosage} {plan.medication.unit}",
+                'frequency': plan.frequency,
+                'time_of_day': plan.time_of_day,
+                'category': plan.medication.category,
+                'instructions': plan.special_instructions or f"按医嘱服用，{plan.medication.name}",
+                'start_date': plan.start_date,
+                'end_date': plan.end_date,
+                'status': plan.status,
+                'doctor_name': plan.doctor.name,
+                'requires_monitoring': plan.requires_monitoring,
+                'monitoring_notes': plan.monitoring_notes,
+            }
+            medications.append(medication)
+        
+        return Response({
+            'medications': medications,
+            'total': len(medications),
+            'message': f'找到 {len(medications)} 个用药计划'
+        })
+        
+    except Exception as e:
+        print(f"获取病人用药计划失败: {str(e)}")
+        return Response({
+            'medications': [],
+            'message': f'获取用药计划失败: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
 def user_medication_confirmation(request):
     """确认服药"""
-    # 暂时返回成功，后续可以集成medication应用
-    return Response({
-        'message': '服药确认成功',
-        'timestamp': request.data.get('timestamp')
-    })
+    user = request.user
+    
+    if user.role != 'patient':
+        return Response(
+            {"error": "只有病人可以确认服药"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    try:
+        medication_id = request.data.get('medication_id')
+        timestamp = request.data.get('timestamp')
+        
+        if not medication_id:
+            return Response(
+                {"error": "缺少用药计划ID"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # 从medication应用导入模型
+        from medication.models import MedicationPlan, MedicationReminder
+        
+        # 验证用药计划是否存在且属于当前病人
+        try:
+            plan = MedicationPlan.objects.get(
+                id=medication_id,
+                patient=user,
+                status='active'
+            )
+        except MedicationPlan.DoesNotExist:
+            return Response(
+                {"error": "用药计划不存在或已停止"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # 创建或更新用药提醒记录
+        current_time = timezone.now()
+        current_date = current_time.date()
+        
+        # 查找今天的用药提醒记录
+        reminder, created = MedicationReminder.objects.get_or_create(
+            plan=plan,
+            reminder_time__date=current_date,
+            defaults={
+                'reminder_time': current_time,
+                'scheduled_time': current_time.time(),
+                'status': 'taken',
+                'confirm_time': current_time,
+                'dosage_taken': plan.dosage,
+                'notes': '病人主动确认服药'
+            }
+        )
+        
+        if not created:
+            # 如果记录已存在，更新状态
+            reminder.status = 'taken'
+            reminder.confirm_time = current_time
+            reminder.dosage_taken = plan.dosage
+            reminder.notes = '病人主动确认服药'
+            reminder.save()
+        
+        return Response({
+            'message': '服药记录已保存',
+            'plan_id': plan.id,
+            'medication_name': plan.medication.name,
+            'timestamp': reminder.confirm_time,
+            'status': 'taken'
+        })
+        
+    except Exception as e:
+        print(f"确认服药失败: {str(e)}")
+        return Response({
+            'error': f'确认服药失败: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class PatientUpdateView(generics.RetrieveUpdateAPIView):

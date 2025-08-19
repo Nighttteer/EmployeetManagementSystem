@@ -4,8 +4,7 @@ from . import views
 app_name = 'medication'
 
 urlpatterns = [
-    # 测试接口
-    path('test/', views.test_medication_api, name='test_medication_api'),
+
     
     # 药品列表
     path('medications/', views.medication_list, name='medication_list'),
