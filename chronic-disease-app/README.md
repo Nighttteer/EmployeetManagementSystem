@@ -1,232 +1,232 @@
-# 慢性病管理系统 React Native App
+# Chronic Disease Management System - React Native App
 
-一个专为慢性病患者和医生设计的跨平台移动应用，支持健康数据管理、用药提醒、医患沟通等功能。
+A cross-platform mobile application designed for chronic disease patients and doctors, supporting health data management, medication reminders, doctor-patient communication, and more.
 
-## 功能特性
+## Features
 
-### 患者端功能
-- **健康指标录入** - 血压、血糖、心率、体重等数据录入
-- **健康趋势图表** - 历史数据可视化显示
-- **用药提醒** - 智能用药提醒和确认
-- **医生建议接收** - 实时接收医生的健康指导
-- **医患沟通** - 与医生在线聊天咨询
-- **个人档案** - 查看和管理个人健康档案
+### Patient Features
+- **Health Metrics Entry** - Blood pressure, blood glucose, heart rate, weight, and other health data input
+- **Health Trend Charts** - Historical data visualization
+- **Medication Reminders** - Smart medication reminders and confirmation
+- **Doctor Recommendations** - Real-time health guidance from doctors
+- **Doctor-Patient Communication** - Online chat consultation with doctors
+- **Personal Profile** - View and manage personal health records
 
-### 医生端功能
-- **患者列表管理** - 查看负责的患者信息
-- **异常告警处理** - 处理患者健康异常提醒
-- **远程沟通** - 与患者实时聊天
-- **用药计划制定** - 为患者制定和调整用药方案
-- **建议发送** - 向患者发送健康管理建议
+### Doctor Features
+- **Patient List Management** - View and manage assigned patient information
+- **Alert Processing** - Handle patient health anomaly alerts
+- **Remote Communication** - Real-time chat with patients
+- **Medication Plan Creation** - Create and adjust medication plans for patients
+- **Recommendation Sending** - Send health management advice to patients
 
-## 技术栈
+## Tech Stack
 
-- **前端框架**: React Native + Expo
-- **导航**: React Navigation v6
-- **状态管理**: Redux Toolkit
-- **UI组件**: React Native Paper
-- **网络请求**: Axios
-- **推送通知**: Expo Notifications
-- **图表库**: React Native Chart Kit
-- **聊天UI**: React Native Gifted Chat
-- **安全存储**: Expo Secure Store
+- **Frontend Framework**: React Native + Expo
+- **Navigation**: React Navigation v6
+- **State Management**: Redux Toolkit
+- **UI Components**: React Native Paper
+- **Network Requests**: Axios
+- **Push Notifications**: Expo Notifications
+- **Charts**: React Native Chart Kit
+- **Chat UI**: React Native Gifted Chat
+- **Secure Storage**: Expo Secure Store
 
-## 项目结构
+## Project Structure
 
 ```
 src/
-├── components/          # 可复用组件
+├── components/          # Reusable components
 │   ├── CustomButton.js
 │   ├── CustomCard.js
 │   └── ...
-├── screens/            # 页面组件
-│   ├── auth/           # 认证相关页面
-│   ├── patient/        # 患者端页面
-│   └── doctor/         # 医生端页面
-├── navigation/         # 导航配置
+├── screens/            # Screen components
+│   ├── auth/           # Authentication screens
+│   ├── patient/        # Patient screens
+│   └── doctor/         # Doctor screens
+├── navigation/         # Navigation configuration
 │   ├── AppNavigator.js
 │   ├── PatientNavigator.js
 │   └── DoctorNavigator.js
-├── store/              # Redux状态管理
+├── store/              # Redux state management
 │   ├── store.js
 │   └── slices/
-├── services/           # API和服务
+├── services/           # API and services
 │   ├── api.js
 │   └── notifications.js
-└── utils/              # 工具函数
+└── utils/              # Utility functions
     └── helpers.js
 ```
 
-## 安装和运行
+## Installation and Setup
 
-### 环境要求
+### Prerequisites
 - Node.js 16+
-- npm 或 yarn
+- npm or yarn
 - Expo CLI
-- Android Studio (Android开发)
-- Xcode (iOS开发，仅macOS)
+- Android Studio (for Android development)
+- Xcode (for iOS development, macOS only)
 
-### 安装依赖
+### Install Dependencies
 ```bash
 cd chronic-disease-app
 npm install
 ```
 
-### 运行项目
+### Run the Project
 ```bash
-# 启动开发服务器
+# Start development server
 npm start
 
-# 在Android模拟器中运行
+# Run on Android emulator
 npm run android
 
-# 在iOS模拟器中运行 (仅macOS)
+# Run on iOS simulator (macOS only)
 npm run ios
 
-# 在Web浏览器中运行
+# Run in web browser
 npm run web
 ```
 
-## 配置说明
+## Configuration
 
-### 后端API配置
-在 `src/services/api.js` 文件中修改后端API地址：
+### Backend API Configuration
+Modify the backend API address in `src/services/api.js`:
 ```javascript
 const BASE_URL = 'https://your-django-backend.com/api';
 ```
 
-### 推送通知配置
-在 `src/services/notifications.js` 文件中配置Expo项目ID：
+### Push Notification Configuration
+Configure Expo project ID in `src/services/notifications.js`:
 ```javascript
 const token = await Notifications.getExpoPushTokenAsync({
   projectId: 'your-expo-project-id',
 });
 ```
 
-## 与Django后端对接
+## Django Backend Integration
 
-### API接口要求
-后端需要提供以下RESTful API端点：
+### Required API Endpoints
+The backend should provide the following RESTful API endpoints:
 
-#### 认证相关
-- `POST /api/auth/login/` - 用户登录
-- `POST /api/auth/validate-token/` - 验证Token
-- `POST /api/auth/refresh/` - 刷新Token
+#### Authentication
+- `POST /api/auth/login/` - User login
+- `POST /api/auth/validate-token/` - Validate token
+- `POST /api/auth/refresh/` - Refresh token
 
-#### 用户管理
-- `GET /api/user/profile/` - 获取用户资料
-- `PATCH /api/user/profile/` - 更新用户资料
-- `POST /api/user/health-metrics/` - 提交健康指标
-- `GET /api/user/health-trends/` - 获取健康趋势
+#### User Management
+- `GET /api/user/profile/` - Get user profile
+- `PATCH /api/user/profile/` - Update user profile
+- `POST /api/user/health-metrics/` - Submit health metrics
+- `GET /api/user/health-trends/` - Get health trends
 
-#### 患者管理（医生端）
-- `GET /api/doctor/patients/` - 获取患者列表
-- `GET /api/doctor/patients/{id}/` - 获取患者详情
-- `PUT /api/doctor/patients/{id}/medication-plan/` - 更新用药计划
+#### Patient Management (Doctor Side)
+- `GET /api/doctor/patients/` - Get patient list
+- `GET /api/doctor/patients/{id}/` - Get patient details
+- `PUT /api/doctor/patients/{id}/medication-plan/` - Update medication plan
 
-#### 告警管理
-- `GET /api/alerts/` - 获取告警列表
-- `PATCH /api/alerts/{id}/` - 处理告警
+#### Alert Management
+- `GET /api/alerts/` - Get alert list
+- `PATCH /api/alerts/{id}/` - Process alerts
 
-#### 消息通信
-- `GET /api/messages/conversations/` - 获取对话列表
-- `POST /api/messages/conversations/{id}/messages/` - 发送消息
+#### Messaging
+- `GET /api/messages/conversations/` - Get conversation list
+- `POST /api/messages/conversations/{id}/messages/` - Send messages
 
-#### 推送通知
-- `POST /api/notifications/register-token/` - 注册推送Token
+#### Push Notifications
+- `POST /api/notifications/register-token/` - Register push token
 
-### 认证机制
-应用使用JWT Token进行认证：
-1. 登录成功后获取Token
-2. Token存储在Expo SecureStore中
-3. 每次API请求自动在Header中添加Token
-4. Token过期时自动清除并跳转到登录页
+### Authentication Mechanism
+The app uses JWT tokens for authentication:
+1. Get token after successful login
+2. Store token in Expo SecureStore
+3. Automatically add token to headers for each API request
+4. Clear token and redirect to login page when expired
 
-## 适老化设计特性
+## Accessibility Features
 
-- **大字号字体** - 最小16sp，适合老年用户
-- **高对比度** - 深色文字配浅色背景
-- **大按钮尺寸** - 最小48dp高度，充足间距
-- **简洁界面** - 减少复杂元素和干扰项
-- **清晰导航** - 使用熟悉的图标和术语
-- **容错设计** - 重要操作提供确认机制
+- **Large Font Sizes** - Minimum 16sp, suitable for elderly users
+- **High Contrast** - Dark text on light background
+- **Large Button Sizes** - Minimum 48dp height with adequate spacing
+- **Clean Interface** - Reduce complex elements and distractions
+- **Clear Navigation** - Use familiar icons and terminology
+- **Error Tolerance** - Provide confirmation for important operations
 
-## 开发调试
+## Development and Debugging
 
-### 使用Expo开发工具
-- 扫码在真机上运行
-- 热重载快速预览
-- 远程调试JS代码
+### Using Expo Development Tools
+- Scan QR code to run on real devices
+- Hot reload for quick preview
+- Remote debugging for JavaScript code
 
-### 状态管理调试
-使用Redux DevTools查看状态变化：
+### State Management Debugging
+Use Redux DevTools to view state changes:
 ```javascript
-// 在store.js中已配置开发工具
+// Already configured in store.js
 ```
 
-### 网络调试
-使用Flipper或代理工具查看API请求。
+### Network Debugging
+Use Flipper or proxy tools to view API requests.
 
-## 构建发布
+## Building and Publishing
 
-### Android构建
+### Android Build
 ```bash
-# 使用EAS构建服务
+# Using EAS Build service
 npx eas build -p android --profile production
 ```
 
-### iOS构建
+### iOS Build
 ```bash
-# 使用EAS构建服务 (需要Apple Developer账号)
+# Using EAS Build service (requires Apple Developer account)
 npx eas build -p ios --profile production
 ```
 
-## 注意事项
+## Important Notes
 
-1. **推送通知仅在真实设备上工作**
-2. **需要配置正确的API地址和认证**
-3. **iOS构建需要Apple Developer账号**
-4. **遵循应用商店审核规范**
+1. **Push notifications only work on real devices**
+2. **Need to configure correct API addresses and authentication**
+3. **iOS builds require Apple Developer account**
+4. **Follow App Store review guidelines**
 
-## 贡献指南
+## Contributing
 
-1. Fork项目
-2. 创建功能分支
-3. 提交更改
-4. 发起Pull Request
+1. Fork the project
+2. Create a feature branch
+3. Commit your changes
+4. Submit a Pull Request
 
-## 许可证
+## License
 
 MIT License
 
-## 联系方式
+## Contact
 
-如有问题或建议，请联系开发团队。
+For questions or suggestions, please contact the development team.
 
 ---
 
-# 快速开始指南
+# Quick Start Guide
 
-## 1. 克隆项目
+## 1. Clone the Project
 ```bash
 git clone <repository-url>
 cd chronic-disease-app
 ```
 
-## 2. 安装依赖
+## 2. Install Dependencies
 ```bash
 npm install
 ```
 
-## 3. 配置后端API
-编辑 `src/services/api.js`，设置正确的后端地址。
+## 3. Configure Backend API
+Edit `src/services/api.js` and set the correct backend address.
 
-## 4. 启动开发服务器
+## 4. Start Development Server
 ```bash
 npm start
 ```
 
-## 5. 在设备上测试
-使用Expo Go应用扫描二维码，或在模拟器中运行。
+## 5. Test on Device
+Use Expo Go app to scan QR code, or run in simulator.
 
-现在您可以开始开发和测试应用了！ 
+You can now start developing and testing the application! 
