@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Dimensions, TouchableOpacity, ScrollView } from 'react-native';
 import { Text } from 'react-native-paper';
 import Svg, { Rect, Text as SvgText, Line } from 'react-native-svg';
+import { useTranslation } from 'react-i18next';
 
 // 工具函数：验证数字是否有效
 const isValidNumber = (num) => {
@@ -30,6 +31,7 @@ const BarChart = ({
   barUnitWidth = 70,
   maxLabelLength = 8
 }) => {
+  const { t } = useTranslation();
   const screenWidth = width || Dimensions.get('window').width - 40;
   const padding = 70; // 增加padding为Y轴标签留出空间
   const bottomPadding = 48; // 为X轴标签留出更多空间

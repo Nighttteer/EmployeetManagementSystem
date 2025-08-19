@@ -99,9 +99,6 @@ const MedicationPlanScreen = ({ route, navigation }) => {
     try {
       setLoading(true);
       
-      // 首先测试API连接
-      const testResponse = await medicationAPI.testConnection();
-      
       const [plansResponse, statsResponse] = await Promise.all([
         medicationAPI.getMedicationPlans(patient.id),
         medicationAPI.getMedicationStats(patient.id)

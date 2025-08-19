@@ -20,12 +20,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { useTranslation } from 'react-i18next';
+import { useSafeTranslation } from '../../hooks/useSafeTranslation';
 import { searchUnassignedPatients, bindPatientToDoctor } from '../../store/slices/patientsSlice';
 import { resolvePatientRiskLevel, getRiskColor, getRiskText } from '../../utils/riskUtils';
 
 const AddPatientScreen = () => {
-  const { t, ready } = useTranslation();
+  const { t, ready, canRender } = useSafeTranslation();
   const dispatch = useDispatch();
   const navigation = useNavigation();
   const { unassignedPatients, loading, error } = useSelector((state) => state.patients);
@@ -34,9 +34,9 @@ const AddPatientScreen = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPatients, setSelectedPatients] = useState([]);
 
-  // 等待国际化系统准备就绪
-  if (!ready || typeof t !== 'function') {
-    console.log('⏳ 等待国际化系统准备就绪...', { ready, tFunctionExists: typeof t === 'function' });
+  // 等待国际化系统完全准备就绪
+  if (!ready || !canRender) {
+    console.log('⏳ 等待国际化系统准备就绪...', { ready, canRender, tFunctionExists: typeof t === 'function' });
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#2196F3" />
@@ -54,46 +54,7 @@ const AddPatientScreen = () => {
   console.log('  common.male:', t('common.male'));
   console.log('  common.female:', t('common.female'));
 
-  // 安全的t函数包装器
-  const safeT = (key, options) => {
-    if (typeof t !== 'function') {
-      console.error('❌ t函数未定义，使用默认值:', key);
-      // 返回默认值或键名
-      return key.includes('common.phone') ? '手机' : 
-             key.includes('common.yearsOld') ? '岁' :
-             key.includes('common.male') ? '男' :
-             key.includes('common.female') ? '女' :
-             key.includes('common.highRisk') ? '高风险' :
-             key.includes('common.mediumRisk') ? '中风险' :
-             key.includes('common.lowRisk') ? '低风险' :
-             key.includes('common.healthy') ? '健康' :
-             key.includes('common.unassessed') ? '未评估' :
-             key.includes('patients.addPatient') ? '添加患者' :
-             key.includes('patients.searchPatientPlaceholder') ? '搜索患者姓名或诊断' :
-             key.includes('patients.selectedPatients') ? '已选择患者' :
-             key.includes('patients.searchingPatients') ? '正在搜索患者...' :
-             key.includes('patients.noMatchingPatients') ? '没有匹配的患者' :
-             key.includes('patients.noUnassignedPatients') ? '没有未分配的患者' :
-             key.includes('patients.tryOtherSearchCriteria') ? '请尝试其他搜索条件' :
-             key.includes('patients.allPatientsAssigned') ? '所有患者都已分配医生' :
-             key.includes('patients.pleaseSelectAtLeastOnePatient') ? '请选择至少一个患者' :
-             key.includes('patients.successfullyAddedPatients') ? '成功添加患者' :
-             key.includes('patients.partialAddFailed') ? '部分添加失败' :
-             key.includes('patients.partialAddFailedMessage') ? '部分患者添加失败' :
-             key.includes('patients.addFailed') ? '添加失败' :
-             key.includes('patients.addPatientError') ? '添加患者时发生错误' :
-             key.includes('common.notice') ? '提示' :
-             key.includes('common.success') ? '成功' :
-             key.includes('common.confirm') ? '确定' :
-             key;
-    }
-    try {
-      return t(key, options);
-    } catch (error) {
-      console.error('❌ t函数调用失败:', error, 'key:', key);
-      return key; // 返回键名作为回退
-    }
-  };
+  // 使用安全的国际化Hook，无需额外的safeT函数
 
   useEffect(() => {
     // 组件加载时搜索所有未分配的患者
@@ -128,7 +89,7 @@ const AddPatientScreen = () => {
   // 添加选中的患者
   const handleAddPatients = async () => {
     if (selectedPatients.length === 0) {
-      Alert.alert(safeT('common.notice'), safeT('patients.pleaseSelectAtLeastOnePatient'));
+      Alert.alert(t('common.notice'), t('patients.pleaseSelectAtLeastOnePatient'));
       return;
     }
 
@@ -148,25 +109,25 @@ const AddPatientScreen = () => {
       
       if (failedBindings.length === 0) {
         Alert.alert(
-          safeT('common.success'),
-          safeT('patients.successfullyAddedPatients', { count: selectedPatients.length }),
+          t('common.success'),
+          t('patients.successfullyAddedPatients', { count: selectedPatients.length }),
           [
             {
-              text: safeT('common.confirm'),
+              text: t('common.confirm'),
               onPress: () => navigation.goBack(),
             },
           ]
         );
       } else {
         Alert.alert(
-          safeT('patients.partialAddFailed'),
-          safeT('patients.partialAddFailedMessage', { 
+          t('patients.partialAddFailed'),
+          t('patients.partialAddFailedMessage', { 
             successCount: selectedPatients.length - failedBindings.length, 
             failedCount: failedBindings.length 
           }),
           [
             {
-              text: safeT('common.confirm'),
+              text: t('common.confirm'),
               onPress: () => navigation.goBack(),
             },
           ]
@@ -174,7 +135,7 @@ const AddPatientScreen = () => {
       }
     } catch (error) {
       console.error('添加患者失败:', error);
-      Alert.alert(safeT('patients.addFailed'), safeT('patients.addPatientError'));
+      Alert.alert(t('patients.addFailed'), t('patients.addPatientError'));
     }
   };
 
@@ -184,11 +145,11 @@ const AddPatientScreen = () => {
   // 获取风险等级文本（国际化）
   const getLocalizedRiskText = (level) => {
     switch (level) {
-      case 'high': return safeT('common.highRisk');
-      case 'medium': return safeT('common.mediumRisk');
-      case 'low': return safeT('common.lowRisk');
-      case 'healthy': return safeT('common.healthy');
-      default: return safeT('common.unassessed');
+      case 'high': return t('common.highRisk');
+      case 'medium': return t('common.mediumRisk');
+      case 'low': return t('common.lowRisk');
+      case 'healthy': return t('common.healthy');
+      default: return t('common.unassessed');
     }
   };
 
@@ -211,16 +172,16 @@ const AddPatientScreen = () => {
           <View style={styles.patientHeader}>
             <Avatar.Text 
               size={40} 
-              label={patient.name?.charAt(0) || safeT('patients.patient')}
+              label={patient.name?.charAt(0) || t('patients.patient')}
               style={[styles.avatar, { backgroundColor: getRiskColor(level) }]}
             />
             <View style={styles.patientInfo}>
               <Text style={styles.patientName}>{patient.name}</Text>
               <Text style={styles.patientDetails}>
-                {patient.age}{safeT('common.yearsOld')} • {patient.gender === 'male' ? safeT('common.male') : safeT('common.female')}
+                {patient.age}{t('common.yearsOld')} • {patient.gender === 'male' ? t('common.male') : t('common.female')}
               </Text>
               <Text style={styles.patientPhone}>
-                {safeT('common.phone')}: {patient.phone}
+                {t('common.phone')}: {patient.phone}
               </Text>
               {patient.bio && (
                 <Text style={styles.patientBio} numberOfLines={2}>
@@ -253,10 +214,10 @@ const AddPatientScreen = () => {
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
       <Text style={styles.emptyText}>
-        {searchQuery ? safeT('patients.noMatchingPatients') : safeT('patients.noUnassignedPatients')}
+        {searchQuery ? t('patients.noMatchingPatients') : t('patients.noUnassignedPatients')}
       </Text>
       <Text style={styles.emptySubtext}>
-        {searchQuery ? safeT('patients.tryOtherSearchCriteria') : safeT('patients.allPatientsAssigned')}
+        {searchQuery ? t('patients.tryOtherSearchCriteria') : t('patients.allPatientsAssigned')}
       </Text>
     </View>
   );
@@ -265,7 +226,7 @@ const AddPatientScreen = () => {
     <SafeAreaView style={styles.container}>
       <Appbar.Header>
         <Appbar.BackAction onPress={() => navigation.goBack()} />
-        <Appbar.Content title={safeT('patients.addPatient')} />
+        <Appbar.Content title={t('patients.addPatient')} />
         {selectedPatients.length > 0 && (
           <Appbar.Action
             icon="check"
@@ -277,7 +238,7 @@ const AddPatientScreen = () => {
 
       <View style={styles.content}>
         <Searchbar
-          placeholder={safeT('patients.searchPatientPlaceholder')}
+          placeholder={t('patients.searchPatientPlaceholder')}
           onChangeText={handleSearch}
           value={searchQuery}
           style={styles.searchBar}
@@ -286,7 +247,7 @@ const AddPatientScreen = () => {
         {selectedPatients.length > 0 && (
           <View style={styles.selectedContainer}>
             <Text style={styles.selectedText}>
-              {safeT('patients.selectedPatients', { count: selectedPatients.length })}
+              {t('patients.selectedPatients', { count: selectedPatients.length })}
             </Text>
             <Button
               mode="contained"
@@ -294,7 +255,7 @@ const AddPatientScreen = () => {
               disabled={loading}
               style={styles.addButton}
             >
-              {loading ? <ActivityIndicator size="small" color="#fff" /> : safeT('patients.addPatient')}
+              {loading ? <ActivityIndicator size="small" color="#fff" /> : t('patients.addPatient')}
             </Button>
           </View>
         )}
@@ -304,7 +265,7 @@ const AddPatientScreen = () => {
         {loading && !unassignedPatients.length ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#2196F3" />
-            <Text style={styles.loadingText}>{safeT('patients.searchingPatients')}</Text>
+            <Text style={styles.loadingText}>{t('patients.searchingPatients')}</Text>
           </View>
         ) : (
           <FlatList

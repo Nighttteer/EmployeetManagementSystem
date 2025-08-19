@@ -6,7 +6,8 @@ import { notificationsAPI } from './api';
 // 配置通知行为
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
+          shouldShowBanner: true,
+      shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
   }),

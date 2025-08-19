@@ -393,11 +393,6 @@ export const notificationsAPI = {
 
 // 用药管理相关API
 export const medicationAPI = {
-  // 测试API连接
-  testConnection: () => {
-    return apiClient.get('/medication/test/');
-  },
-
   // 获取药品列表
   getMedications: (params = {}) => {
     return apiClient.get('/medication/medications/', { params });
