@@ -6,6 +6,9 @@ app_name = 'medication'
 urlpatterns = [
 
     
+    # 患者查看自己的用药计划
+    path('patient/plans/', views.patient_medication_plans, name='patient_medication_plans'),
+    
     # 药品列表
     path('medications/', views.medication_list, name='medication_list'),
     

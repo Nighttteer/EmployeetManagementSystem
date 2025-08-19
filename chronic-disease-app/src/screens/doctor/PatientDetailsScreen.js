@@ -867,15 +867,18 @@ const PatientDetailsScreen = ({ route, navigation }) => {
   // 建议类型映射
   const adviceTypeText = (advice_type) => {
     switch (advice_type) {
-      case 'follow_up':
       case 'general':
-        return safeT('patients.followUp') || 'Follow-up';
-      case 'examination':
-        return safeT('patients.examination') || 'Examination';
+        return safeT('patients.generalAdvice') || 'General Advice';
       case 'medication':
         return safeT('medication.medication') || 'Medication';
       case 'lifestyle':
         return safeT('health.lifestyle') || 'Lifestyle';
+      case 'diet':
+        return safeT('patients.dietAdvice') || 'Diet Advice';
+      case 'exercise':
+        return safeT('patients.exerciseAdvice') || 'Exercise Advice';
+      case 'urgent':
+        return safeT('patients.urgentAdvice') || 'Urgent Advice';
       default:
         return safeT('common.note') || 'Note';
     }
@@ -1000,7 +1003,7 @@ const PatientDetailsScreen = ({ route, navigation }) => {
             <Text>{safeT('patients.adviceType') || '类型'}</Text>
             <View style={{ height: 8 }} />
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              {['general','medication','lifestyle','examination','follow_up'].map(tp => (
+              {['general','medication','lifestyle','diet','exercise','urgent'].map(tp => (
                 <Chip key={tp} selected={adviceForm.advice_type===tp} onPress={() => setAdviceForm({ ...adviceForm, advice_type: tp })}>
                   {adviceTypeText(tp)}
                 </Chip>

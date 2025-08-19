@@ -21,6 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LineChart } from '../../components/Charts';
 import CustomCard from '../../components/CustomCard';
 import { fetchUserProfile, fetchHealthTrends } from '../../store/slices/userSlice';
+import { fetchTodayMedications } from '../../store/slices/medicationSlice';
 import { patientsAPI, messagesAPI } from '../../services/api';
 import { 
   METRIC_TYPES,
@@ -34,6 +35,7 @@ const PatientHomeScreen = ({ navigation }) => {
   const dispatch = useDispatch();
   const { user, profile } = useSelector((state) => state.auth);
   const { healthMetrics, loading } = useSelector((state) => state.user);
+  const { todayMedications } = useSelector((state) => state.medication);
   
   const [refreshing, setRefreshing] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
@@ -48,7 +50,8 @@ const PatientHomeScreen = ({ navigation }) => {
     try {
       await Promise.all([
         dispatch(fetchUserProfile()),
-        dispatch(fetchHealthTrends('week'))
+        dispatch(fetchHealthTrends('week')),
+        dispatch(fetchTodayMedications()) // 获取今日用药数据
       ]);
       // 加载我的医生建议
       if (user?.id) {
@@ -102,8 +105,43 @@ const PatientHomeScreen = ({ navigation }) => {
 
   // 获取今日用药信息
   const getTodayMedications = () => {
-    // TODO: 从Redux store获取真实的用药数据
-    return [];
+    // 从Redux store获取真实的用药数据
+    return todayMedications || [];
+  };
+
+  // 计算今日服药总数量（根据具体药量）
+  const getTodayMedicationCount = () => {
+    const medications = getTodayMedications();
+    if (medications.length === 0) return 0;
+    
+    // 计算所有药物的总剂量
+    const totalDosage = medications.reduce((total, med) => {
+      // 解析剂量字符串，提取数值
+      const dosageStr = med.dosage || '0';
+      const dosageMatch = dosageStr.match(/(\d+(?:\.\d+)?)/);
+      const dosageValue = dosageMatch ? parseFloat(dosageMatch[1]) : 0;
+      
+      // 如果有次数信息，乘以次数
+      const times = med.times || med.time_of_day || 1;
+      const timeCount = Array.isArray(times) ? times.length : 1;
+      
+      return total + (dosageValue * timeCount);
+    }, 0);
+    
+    return Math.round(totalDosage * 100) / 100; // 保留两位小数
+  };
+
+  // 获取待服用的用药数量（pending状态）
+  const getPendingMedicationCount = () => {
+    console.log('🔍 调试用药数据:', {
+      todayMedications,
+      totalCount: todayMedications?.length || 0,
+      pendingCount: todayMedications?.filter(med => med.status === 'pending')?.length || 0,
+      allStatuses: todayMedications?.map(med => ({ id: med.id, status: med.status, name: med.name })) || []
+    });
+    
+    // 直接从todayMedications中获取pending状态的数量
+    return todayMedications?.filter(med => med.status === 'pending')?.length || 0;
   };
 
   // 获取健康状态
@@ -333,7 +371,6 @@ const PatientHomeScreen = ({ navigation }) => {
     }
   };
 
-  const todayMedications = getTodayMedications();
   const healthStatusInfo = getHealthStatus();
   const trendsData = processTrendsData();
 
@@ -451,22 +488,14 @@ const PatientHomeScreen = ({ navigation }) => {
 
         {/* 今日用药 */}
         <CustomCard
-          title={t('patient.todayMedication')}
-          subtitle={t('patient.medicationsToTake', { count: todayMedications.length })}
+                        title={t('patient.todayMedication')}
+              subtitle={t('patient.medicationsToTake', { count: getPendingMedicationCount() })}
           content={
             <View style={styles.medicationList}>
               {todayMedications.length > 0 ? (
-                todayMedications.map((med, index) => (
-                  <View key={index} style={styles.medicationItem}>
-                    <View style={styles.medicationInfo}>
-                      <Text style={styles.medicationName}>{med.name}</Text>
-                      <Text style={styles.medicationDosage}>{med.dosage}</Text>
-                    </View>
-                    <Text style={styles.medicationTime}>
-                      {med.nextTime || '待安排'}
-                    </Text>
-                  </View>
-                ))
+                <Text style={styles.medicationSummary}>
+                  {t('patient.medicationSummary', { count: todayMedications.length })}
+                </Text>
               ) : (
                 <Text style={styles.noMedicationText}>{t('patient.noMedicationToday')}</Text>
               )}

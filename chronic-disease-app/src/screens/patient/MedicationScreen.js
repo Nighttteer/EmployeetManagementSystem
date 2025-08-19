@@ -362,8 +362,12 @@ const MedicationScreen = ({ navigation }) => {
         const trigger = { hour: hours, minute: minutes, repeats: true };
         const notificationContent = {
           content: {
-            title: '💊 用药提醒',
-            body: `该服用 ${medicationName} 了 (${dosage})`,
+            title: t('medication.medicationReminder'),
+            body: t('medication.timeToTakeMedication', { 
+              medication: medicationName, 
+              dosage: dosage,
+              time: timeStr 
+            }),
             data: { 
               planId: plan.id,
               medicationName,
@@ -391,8 +395,12 @@ const MedicationScreen = ({ navigation }) => {
           const trigger = { hour: hours, minute: minutes, repeats: true };
           const notificationContent = {
             content: {
-              title: '💊 用药提醒',
-              body: `该服用 ${medicationName} 了 (${dosage}) - 今日第1次`,
+              title: t('medication.medicationReminder'),
+              body: t('medication.firstDoseReminder', { 
+                medication: medicationName, 
+                dosage: dosage,
+                time: firstTime 
+              }),
               data: { 
                 planId: plan.id,
                 medicationName,
@@ -420,8 +428,13 @@ const MedicationScreen = ({ navigation }) => {
           const trigger = { hour: hours, minute: minutes, repeats: true };
           const notificationContent = {
             content: {
-              title: '💊 用药提醒',
-              body: `该服用 ${medicationName} 了 (${dosage}) - 今日第${i + 1}次`,
+              title: t('medication.medicationReminder'),
+              body: t('medication.doseReminder', { 
+                medication: medicationName, 
+                dosage: dosage,
+                time: timeStr,
+                doseNumber: i + 1
+              }),
               data: { 
                 planId: plan.id,
                 medicationName,
@@ -970,40 +983,56 @@ const MedicationScreen = ({ navigation }) => {
         return plan.current_time_slot;
       }
       
-      // 否则基于当前时间计算
+      // 基于当前时间计算
       const now = new Date();
       const currentHour = now.getHours();
       const currentMinute = now.getMinutes();
       const currentTime = currentHour * 60 + currentMinute;
       
-      // 找到下一个待处理的时间点
+      console.log('🔍 当前时间:', currentHour + ':' + currentMinute, '转换为分钟:', currentTime);
+      
+      // 找到当前应该处理的时间点
       for (let i = 0; i < timeArray.length; i++) {
         const timeStr = timeArray[i];
         const [hours, minutes] = timeStr.split(':').map(Number);
         const doseTime = hours * 60 + minutes;
         
-        // 如果当前时间还没到这个时间点，或者刚过这个时间点（20分钟内），返回这个时间点
-        if (currentTime <= doseTime + 20) {
+        console.log('🔍 检查时间点:', timeStr, '转换为分钟:', doseTime);
+        
+        // 如果当前时间还没到这个时间点，返回这个时间点
+        if (currentTime < doseTime) {
+          const timeSlot = {
+            time: timeStr,
+            index: i,
+            isOverdue: false,
+            isCurrent: false
+          };
+          console.log('🔍 返回下一个时间点:', timeSlot);
+          return timeSlot;
+        }
+        
+        // 如果当前时间刚过这个时间点（30分钟内），返回这个时间点
+        if (currentTime >= doseTime && currentTime <= doseTime + 30) {
           const timeSlot = {
             time: timeStr,
             index: i,
             isOverdue: currentTime > doseTime,
-            isCurrent: currentTime >= doseTime && currentTime <= doseTime + 20
+            isCurrent: true
           };
-          console.log('🔍 基于当前时间计算的时间点:', timeSlot);
+          console.log('🔍 返回当前时间点:', timeSlot);
           return timeSlot;
         }
       }
       
-      // 如果所有时间点都过了，返回第一个（作为默认值）
-      const defaultSlot = {
-        time: timeArray[0],
-        index: 0,
-        isOverdue: false,
-        isCurrent: true
+      // 如果所有时间点都过了，返回最后一个时间点（表示今天已完成）
+      const lastSlot = {
+        time: timeArray[timeArray.length - 1],
+        index: timeArray.length - 1,
+        isOverdue: true,
+        isCurrent: false
       };
-      console.log('🔍 返回默认时间点:', defaultSlot);
-      return defaultSlot;
+      console.log('🔍 所有时间点已过，返回最后一个:', lastSlot);
+      return lastSlot;
     } catch (error) {
       console.error('获取当前时间点失败:', error);
       return null;

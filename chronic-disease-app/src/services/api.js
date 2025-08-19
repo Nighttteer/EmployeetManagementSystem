@@ -212,10 +212,7 @@ export const patientsAPI = {
 
   // 发送建议给患者
   sendAdvice: (patientId, advice) => {
-    return apiClient.post(`/auth/patients/${patientId}/advice/`, {
-      advice,
-      timestamp: new Date().toISOString(),
-    });
+    return apiClient.post(`/health/patients/${patientId}/advice/`, advice);
   },
 
   // 获取患者健康历史

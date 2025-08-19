@@ -279,11 +279,88 @@ class MedicationReminderService {
   // 获取今日用药计划
   async getTodayMedications() {
     try {
-      const response = await api.get('/medication/today/');
-      return response.data;
+      // 使用患者专用的用药计划端点
+      const response = await api.get('/medication/patient/plans/');
+      const plans = response.data?.plans || [];
+      
+      // 添加详细的调试信息
+      console.log('🔍 原始用药计划数据:', {
+        plansCount: plans.length,
+        firstPlan: plans[0],
+        allPlans: plans
+      });
+      
+      // 过滤出今日的用药计划
+      const today = new Date();
+      const todayString = today.toISOString().split('T')[0];
+      
+      console.log('🔍 日期过滤信息:', {
+        today: todayString,
+        todayDate: today
+      });
+      
+      const todayMedications = plans.filter(plan => {
+        console.log('🔍 检查计划:', {
+          planId: plan.id,
+          planName: plan.medication?.name,
+          startDate: plan.start_date,
+          endDate: plan.end_date,
+          status: plan.status,
+          hasStartDate: !!plan.start_date,
+          hasEndDate: !!plan.end_date,
+          isActive: plan.status === 'active'
+        });
+        
+        // 放宽过滤条件：如果没有日期信息，也包含进来
+        if (!plan.start_date && !plan.end_date) {
+          console.log('✅ 计划无日期限制，包含');
+          return true;
+        }
+        
+        if (!plan.start_date || !plan.end_date) {
+          console.log('⚠️ 计划日期信息不完整，包含');
+          return true;
+        }
+        
+        const startDate = new Date(plan.start_date);
+        const endDate = new Date(plan.end_date);
+        const todayDate = new Date(todayString);
+        
+        const isInDateRange = todayDate >= startDate && todayDate <= endDate;
+        const isActive = plan.status === 'active';
+        
+        console.log('🔍 日期范围检查:', {
+          startDate,
+          endDate,
+          todayDate,
+          isInDateRange,
+          isActive,
+          result: isInDateRange && isActive
+        });
+        
+        return isInDateRange && isActive;
+      }).map(plan => ({
+        ...plan,
+        id: plan.id,
+        name: plan.medication?.name || '未知药物',
+        dosage: plan.dosage || '未知剂量',
+        status: 'pending', // 添加状态字段，默认为pending
+        time_of_day: plan.time_of_day || [],
+        frequency: plan.frequency || '未知频次'
+      }));
+      
+      console.log('📊 今日用药数据转换完成:', {
+        originalPlans: plans.length,
+        todayMedications: todayMedications.length,
+        sample: todayMedications[0],
+        allTodayMedications: todayMedications
+      });
+      
+      return todayMedications;
     } catch (error) {
       console.error('获取今日用药失败:', error);
-      throw error;
+      // 返回空数组而不是抛出错误，避免页面崩溃
+      return [];
     }
   }
 
@@ -294,7 +371,8 @@ class MedicationReminderService {
       return response.data;
     } catch (error) {
       console.error('获取用药计划失败:', error);
-      throw error;
+      // 返回空数组而不是抛出错误
+      return [];
     }
   }
 
@@ -307,18 +385,20 @@ class MedicationReminderService {
       return response.data;
     } catch (error) {
       console.error('获取用药历史失败:', error);
-      throw error;
+      // 返回空数组而不是抛出错误
+      return [];
     }
   }
 
-  // 获取用药依从性统计
+    // 获取用药依从性统计
   async getComplianceStats() {
     try {
       const response = await api.get('/medication/compliance-stats/');
       return response.data;
     } catch (error) {
       console.error('获取依从性统计失败:', error);
-      throw error;
+      // 返回空数组而不是抛出错误
+      return [];
     }
   }
 

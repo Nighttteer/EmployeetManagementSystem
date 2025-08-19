@@ -183,6 +183,48 @@ const AlertsScreen = ({ navigation }) => {
           })
         };
         
+      case 'glucose_high_rising':
+        return {
+          title: t('alerts.cardContent.glucose_high_rising'),
+          message: t('alerts.cardContent.glucose_high_rising_message', { 
+            value: alert.value || '9.10mmol/L',
+            trend: alert.trend || '+0.5'
+          })
+        };
+        
+      case 'glucose_normal_rising':
+        return {
+          title: t('alerts.cardContent.glucose_normal_rising'),
+          message: t('alerts.cardContent.glucose_normal_rising_message', { 
+            value: alert.value || '6.50mmol/L',
+            trend: alert.trend || '+0.3'
+          })
+        };
+        
+      case 'abnormal_trend':
+        return {
+          title: t('alerts.cardContent.abnormalTrendAlert'),
+          message: t('alerts.cardContent.abnormalTrendMessage', { 
+            metric: alert.relatedMetric || '健康指标',
+            trend: alert.trend || '异常'
+          })
+        };
+        
+      case 'worsening_trend':
+        return {
+          title: t('alerts.cardContent.worseningTrendAlert'),
+          message: t('alerts.cardContent.worseningTrendMessage', { 
+            metric: alert.relatedMetric || '健康指标',
+            trend: alert.trend || '恶化'
+          })
+        };
+        
+      case 'system_notification':
+        return {
+          title: t('alerts.cardContent.systemNotificationAlert'),
+          message: t('alerts.cardContent.systemNotificationMessage')
+        };
+        
       case 'blood_pressure_anomaly':
         return {
           title: t('alerts.cardContent.blood_pressure_anomaly_alert'),
@@ -744,9 +786,9 @@ const AlertsScreen = ({ navigation }) => {
           ? { 
               ...alert, 
               status: 'handled',
-              handledBy: '当前医生',
+              handledBy: t('alerts.systemTexts.currentDoctor'),
               handledAt: new Date().toISOString(),
-              handledMethod: '医生处理'
+              handledMethod: t('alerts.systemTexts.doctorHandled')
             }
           : alert
       );
@@ -1196,15 +1238,15 @@ const AlertsScreen = ({ navigation }) => {
 
 
             
-            {/* 告警详细信息 */}
-            {alert.relatedMetric && (
+            {/* 告警详细信息 - 隐藏relatedMetric显示 */}
+            {/* {alert.relatedMetric && (
               <View style={styles.alertDetails}>
                 <Text style={styles.detailLabel}>{t('alerts.relatedMetric')}:</Text>
                 <Text style={styles.detailValue}>
                   {t(`alerts.metrics.${alert.relatedMetric.toLowerCase()}`) || alert.relatedMetric}: {alert.value}
                 </Text>
               </View>
-            )}
+            )} */}
             
             {alert.medicationName && (
               <View style={styles.alertDetails}>

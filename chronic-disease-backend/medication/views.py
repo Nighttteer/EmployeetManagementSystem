@@ -19,6 +19,40 @@ from .serializers import (
 
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
+def patient_medication_plans(request):
+    """
+    患者查看自己的用药计划
+    
+    Allow patients to view their own medication plans.
+    """
+    user = request.user
+    
+    if not user.is_patient:
+        return Response(
+            {"error": "只有患者可以查看自己的用药计划"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    # 获取患者的用药计划
+    plans = MedicationPlan.objects.filter(
+        patient=user,
+        status='active'
+    ).order_by('-created_at')
+    
+    # 支持按状态筛选
+    plan_status = request.query_params.get('status')
+    if plan_status:
+        plans = plans.filter(status=plan_status)
+    
+    serializer = MedicationPlanSerializer(plans, many=True)
+    return Response({
+        'plans': serializer.data,
+        'total': plans.count()
+    })
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
 def medication_list(request):
     """
     获取药品列表

@@ -14,8 +14,8 @@ i18n
       zh: { translation: zh },
       en: { translation: en }
     },
-    lng: 'zh', // 默认使用中文
-    fallbackLng: 'en', // 回退语言
+    lng: 'en', // 默认使用中文
+    fallbackLng: 'zh', // 回退语言
     debug: false, // 关闭调试
     
     interpolation: {
