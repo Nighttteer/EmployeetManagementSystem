@@ -4,12 +4,13 @@ import { Text } from 'react-native-paper';
 import Svg, { Rect, Text as SvgText, Line } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 
-// 工具函数：验证数字是否有效
+// Utility function: Validate if number is valid
+// Chart rendering error: When invalid data is passed, the chart may not display properly or crash
 const isValidNumber = (num) => {
   return typeof num === 'number' && !isNaN(num) && isFinite(num);
 };
 
-// 工具函数：安全获取数字值
+// Utility function: Safely get numeric value
 const safeNumber = (value, defaultValue = 0) => {
   const num = parseFloat(value);
   return isValidNumber(num) ? num : defaultValue;
@@ -26,17 +27,17 @@ const BarChart = ({
   yAxisLabel = '',
   xAxisLabel = '',
   onPress = null,
-  // 新增：长数据时横向滚动与标签截断控制
+  // New: Horizontal scroll and label truncation control for long data
   enableHorizontalScroll = true,
   barUnitWidth = 70,
   maxLabelLength = 8
 }) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation();//// Get translation functions, subscribe to language changes 准备好
   const screenWidth = width || Dimensions.get('window').width - 40;
-  const padding = 70; // 增加padding为Y轴标签留出空间
-  const bottomPadding = 48; // 为X轴标签留出更多空间
+  const padding = 70; // Increase padding to make room for Y-axis labels
+  const bottomPadding = 48; // Make more room for X-axis labels
 
-  // 数据验证和清理
+  // Data validation and cleanup
   if (!data || data.length === 0) {
     return (
       <View style={{ width: screenWidth, height, justifyContent: 'center', alignItems: 'center' }}>
@@ -45,7 +46,7 @@ const BarChart = ({
     );
   }
 
-  // 过滤和验证数据
+  // Filter and validate data
   const validData = data
     .filter(item => item && typeof item === 'object')
     .map(item => ({
@@ -62,12 +63,12 @@ const BarChart = ({
     );
   }
 
-  // 计算数据范围
+  // Calculate data range
   const values = validData.map(item => item.value);
-  const maxValue = Math.max(...values, 1); // 确保至少为1，避免除零
+  const maxValue = Math.max(...values, 1); // Ensure at least 1 to avoid division by zero
   const minValue = Math.min(...values, 0);
   
-  // 验证最大值和最小值
+  // Validate maximum and minimum values
   if (!isValidNumber(maxValue) || !isValidNumber(minValue)) {
     return (
       <View style={{ width: screenWidth, height, justifyContent: 'center', alignItems: 'center' }}>
@@ -76,26 +77,26 @@ const BarChart = ({
     );
   }
 
-  // 根据数据量动态计算内容宽度（允许横向滚动）
+  // Dynamically calculate content width based on data amount (allow horizontal scrolling)
   const desiredContentWidth = padding * 2 + Math.max(barUnitWidth, 50) * validData.length;
   const contentWidth = enableHorizontalScroll ? Math.max(screenWidth, desiredContentWidth) : screenWidth;
   const chartWidth = contentWidth - padding * 2;
   const chartHeight = height - padding - bottomPadding;
 
-  // 固定每组宽度，保证可读性
+  // Fixed width for each group to ensure readability
   const barWidth = Math.min(32, Math.max(14, barUnitWidth * 0.6));
   const barSpacing = Math.max(8, barUnitWidth - barWidth);
 
-  // 验证图表尺寸
+  // Validate chart dimensions
   if (!isValidNumber(barWidth) || !isValidNumber(barSpacing) || barWidth <= 0) {
     return (
       <View style={{ width: screenWidth, height, justifyContent: 'center', alignItems: 'center' }}>
-        <Text>图表尺寸无效</Text>
+        <Text>Invalid chart dimensions</Text>
       </View>
     );
   }
 
-  // 网格线
+  // Grid lines
   const gridLines = [];
   const gridSteps = 5;
   if (showGrid) {
@@ -117,10 +118,10 @@ const BarChart = ({
 
   const ChartSvg = (
     <Svg width={contentWidth} height={height}>
-      {/* 网格线 */}
+      {/* Grid lines */}
       {gridLines}
       
-      {/* Y轴标签 */}
+      {/* Y-axis labels */}
       {[...Array(gridSteps + 1)].map((_, i) => {
         const value = maxValue - (i / gridSteps) * maxValue;
         const y = padding + (i / gridSteps) * chartHeight;
@@ -138,13 +139,13 @@ const BarChart = ({
         );
       })}
       
-      {/* 柱状图 */}
+      {/* Bar chart */}
       {validData.map((item, index) => {
-        const barHeight = Math.max((item.value / maxValue) * chartHeight, 2); // 确保至少有2px高度
+        const barHeight = Math.max((item.value / maxValue) * chartHeight, 2); // Ensure at least 2px height
         const x = padding + index * (barWidth + barSpacing) + barSpacing / 2;
         const y = padding + chartHeight - barHeight;
         
-        // 验证坐标值
+        // Validate coordinate values
         if (!isValidNumber(x) || !isValidNumber(y) || !isValidNumber(barHeight)) {
           console.warn('Invalid coordinates for bar chart:', { x, y, barHeight, item });
           return null;
@@ -165,7 +166,7 @@ const BarChart = ({
               strokeWidth="1"
             />
             
-            {/* 数值标签 */}
+            {/* Value labels */}
             {showValues && (
               <SvgText
                 x={(x + barWidth / 2).toFixed(2)}
@@ -179,7 +180,7 @@ const BarChart = ({
               </SvgText>
             )}
             
-            {/* X轴标签（截断以避免重叠） */}
+            {/* X-axis labels (truncated to avoid overlap) */}
             <SvgText
               x={(x + barWidth / 2).toFixed(2)}
               y={(padding + chartHeight + 20).toFixed(2)}
@@ -216,7 +217,7 @@ const BarChart = ({
         ChartSvg
       )}
       
-      {/* 轴标签 */}
+      {/* Axis labels */}
       {yAxisLabel && (
         <Text style={{ 
           position: 'absolute', 
@@ -242,7 +243,7 @@ const BarChart = ({
         </Text>
       )}
       
-      {/* 可点击的数据列表 */}
+      {/* Clickable data list */}
       {onPress && (
         <View style={{ marginTop: 15, paddingHorizontal: 20 }}>
           {validData.map((item, index) => (

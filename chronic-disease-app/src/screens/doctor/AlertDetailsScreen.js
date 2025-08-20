@@ -5,7 +5,7 @@ import { Text } from 'react-native-paper';
 const AlertDetailsScreen = () => {
   return (
     <View style={styles.container}>
-      <Text>告警详情功能开发中...</Text>
+      <Text>Alarm details function under development...</Text>
     </View>
   );
 };

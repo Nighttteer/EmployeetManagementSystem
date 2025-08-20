@@ -1,11 +1,11 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
-// 导入语言资源
+// Import language resources
 import zh from '../locales/zh.json';
 import en from '../locales/en.json';
 
-// 初始化i18n
+// Initialize i18n
 i18n
   .use(initReactI18next)
   .init({
@@ -14,49 +14,49 @@ i18n
       zh: { translation: zh },
       en: { translation: en }
     },
-    lng: 'en', // 默认使用中文
-    fallbackLng: 'zh', // 回退语言
-    debug: false, // 关闭调试
+    lng: 'en', // Default language
+    fallbackLng: 'zh', // Fallback language
+    debug: false, // Disable debug
     
     interpolation: {
-      escapeValue: false, // React已经处理了XSS防护
+      escapeValue: false, // React already handles XSS protection
     },
     
-    // React相关配置
+    // React configuration
     react: {
-      useSuspense: false, // React Native中禁用Suspense
+      useSuspense: false, // Disable Suspense in React Native
     },
     
-    // 简化缺失键的处理
+    // Simplified missing key handling
     missingKeyHandler: (lng, ns, key, res) => {
-      // 静默处理，不输出日志
+      // Silent handling, no logging
       return key;
     },
     
-    // 快速初始化
+    // Fast initialization
     initImmediate: true,
     
-    // 移除复杂的回调
+    // Remove complex callbacks
     loaded: (loaded) => {
-      console.log('✅ 国际化资源加载完成');
+      console.log('✅ Internationalization resources loaded');
     }
   });
 
-// 简化的语言切换函数
+// Simplified language switching function
 export const changeLanguage = async (language) => {
   try {
     await i18n.changeLanguage(language);
     return true;
   } catch (error) {
-    console.error('语言切换失败:', error);
+    console.error('Language switching failed:', error);
     return false;
   }
 };
 
-// 获取当前语言
+// Get current language
 export const getCurrentLanguage = () => i18n.language;
 
-// 获取支持的语言列表
+// Get supported languages list
 export const getSupportedLanguages = () => ({
   zh: { name: '中文', nativeName: '中文' },
   en: { name: 'English', nativeName: 'English' }
