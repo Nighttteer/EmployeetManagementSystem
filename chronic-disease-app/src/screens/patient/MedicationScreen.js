@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
   Alert,
-  RefreshControl,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import {
@@ -25,17 +24,121 @@ import { useSelector, useDispatch } from 'react-redux';
 import * as Notifications from 'expo-notifications';
 import i18n from 'i18next';
 import { userAPI, medicationAPI } from '../../services/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+
 
 const MedicationScreen = ({ navigation }) => {
   const { t, ready, i18n } = useTranslation();
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
   const currentLanguage = useSelector((state) => state.language.currentLanguage);
-  const [refreshing, setRefreshing] = useState(false);
+
   const [i18nReady, setI18nReady] = useState(false);
   
+  // 本地存储键名
+  const STORAGE_KEYS = {
+    MEDICATION_DATA: `medication_data_${user?.id || 'guest'}`,
+    LAST_SYNC_TIME: `last_sync_time_${user?.id || 'guest'}`
+  };
+  
+  // 本地存储相关函数
+  const saveMedicationDataToStorage = useCallback(async (data) => {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.MEDICATION_DATA, JSON.stringify(data));
+      await AsyncStorage.setItem(STORAGE_KEYS.LAST_SYNC_TIME, new Date().toISOString());
+      console.log('💾 用药数据已保存到本地存储');
+    } catch (error) {
+      console.error('❌ 保存到本地存储失败:', error);
+    }
+  }, [STORAGE_KEYS.MEDICATION_DATA, STORAGE_KEYS.LAST_SYNC_TIME]);
+  
+  const loadMedicationDataFromStorage = useCallback(async () => {
+    try {
+      const storedData = await AsyncStorage.getItem(STORAGE_KEYS.MEDICATION_DATA);
+      const lastSyncTime = await AsyncStorage.getItem(STORAGE_KEYS.LAST_SYNC_TIME);
+      
+      if (storedData && lastSyncTime) {
+        const parsedData = JSON.parse(storedData);
+        const lastSync = new Date(lastSyncTime);
+        const now = new Date();
+        const hoursSinceSync = (now - lastSync) / (1000 * 60 * 60);
+        
+        // 如果数据超过24小时，认为过期
+        if (hoursSinceSync < 24) {
+          console.log('📱 从本地存储加载用药数据');
+          return parsedData;
+        } else {
+          console.log('⏰ 本地数据已过期，需要重新加载');
+        }
+      }
+      return null;
+    } catch (error) {
+      console.error('❌ 从本地存储加载失败:', error);
+      return null;
+    }
+  }, [STORAGE_KEYS.MEDICATION_DATA, STORAGE_KEYS.LAST_SYNC_TIME]);
+  
+  const clearLocalMedicationData = useCallback(async () => {
+    try {
+      await AsyncStorage.removeItem(STORAGE_KEYS.MEDICATION_DATA);
+      await AsyncStorage.removeItem(STORAGE_KEYS.LAST_SYNC_TIME);
+      console.log('🗑️ 本地用药数据已清除');
+    } catch (error) {
+      console.error('❌ 清除本地数据失败:', error);
+    }
+  }, [STORAGE_KEYS.MEDICATION_DATA, STORAGE_KEYS.LAST_SYNC_TIME]);
 
+  // 合并服务器数据和本地数据，优先保留本地记录
+  const mergeServerAndLocalData = useCallback((serverData, localData) => {
+    if (!localData || !localData.medicationPlans) return serverData;
+    
+    return {
+      ...serverData,
+      medicationPlans: serverData.medicationPlans.map(serverPlan => {
+        // 查找对应的本地计划
+        const localPlan = localData.medicationPlans.find(local => local.id === serverPlan.id);
+        
+        if (localPlan) {
+          // 如果存在本地计划，合并数据，优先保留本地记录
+          return {
+            ...serverPlan,
+            // 保留本地的用药记录
+            last_taken: localPlan.last_taken || serverPlan.last_taken,
+            last_skipped: localPlan.last_skipped || serverPlan.last_skipped,
+            taken_count_today: localPlan.taken_count_today || serverPlan.taken_count_today || 0,
+            skipped_count_today: localPlan.skipped_count_today || serverPlan.skipped_count_today || 0,
+            current_time_slot: localPlan.current_time_slot || serverPlan.current_time_slot,
+            // 保留同步状态
+            synced_to_server: localPlan.synced_to_server !== undefined ? localPlan.synced_to_server : true,
+            skip_synced_to_server: localPlan.skip_synced_to_server !== undefined ? localPlan.skip_synced_to_server : true,
+            compliance_synced_to_server: localPlan.compliance_synced_to_server !== undefined ? localPlan.compliance_synced_to_server : true,
+            compliance_updated: localPlan.compliance_updated || false
+          };
+        } else {
+          // 如果是新的计划，使用服务器数据
+          return {
+            ...serverPlan,
+            synced_to_server: true,
+            skip_synced_to_server: true,
+            compliance_synced_to_server: true,
+            compliance_updated: false
+          };
+        }
+      })
+    };
+  }, []);
 
+  // 格式化时间显示
+  const formatTime = useCallback((timeStr) => {
+    if (!timeStr) return '';
+    try {
+      const [hour, minute] = timeStr.split(':').map(Number);
+      return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+    } catch (error) {
+      return timeStr;
+    }
+  }, []);
 
   const getMedicationData = async () => {
     try {
@@ -255,8 +358,35 @@ const MedicationScreen = ({ navigation }) => {
   const loadMedicationData = async () => {
     try {
       console.log('🔄 开始加载用药数据...');
+      
+      // 首先尝试从本地存储加载
+      const localData = await loadMedicationDataFromStorage();
+      if (localData) {
+        console.log('📱 使用本地存储的用药数据');
+        setMedicationData(localData);
+        
+        // 在后台同步服务器数据
+        setTimeout(async () => {
+          try {
+            const serverData = await getMedicationData();
+            // 合并服务器数据和本地数据，优先保留本地记录
+            const mergedData = mergeServerAndLocalData(serverData, localData);
+            setMedicationData(mergedData);
+            await saveMedicationDataToStorage(mergedData);
+            console.log('🔄 后台同步完成');
+          } catch (error) {
+            console.log('⚠️ 后台同步失败，保持本地数据:', error);
+          }
+        }, 1000);
+        
+        return;
+      }
+      
+      // 如果没有本地数据，从服务器加载
+      console.log('🌐 从服务器加载用药数据');
       const data = await getMedicationData();
       setMedicationData(data);
+      await saveMedicationDataToStorage(data);
       console.log('✅ 用药数据加载完成:', data.todayMedications.length, '个今日用药');
       console.log('📊 用药计划数量:', data.medicationPlans.length);
       console.log('📚 用药历史数量:', data.medicationHistory.length);
@@ -469,7 +599,7 @@ const MedicationScreen = ({ navigation }) => {
     medicationPlans: [],
     medicationHistory: []
   });
-  const [forceUpdate, setForceUpdate] = useState(0);
+  // 移除 forceUpdate，使用更智能的状态管理
 
   // 监听语言变化
   useEffect(() => {
@@ -479,6 +609,14 @@ const MedicationScreen = ({ navigation }) => {
     }
   }, [ready, i18n.isInitialized, i18n.language]);
 
+  // 初始化加载用药数据
+  useEffect(() => {
+    if (i18nReady && user) {
+      console.log('🚀 开始初始化加载用药数据');
+      loadMedicationData();
+    }
+  }, [i18nReady, user]);
+
   // 监听Redux语言状态变化
   useEffect(() => {
     if (currentLanguage && i18n.language !== currentLanguage) {
@@ -487,87 +625,194 @@ const MedicationScreen = ({ navigation }) => {
     }
   }, [currentLanguage, i18n]);
 
-  // 等待国际化系统准备就绪
+  // 设置智能定时器，定期检查用药时间
   useEffect(() => {
-    if (ready && t && typeof t === 'function') {
-      console.log('🌍 国际化系统已准备就绪');
-      console.log('🌍 当前语言:', i18n.language);
-      console.log('🌍 测试翻译:', t('common.medicationReminder'));
-      console.log('👤 当前用户信息:', user);
-      setI18nReady(true);
-      loadMedicationData();
-      // 移除这里的 setupMedicationReminders() 调用，等数据加载完成后再调用
-    } else {
-      console.log('❌ 国际化系统未准备就绪');
-      setI18nReady(false);
-    }
-  }, [ready, t, user]);
-
-  // 检查并重置每日计数器，同时更新时间点
-  useEffect(() => {
-    const checkAndResetDailyCounters = () => {
-      const today = new Date().toISOString().split('T')[0];
-      
-      setMedicationData(prev => ({
-        ...prev,
-        medicationPlans: prev.medicationPlans.map(plan => {
-          // 如果最后服用时间或跳过时间不是今天，重置计数器
-          const lastTakenDate = plan.last_taken ? new Date(plan.last_taken).toISOString().split('T')[0] : null;
-          const lastSkippedDate = plan.last_skipped ? new Date(plan.last_skipped).toISOString().split('T')[0] : null;
-          
-          if ((lastTakenDate && lastTakenDate !== today) || (lastSkippedDate && lastSkippedDate !== today)) {
-            console.log(`🔄 重置 ${plan.medication?.name || '药物'} 的每日计数器`);
-            return { 
-              ...plan, 
-              taken_count_today: 0,
-              skipped_count_today: 0,
-              current_time_slot: getCurrentTimeSlot(plan) // 重新计算当前时间点
-            };
-          } else {
-            // 即使不是跨日，也要更新时间点和检查自动跳过
-            const planWithAutoSkip = checkAndAutoSkip(plan);
-            return {
-              ...planWithAutoSkip,
-              current_time_slot: getCurrentTimeSlot(planWithAutoSkip)
-            };
-          }
-        }),
-      }));
-    };
-
     // 页面加载时检查
     checkAndResetDailyCounters();
     
-    // 设置定时器，每5分钟检查一次时间点
-    const interval = setInterval(checkAndResetDailyCounters, 5 * 60 * 1000);
+    // 设置定时器，每5分钟检查一次用药时间
+    const interval = setInterval(() => {
+      const now = new Date();
+      const currentHour = now.getHours();
+      const currentMinute = now.getMinutes();
+      
+      // 检查是否到了用药时间（前后15分钟）
+      const shouldUpdate = medicationData.medicationPlans?.some(plan => {
+        if (!plan.time_of_day || plan.status !== 'active') return false;
+        
+        const times = Array.isArray(plan.time_of_day) ? plan.time_of_day : [plan.time_of_day];
+        return times.some(timeStr => {
+          if (!timeStr) return false;
+          const [hour, minute] = timeStr.split(':').map(Number);
+          const timeDiff = Math.abs((currentHour * 60 + currentMinute) - (hour * 60 + minute));
+          return timeDiff <= 15; // 前后15分钟内需要更新
+        });
+      });
+      
+      if (shouldUpdate) {
+        console.log('⏰ 检测到用药时间，自动更新界面');
+        checkAndResetDailyCounters();
+      }
+    }, 5 * 60 * 1000); // 每5分钟检查一次
     
     return () => clearInterval(interval);
+  }, []); // 空依赖数组，只在组件挂载时执行一次
+  
+  // 每日自动重置计数器
+  const checkAndResetDailyCounters = useCallback(() => {
+    const today = new Date().toISOString().split('T')[0];
+    
+    setMedicationData(prev => {
+      let hasChanges = false;
+      const updatedPlans = prev.medicationPlans.map(plan => {
+        const lastTakenDate = plan.last_taken ? new Date(plan.last_taken).toISOString().split('T')[0] : null;
+        const lastSkippedDate = plan.last_skipped ? new Date(plan.last_skipped).toISOString().split('T')[0] : null;
+        
+        // 检查是否需要重置每日计数器
+        if ((lastTakenDate && lastTakenDate !== today) || (lastSkippedDate && lastSkippedDate !== today)) {
+          console.log(`🔄 重置 ${plan.medication?.name || '药物'} 的每日计数器`);
+          hasChanges = true;
+          return { 
+            ...plan, 
+            taken_count_today: 0,
+            skipped_count_today: 0,
+            current_time_slot: getCurrentTimeSlot(plan) // 重新计算当前时间点
+          };
+        } else {
+          // 检查是否需要自动跳过过期时间
+          const planWithAutoSkip = checkAndAutoSkip(plan);
+          const newTimeSlot = getCurrentTimeSlot(planWithAutoSkip);
+          
+          if (planWithAutoSkip.current_time_slot !== newTimeSlot) {
+            hasChanges = true;
+            return {
+              ...planWithAutoSkip,
+              current_time_slot: newTimeSlot
+            };
+          }
+          return planWithAutoSkip;
+        }
+      });
+      
+      if (hasChanges) {
+        console.log('🔄 检测到用药计划变化，更新状态');
+        const updatedData = {
+          ...prev,
+          medicationPlans: updatedPlans
+        };
+        // 异步保存到本地存储，避免阻塞状态更新
+        setTimeout(() => {
+          saveMedicationDataToStorage(updatedData);
+        }, 0);
+        return updatedData;
+      } else {
+        console.log('✅ 用药计划无变化，保持原状态');
+        return prev;
+      }
+    });
+  }, [saveMedicationDataToStorage]);
+  
+  // 检查并自动跳过过期时间
+  const checkAndAutoSkip = useCallback((plan) => {
+    if (!plan.time_of_day || plan.status !== 'active') return plan;
+    
+    const times = Array.isArray(plan.time_of_day) ? plan.time_of_day : [plan.time_of_day];
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentTime = currentHour * 60 + currentMinute;
+    
+    // 找到下一个应该服药的时间
+    let nextTimeSlot = null;
+    for (let i = 0; i < times.length; i++) {
+      const timeStr = times[i];
+      if (!timeStr) continue;
+      
+      const [hour, minute] = timeStr.split(':').map(Number);
+      const timeInMinutes = hour * 60 + minute;
+      
+      if (timeInMinutes > currentTime) {
+        nextTimeSlot = { index: i, time: timeStr };
+        break;
+      }
+    }
+    
+    // 如果没有找到下一个时间，说明今天的所有时间都已过
+    if (!nextTimeSlot) {
+      nextTimeSlot = { index: 0, time: times[0] };
+    }
+    
+    return {
+      ...plan,
+      current_time_slot: nextTimeSlot
+    };
+  }, []);
+  
+  // 获取当前时间点
+  const getCurrentTimeSlot = useCallback((plan) => {
+    if (!plan.time_of_day || plan.status !== 'active') return null;
+    
+    const times = Array.isArray(plan.time_of_day) ? plan.time_of_day : [plan.time_of_day];
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentTime = currentHour * 60 + currentMinute;
+    
+    // 找到当前应该服药的时间
+    for (let i = 0; i < times.length; i++) {
+      const timeStr = times[i];
+      if (!timeStr) continue;
+      
+      const [hour, minute] = timeStr.split(':').map(Number);
+      const timeInMinutes = hour * 60 + minute;
+      
+      // 如果当前时间在服药时间前后15分钟内，认为是当前时间点
+      if (Math.abs(currentTime - timeInMinutes) <= 15) {
+        return { index: i, time: timeStr };
+      }
+    }
+    
+    // 如果没有找到当前时间点，返回下一个时间点
+    for (let i = 0; i < times.length; i++) {
+      const timeStr = times[i];
+      if (!timeStr) continue;
+      
+      const [hour, minute] = timeStr.split(':').map(Number);
+      const timeInMinutes = hour * 60 + minute;
+      
+      if (timeInMinutes > currentTime) {
+        return { index: i, time: timeStr };
+      }
+    }
+    
+    // 如果所有时间都已过，返回第一个时间点
+    return times[0] ? { index: 0, time: times[0] } : null;
+  }, []);
+  
+  // 获取下一个时间点
+  const getNextTimeSlot = useCallback((plan, currentSlot) => {
+    if (!plan.time_of_day || !currentSlot) return null;
+    
+    const times = Array.isArray(plan.time_of_day) ? plan.time_of_day : [plan.time_of_day];
+    const nextIndex = (currentSlot.index + 1) % times.length;
+    
+    if (nextIndex === 0) {
+      // 如果回到第一个时间点，说明今天完成
+      return { index: nextIndex, time: times[nextIndex], completed: true };
+    }
+    
+    return { index: nextIndex, time: times[nextIndex] };
   }, []);
 
-  // 等待国际化系统准备就绪
-  if (!i18nReady) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text>正在加载国际化资源...</Text>
-      </View>
-    );
-  }
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadMedicationData();
-    setRefreshing(false);
-  };
-
   // 标记药物已服用
-  const markAsTaken = async (medicationId, time = null) => {
+  const markAsTaken = useCallback(async (medicationId, time = null) => {
     try {
       console.log('💊 标记药物已服用:', medicationId, time ? `时间: ${time}` : '');
       
-                  // 更新本地状态 - 同时更新用药计划和今日用药
+      // 更新本地状态 - 同时更新用药计划和今日用药
       setMedicationData(prev => {
         const updatedData = {
-      ...prev,
+          ...prev,
           medicationPlans: prev.medicationPlans.map(plan => {
             if (plan.id === medicationId) {
               // 检查今天是否已经服用过
@@ -611,7 +856,8 @@ const MedicationScreen = ({ navigation }) => {
                 taken_count_today: takenCountToday, // 记录今天服用次数
                 skipped_count_today: plan.skipped_count_today || 0, // 保持跳过次数
                 current_time_slot: nextTimeSlot, // 跳转到下一个时间点
-                compliance_updated: true // 标记需要更新依从性
+                compliance_updated: true, // 标记需要更新依从性
+                synced_to_server: false // 标记为未同步到服务器
               };
               
               console.log('📊 更新后的用药计划:', updatedPlan);
@@ -621,30 +867,27 @@ const MedicationScreen = ({ navigation }) => {
             }
             return plan;
           }),
-                            // 同时更新 todayMedications 中的时间显示
-                  todayMedications: prev.todayMedications.map(medication => {
-                    // 直接使用 ID 匹配
-                    if (medication.id === medicationId) {
-                      // 如果这个药物被服用了，更新时间显示
-                      const plan = prev.medicationPlans.find(p => p.id === medicationId);
-                      if (plan) {
-                        const nextTimeSlot = getNextTimeSlot(plan, getCurrentTimeSlot(plan));
-                        return {
-                          ...medication,
-                          time: nextTimeSlot?.time || medication.time
-                        };
-                      }
-                    }
-                    return medication;
-                  })
+          // 同时更新 todayMedications 中的时间显示
+          todayMedications: prev.todayMedications.map(medication => {
+            // 直接使用 ID 匹配
+            if (medication.id === medicationId) {
+              // 如果这个药物被服用了，更新时间显示
+              const plan = prev.medicationPlans.find(p => p.id === medicationId);
+              if (plan) {
+                const nextTimeSlot = getNextTimeSlot(plan, getCurrentTimeSlot(plan));
+                return {
+                  ...medication,
+                  time: nextTimeSlot?.time || medication.time
+                };
+              }
+            }
+            return medication;
+          })
         };
         
         console.log('🔄 整个状态更新:', updatedData);
         
-        // 强制重新渲染
-        setTimeout(() => {
-          setForceUpdate(prev => prev + 1);
-        }, 100);
+        // 移除强制重新渲染，状态更新会自动触发重新渲染
         
         return updatedData;
       });
@@ -673,10 +916,10 @@ const MedicationScreen = ({ navigation }) => {
       console.error('❌ 标记药物已服用失败:', error);
       Alert.alert(t('common.error'), t('medication.operationFailed'));
     }
-  };
+  }, [medicationData.medicationPlans, saveMedicationDataToStorage]);
 
-    // 跳过药物
-  const skipMedication = (medicationId, time = null) => {
+  // 跳过药物
+  const skipMedication = useCallback((medicationId, time = null) => {
     Alert.alert(
       t('medication.skipMedication'),
       t('medication.confirmSkipMedication'),
@@ -688,10 +931,10 @@ const MedicationScreen = ({ navigation }) => {
             try {
               console.log('⏭️ 跳过药物:', medicationId, time ? `时间: ${time}` : '');
               
-                            // 更新本地状态 - 同时更新用药计划和今日用药
+              // 更新本地状态 - 同时更新用药计划和今日用药
               setMedicationData(prev => {
                 const updatedData = {
-              ...prev,
+                  ...prev,
                   medicationPlans: prev.medicationPlans.map(plan => {
                     if (plan.id === medicationId) {
                       // 检查今天是否已经跳过过
@@ -723,7 +966,8 @@ const MedicationScreen = ({ navigation }) => {
                         last_skipped: new Date().toISOString(), // 记录最后跳过时间
                         skipped_count_today: skippedCountToday, // 记录今天跳过次数
                         current_time_slot: nextTimeSlot, // 跳转到下一个时间点
-                        compliance_updated: true // 标记需要更新依从性
+                        compliance_updated: true, // 标记需要更新依从性
+                        skip_synced_to_server: false // 标记为未同步到服务器
                       };
                     }
                     return plan;
@@ -748,10 +992,7 @@ const MedicationScreen = ({ navigation }) => {
                 
                 console.log('🔄 整个状态更新 (跳过):', updatedData);
                 
-                // 强制重新渲染
-                setTimeout(() => {
-                  setForceUpdate(prev => prev + 1);
-                }, 100);
+                // 移除强制重新渲染，状态更新会自动触发重新渲染
                 
                 return updatedData;
               });
@@ -771,28 +1012,28 @@ const MedicationScreen = ({ navigation }) => {
         },
       ]
     );
-  };
+  }, [medicationData.medicationPlans, saveMedicationDataToStorage]);
 
-  const getStatusColor = (status) => {
+  const getStatusColor = useCallback((status) => {
     switch (status) {
       case 'taken': return '#4CAF50';
       case 'pending': return '#FF9800';
       case 'skipped': return '#F44336';
       default: return '#9E9E9E';
     }
-  };
+  }, []);
 
-  const getStatusText = (status) => {
+  const getStatusText = useCallback((status) => {
     switch (status) {
       case 'taken': return t('medication.taken');
       case 'pending': return t('common.pending');
       case 'skipped': return t('common.skipped');
       default: return t('common.unknown');
     }
-  };
+  }, [t]);
 
   // 渲染单次用药的操作按钮
-  const renderSingleMedicationButtons = (medication) => {
+  const renderSingleMedicationButtons = useCallback((medication) => {
     // 查找对应的用药计划
     const plan = medicationData.medicationPlans.find(p => p.id === medication.id);
     
@@ -835,7 +1076,7 @@ const MedicationScreen = ({ navigation }) => {
             textStyle={styles.statusChipText}
             icon="check-circle"
           >
-                                    {t('medication.todayPlanCompleted')}
+            {t('medication.todayPlanCompleted')}
           </Chip>
         </View>
       );
@@ -862,182 +1103,16 @@ const MedicationScreen = ({ navigation }) => {
         </Button>
       </View>
     );
-  };
+  }, [medicationData.medicationPlans, markAsTaken, skipMedication, t]);
 
-  // 检查是否需要自动跳过超时的时间点
-  const checkAndAutoSkip = (plan) => {
-    try {
-      const timeArray = Array.isArray(plan.time_of_day) ? plan.time_of_day : [plan.time_of_day];
-      if (timeArray.length === 0) return plan;
-      
-      const now = new Date();
-      const currentHour = now.getHours();
-      const currentMinute = now.getMinutes();
-      const currentTime = currentHour * 60 + currentMinute;
-      
-      let hasChanges = false;
-      let updatedPlan = { ...plan };
-      
-      // 检查每个时间点是否超时
-      for (let i = 0; i < timeArray.length; i++) {
-        const timeStr = timeArray[i];
-        const [hours, minutes] = timeStr.split(':').map(Number);
-        const doseTime = hours * 60 + minutes;
-        
-        // 如果超过20分钟没有处理，自动标记为跳过
-        if (currentTime > doseTime + 20) {
-          // 检查这个时间点是否已经处理过
-          const timeSlotKey = `time_slot_${i}`;
-          if (!updatedPlan[timeSlotKey] || updatedPlan[timeSlotKey].status === 'pending') {
-            console.log(`⏰ 自动跳过超时时间点: ${timeStr} (${plan.medication?.name || '药物'})`);
-            
-            // 自动增加跳过计数（避免重复计数）
-            if (!updatedPlan[timeSlotKey] || updatedPlan[timeSlotKey].status !== 'skipped') {
-              updatedPlan.skipped_count_today = (updatedPlan.skipped_count_today || 0) + 1;
-            }
-            
-            updatedPlan[timeSlotKey] = {
-              time: timeStr,
-              status: 'skipped',
-              skipped_at: new Date().toISOString()
-            };
-            
-            // 自动跳过后，跳转到下一个时间点
-            const nextTimeSlot = getNextTimeSlot(updatedPlan, {
-              time: timeStr,
-              index: i,
-              isOverdue: true,
-              isCurrent: false
-            });
-            updatedPlan.current_time_slot = nextTimeSlot;
-            
-            hasChanges = true;
-          }
-        }
-      }
-      
-      return hasChanges ? updatedPlan : plan;
-    } catch (error) {
-      console.error('自动跳过检查失败:', error);
-      return plan;
-    }
-  };
-
-  // 获取下一个时间点
-  const getNextTimeSlot = (plan, currentTimeSlot) => {
-    try {
-      const timeArray = Array.isArray(plan.time_of_day) ? plan.time_of_day : [plan.time_of_day];
-      if (timeArray.length === 0) return null;
-      
-      console.log('🔍 getNextTimeSlot 输入:', { 
-        planName: plan.medication?.name, 
-        currentTimeSlot, 
-        timeArray 
-      });
-      
-      // 如果没有当前时间点，返回第一个
-      if (!currentTimeSlot || currentTimeSlot.index === undefined) {
-        const firstSlot = {
-          time: timeArray[0],
-          index: 0,
-          isOverdue: false,
-          isCurrent: true
-        };
-        console.log('🔍 返回第一个时间点:', firstSlot);
-        return firstSlot;
-      }
-      
-      const nextIndex = currentTimeSlot.index + 1;
-      console.log('🔍 下一个索引:', nextIndex, '总长度:', timeArray.length);
-      
-      // 如果还有下一个时间点
-      if (nextIndex < timeArray.length) {
-        const nextSlot = {
-          time: timeArray[nextIndex],
-          index: nextIndex,
-          isOverdue: false,
-          isCurrent: true
-        };
-        console.log('🔍 返回下一个时间点:', nextSlot);
-        return nextSlot;
-      } else {
-        // 如果已经是最后一个时间点，返回null表示完成
-        console.log('🔍 所有时间点已完成，返回null');
-        return null;
-      }
-    } catch (error) {
-      console.error('获取下一个时间点失败:', error);
-      return null;
-    }
-  };
-
-  // 获取当前应该处理的时间点
-  const getCurrentTimeSlot = (plan) => {
-    try {
-      const timeArray = Array.isArray(plan.time_of_day) ? plan.time_of_day : [plan.time_of_day];
-      if (timeArray.length === 0) return null;
-      
-      // 如果计划中已经有当前时间点，使用它
-      if (plan.current_time_slot) {
-        console.log('🔍 使用计划中已有的当前时间点:', plan.current_time_slot);
-        return plan.current_time_slot;
-      }
-      
-      // 基于当前时间计算
-      const now = new Date();
-      const currentHour = now.getHours();
-      const currentMinute = now.getMinutes();
-      const currentTime = currentHour * 60 + currentMinute;
-      
-      console.log('🔍 当前时间:', currentHour + ':' + currentMinute, '转换为分钟:', currentTime);
-      
-      // 找到当前应该处理的时间点
-      for (let i = 0; i < timeArray.length; i++) {
-        const timeStr = timeArray[i];
-        const [hours, minutes] = timeStr.split(':').map(Number);
-        const doseTime = hours * 60 + minutes;
-        
-        console.log('🔍 检查时间点:', timeStr, '转换为分钟:', doseTime);
-        
-        // 如果当前时间还没到这个时间点，返回这个时间点
-        if (currentTime < doseTime) {
-          const timeSlot = {
-            time: timeStr,
-            index: i,
-            isOverdue: false,
-            isCurrent: false
-          };
-          console.log('🔍 返回下一个时间点:', timeSlot);
-          return timeSlot;
-        }
-        
-        // 如果当前时间刚过这个时间点（30分钟内），返回这个时间点
-        if (currentTime >= doseTime && currentTime <= doseTime + 30) {
-          const timeSlot = {
-            time: timeStr,
-            index: i,
-            isOverdue: currentTime > doseTime,
-            isCurrent: true
-          };
-          console.log('🔍 返回当前时间点:', timeSlot);
-          return timeSlot;
-        }
-      }
-      
-      // 如果所有时间点都过了，返回最后一个时间点（表示今天已完成）
-      const lastSlot = {
-        time: timeArray[timeArray.length - 1],
-        index: timeArray.length - 1,
-        isOverdue: true,
-        isCurrent: false
-      };
-      console.log('🔍 所有时间点已过，返回最后一个:', lastSlot);
-      return lastSlot;
-    } catch (error) {
-      console.error('获取当前时间点失败:', error);
-      return null;
-    }
-  };
+  // 等待国际化系统准备就绪
+  if (!i18nReady) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text>正在加载国际化资源...</Text>
+      </View>
+    );
+  }
 
   // 检查今天的用药计划状态
   const getTodayPlanStatus = (plan) => {
@@ -1187,7 +1262,7 @@ const MedicationScreen = ({ navigation }) => {
         
         {medicationData.medicationPlans.length > 0 ? (
           medicationData.todayMedications.map((medication) => (
-          <View key={`${medication.id}-${forceUpdate}`} style={styles.medicationItem}>
+                      <View key={`medication-${medication.id}`} style={styles.medicationItem}>
             <View style={styles.medicationInfo}>
               <View style={styles.medicationHeader}>
                 <Text variant="titleMedium" style={styles.medicationName}>
@@ -1339,8 +1414,7 @@ const MedicationScreen = ({ navigation }) => {
         
         {medicationData.medicationPlans.length > 0 ? (
           medicationData.medicationPlans.map((plan) => (
-                        // 使用 forceUpdate 确保重新渲染
-            <View key={`${plan.id}-${forceUpdate}`} style={styles.planItem}>
+                        <View key={`plan-${plan.id}`} style={styles.planItem}>
             <View style={styles.planHeader}>
               <View style={styles.planInfo}>
                 <Text variant="titleMedium" style={styles.planName}>
@@ -1422,9 +1496,6 @@ const MedicationScreen = ({ navigation }) => {
     <SafeAreaView style={styles.container}>
       <ScrollView
         style={styles.scrollView}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
       >
         <View style={styles.header}>
           <Text variant="headlineLarge" style={styles.title}>

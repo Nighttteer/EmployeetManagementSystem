@@ -339,224 +339,56 @@ const AlertsScreen = ({ navigation }) => {
 
   // 系统定期分析患者数据生成的告警
   const [alertsData, setAlertsData] = useState({
-    doctorId: 1, // 当前登录医生ID
-    lastAnalysisTime: '2024-01-15T10:30:00Z', // 最后分析时间
-    analysisInterval: '每3天', // 分析频率
-    dataRange: '最近3天', // 分析数据范围
+    doctorId: null, // 当前登录医生ID
+    lastAnalysisTime: null, // 最后分析时间
+    analysisInterval: null, // 分析频率
+    dataRange: null, // 分析数据范围
     stats: {
-      total: 6,
-      pending: 3, 
-      handled: 1,
-      dismissed: 2,
-      critical: 1,
-      high: 2,
-      medium: 1,
-      low: 2
+      total: 0,
+      pending: 0, 
+      handled: 0,
+      dismissed: 0,
+      critical: 0,
+      high: 0,
+      medium: 0,
+      low: 0
     },
-    alerts: [
-      {
-        id: 1,
-        patientId: 1, // 李四
-        patientName: '李四',
-        patientAge: 65,
-        doctorId: 1,
-        assignedAt: '2023-12-01T00:00:00Z',
-        type: 'blood_pressure_anomaly', // 血压异常警报类型
-        title: 'blood_pressure_anomaly_alert', // 使用国际化键值
-        message: 'blood_pressure_anomaly_message', // 使用国际化键值
-        priority: 'critical',
-        status: 'pending',
-        createdAt: '2024-01-15T10:30:00Z',
-        // 系统分析的数据范围
-        analysisData: {
-          dataRange: '2024-01-12 至 2024-01-15',
-          analysisType: '3天数据趋势分析',
-          patientEntries: [
-            { date: '2024-01-13', value: '175/92', time: '08:30' },
-            { date: '2024-01-14', value: '178/94', time: '09:15' },
-            { date: '2024-01-15', value: '180/95', time: '10:25' }
-          ],
-          trend: '连续上升',
-          avgValue: '177.7/93.7'
-        },
-        relatedMetric: 'bloodPressure', // 添加相关指标
-        value: '160.0mmHg', // 修改为正确的值格式
-        threshold: '< 140/90 mmHg',
-        thresholdSetBy: '医生设定'
-      },
-      {
-        id: 2,
-        patientId: 2, // 王五
-        patientName: '王五',
-        patientAge: 58,
-        doctorId: 1,
-        assignedAt: '2023-11-15T00:00:00Z',
-        type: 'glucose_high', // 修改为新患者更可能的情况：血糖异常
-        title: 'glucose_high_alert', // 使用国际化键值
-        message: 'glucose_high_message', // 使用国际化键值
-        priority: 'medium',
-        status: 'pending',
-        createdAt: '2024-01-15T09:15:00Z',
-        // 系统分析的血糖数据
-        analysisData: {
-          dataRange: '2024-01-13 至 2024-01-15',
-          analysisType: t('alerts.analysisTypes.glucoseTrendAnalysis'),
-          patientEntries: [
-            { date: '2024-01-13', value: 8.5, type: t('alerts.measurementContexts.fasting') },
-            { date: '2024-01-14', value: 8.8, type: t('alerts.measurementContexts.postMeal2Hours') },
-            { date: '2024-01-15', value: 9.2, type: t('alerts.measurementContexts.fasting') }
-          ],
-          avgValue: 8.83,
-          trend: t('alerts.trends.continuousRise'),
-          exceedsTarget: true,
-          targetRange: '4.4-7.0'
-        },
-        relatedMetric: 'glucose', // 血糖相关指标
-        value: '9.2mmol/L',
-        targetRange: '4.4-7.0 mmol/L',
-        trendDirection: 'up'
-      },
-      {
-        id: 3,
-        patientId: 3, // 赵六
-        patientName: '赵六',
-        patientAge: 72,
-        doctorId: 1,
-        assignedAt: '2023-10-20T00:00:00Z',
-        type: 'glucose_high', // 修改类型以匹配国际化逻辑
-        title: 'glucose_high_alert', // 使用国际化键值
-        message: 'glucose_high_message', // 使用国际化键值
-        priority: 'low',
-        status: 'pending',
-        createdAt: '2024-01-14T16:45:00Z',
-        handledBy: null,
-        handledAt: null,
-        // 系统分析的血糖数据
-        analysisData: {
-          dataRange: '2024-01-12 至 2024-01-14',
-          analysisType: t('alerts.analysisTypes.glucoseTrendAnalysis'),
-          patientEntries: [
-            { date: '2024-01-12', value: 8.2, type: t('alerts.measurementContexts.postMeal2Hours') },
-            { date: '2024-01-13', value: 8.0, type: t('alerts.measurementContexts.fasting') },
-            { date: '2024-01-14', value: 7.8, type: t('alerts.measurementContexts.postMeal') }
-          ],
-          avgValue: 8.00,
-          trend: t('alerts.trends.continuousDecline'),
-          exceedsTarget: true,
-          targetRange: '4.4-7.0'
-        },
-        relatedMetric: 'glucose', // 使用英文键值
-        targetRange: '4.4-7.0 mmol/L',
-        trendDirection: 'up'
-      },
-      {
-        id: 4,
-        patientId: 4, // 张三
-        patientName: '张三',
-        patientAge: 60,
-        doctorId: 1,
-        assignedAt: '2023-09-05T00:00:00Z',
-        type: 'patient_inactivity',
-        title: 'patient_inactivity_alert', // 使用国际化键值
-        message: 'patient_inactivity_message', // 使用国际化键值
-        priority: 'low',
-        status: 'pending',
-        createdAt: '2024-01-14T14:20:00Z',
-        // 系统分析的活跃度数据
-        analysisData: {
-          dataRange: '2024-01-12 至 2024-01-14',
-          analysisType: t('alerts.analysisTypes.patientActivityAnalysis'),
-          expectedEntries: 9, // 3天预期记录数
-          actualEntries: 1, // 实际记录数
-          activityRate: '11.1%',
-          lastActive: '2024-01-11 22:30',
-          inactiveDays: 3
-        },
-        relatedMetric: 'activity', // 添加相关指标
-        expectedFrequency: t('alerts.systemTexts.dailyDataUpload'),
-        lastDataSync: '2024-01-11T22:30:00Z'
-      },
-      {
-        id: 5,
-        patientId: 1, // 李四
-        patientName: '李四',
-        patientAge: 65,
-        doctorId: 1,
-        assignedAt: '2023-12-01T00:00:00Z',
-        type: 'heart_rate_alert', // 修改类型以匹配国际化逻辑
-        title: 'heart_rate_alert', // 使用国际化键值
-        message: 'heart_rate_message', // 使用国际化键值
-        priority: 'high',
-        status: 'dismissed',
-        createdAt: '2024-01-13T11:30:00Z',
-        dismissedBy: t('alerts.systemTexts.currentDoctor'),
-        dismissedAt: '2024-01-13T12:00:00Z',
-        dismissReason: t('alerts.systemTexts.patientAppShowsExerciseState'),
-        // 系统分析的心率数据
-        analysisData: {
-          dataRange: '2024-01-11 至 2024-01-13',
-          analysisType: t('alerts.analysisTypes.heartRateAnomalyDetection'),
-          patientEntries: [
-            { date: '2024-01-11', value: 72, context: t('alerts.measurementContexts.resting') },
-            { date: '2024-01-12', value: 85, context: t('alerts.measurementContexts.postMeal') },
-            { date: '2024-01-13', value: 110, context: t('alerts.measurementContexts.postExercise') }
-          ],
-          contextAnalysis: t('alerts.systemTexts.heartRateNormalDuringExercise'),
-          riskLevel: t('alerts.systemTexts.lowRisk')
-        },
-        relatedMetric: 'heartRate', // 添加相关指标
-        value: '110bpm',
-        context: t('alerts.measurementContexts.postExercise'),
-        normalRange: '60-100 bpm'
-      },
-      {
-        id: 6,
-        patientId: 2, // 王五
-        patientName: '王五',
-        patientAge: 58,
-        doctorId: 1,
-        assignedAt: '2023-11-15T00:00:00Z',
-        type: 'blood_pressure_anomaly', // 修改为新患者更可能的情况：高血压趋势
-        title: 'blood_pressure_anomaly_alert', // 使用国际化键值
-        message: 'blood_pressure_anomaly_message', // 使用国际化键值
-        priority: 'medium',
-        status: 'pending',
-        createdAt: '2024-01-12T09:45:00Z',
-        // 系统分析的血压数据
-        analysisData: {
-          dataRange: '2024-01-10 至 2024-01-12',
-          analysisType: t('alerts.analysisTypes.bloodPressureTrendAnalysis'),
-          patientEntries: [
-            { date: '2024-01-10', value: '145/88', time: '08:00', context: t('alerts.measurementContexts.fasting') },
-            { date: '2024-01-11', value: '148/90', time: '08:30', context: t('alerts.measurementContexts.fasting') },
-            { date: '2024-01-12', value: '152/92', time: '09:00', context: t('alerts.measurementContexts.fasting') }
-          ],
-          trend: t('alerts.trends.continuousRise'),
-          avgValue: '148.3/90.0',
-          exceedsTarget: true,
-          targetRange: '< 140/90 mmHg'
-        },
-        relatedMetric: 'bloodPressure', // 血压相关指标
-        value: '152/92mmHg',
-        threshold: '< 140/90 mmHg',
-        trendDirection: 'up'
-      }
-    ]
+    alerts: [], // 告警列表，从后端动态获取
+    dataSource: null // 数据来源
   });
 
   useEffect(() => {
     // 组件加载时的初始化逻辑
     if (user && user.role === 'doctor') {
       loadAlerts();
+      // 主动获取患者列表数据，确保告警跳转时能正确匹配
+      if (!patientsList || patientsList.length === 0) {
+        console.log('🔄 AlertsScreen: 主动获取患者列表数据');
+        dispatch(fetchPatientsList());
+      }
     }
-  }, [user]);
+  }, [user, dispatch]);
 
   // 监听患者数据变化，当有新患者时自动分析
   useEffect(() => {
     if (patientsList && patientsList.length > 0) {
-      analyzeNewPatients();
+      console.log('🔄 AlertsScreen: 患者列表数据已加载，检查是否需要为新病人生成告警');
+      // 添加防抖，避免频繁调用
+      const timeoutId = setTimeout(() => {
+        checkAndGenerateAlertsForNewPatients();
+      }, 1000); // 延迟1秒，确保数据稳定
+      
+      return () => clearTimeout(timeoutId);
     }
-  }, [patientsList]);
+  }, [patientsList]); // 只依赖 patientsList
+
+  // 当患者列表数据加载完成后，重新检查告警中的患者匹配
+  useEffect(() => {
+    if (patientsList && patientsList.length > 0 && alertsData.alerts.length > 0) {
+      console.log('🔄 AlertsScreen: 患者列表和告警数据都已加载，告警可以正确匹配患者信息');
+      // 告警数据本来就存在，现在患者列表也加载完成，告警应该能正确显示
+    }
+  }, [patientsList]); // 只依赖 patientsList，避免 alertsData.alerts 变化时重复触发
 
   const loadAlerts = async () => {
     setLoading(true);
@@ -568,12 +400,7 @@ const AlertsScreen = ({ navigation }) => {
         return;
       }
       
-      // 系统每3天自动分析患者数据联动流程：
-      // 1. 查询医患关系表(DoctorPatientRelation)获取当前医生的患者
-      // 2. 从健康指标表(HealthMetric)抓取患者最近3天数据
-      // 3. 从用药提醒表(MedicationReminder)分析用药依从性
-      // 4. 分析数据趋势，生成告警写入Alert表
-      // 5. 查询Alert表获取告警推送医生端
+      console.log('🔄 开始从后端API获取告警数据...');
       
       // 实际API调用 - 从数据库获取告警数据
       const doctorId = user.id || alertsData.doctorId;
@@ -592,32 +419,142 @@ const AlertsScreen = ({ navigation }) => {
         const result = await response.json();
         
         if (result.success && result.data) {
+          console.log('✅ 成功从后端API获取告警数据');
+          
+          // 去重处理：基于告警ID、患者ID、类型和创建时间进行去重
+          const uniqueAlerts = result.data.alerts.reduce((acc, current) => {
+            const existingAlert = acc.find(alert => 
+              alert.id === current.id || 
+              (alert.patientId === current.patientId && 
+               alert.type === current.type && 
+               alert.createdAt === current.createdAt)
+            );
+            
+            if (!existingAlert) {
+              acc.push(current);
+            } else {
+              console.log('🔄 发现重复告警，跳过:', {
+                id: current.id,
+                patientId: current.patientId,
+                type: current.type,
+                title: current.title
+              });
+            }
+            
+            return acc;
+          }, []);
+          
+          console.log(`🔄 去重后告警数量: ${uniqueAlerts.length} (原始: ${result.data.alerts.length})`);
+          
           // 更新告警数据
           setAlertsData(prev => ({
             ...prev,
-            alerts: result.data.alerts,
-            stats: result.data.stats,
+            doctorId: doctorId,
+            alerts: uniqueAlerts,
+            stats: result.data.stats || recalculateStats(uniqueAlerts),
             lastAnalysisTime: result.data.lastAnalysisTime,
-            dataSource: result.data.dataSource
+            analysisInterval: result.data.analysisInterval,
+            dataRange: result.data.dataRange,
+            dataSource: result.data.dataSource || '后端数据库'
           }));
+        } else {
+          console.log('⚠️ 后端API返回数据格式异常，使用降级方案');
+          // 使用降级方案：生成基础告警数据
+          await generateFallbackAlerts();
         }
-        
-        // 处理告警数据
-  
       } else {
         console.error('获取告警数据失败:', response.status, response.statusText);
         const errorText = await response.text();
         console.error('错误详情:', errorText);
-        // 降级使用模拟数据
-  
+        
+        // 使用降级方案：生成基础告警数据
+        console.log('🔄 使用降级方案生成基础告警数据');
+        await generateFallbackAlerts();
       }
       
       setLoading(false);
     } catch (error) {
       console.error('获取数据库告警数据失败:', error);
-      // 降级使用模拟数据
-
+      
+      // 使用降级方案：生成基础告警数据
+      console.log('🔄 使用降级方案生成基础告警数据');
+      await generateFallbackAlerts();
+      
       setLoading(false);
+    }
+  };
+
+  // 降级方案：当后端API失败时生成基础告警数据
+  const generateFallbackAlerts = async () => {
+    console.log('🔄 生成降级告警数据...');
+    
+    try {
+      // 等待患者列表加载完成
+      if (!patientsList || patientsList.length === 0) {
+        console.log('⏳ 等待患者列表加载...');
+        return;
+      }
+      
+      // 为每个患者生成基础告警
+      const fallbackAlerts = [];
+      let alertId = 1;
+      
+      patientsList.forEach(patient => {
+        // 生成新患者评估告警
+        fallbackAlerts.push({
+          id: alertId++,
+          patientId: patient.id,
+          patientName: patient.name,
+          patientAge: patient.age,
+          doctorId: user.id,
+          type: 'new_patient',
+          title: '新患者评估提醒',
+          message: `新患者${patient.name}（${patient.age}岁）已加入系统，建议进行初步健康评估`,
+          priority: 'medium',
+          status: 'pending',
+          createdAt: new Date().toISOString(),
+          relatedMetric: '新患者评估',
+          isSystemGenerated: true
+        });
+        
+        // 如果有慢性疾病，生成疾病相关告警
+        if (patient.chronic_diseases && patient.chronic_diseases.length > 0) {
+          patient.chronic_diseases.forEach(disease => {
+            fallbackAlerts.push({
+              id: alertId++,
+              patientId: patient.id,
+              patientName: patient.name,
+              patientAge: patient.age,
+              doctorId: user.id,
+              type: 'chronic_disease',
+              title: `${disease}患者监测提醒`,
+              message: `患者${patient.name}患有${disease}，建议定期监测相关指标`,
+              priority: 'high',
+              status: 'pending',
+              createdAt: new Date().toISOString(),
+              relatedMetric: disease,
+              isSystemGenerated: true
+            });
+          });
+        }
+      });
+      
+      console.log(`✅ 生成了 ${fallbackAlerts.length} 个降级告警`);
+      
+      // 更新告警数据
+      setAlertsData(prev => ({
+        ...prev,
+        doctorId: user.id,
+        alerts: fallbackAlerts,
+        stats: recalculateStats(fallbackAlerts),
+        lastAnalysisTime: new Date().toISOString(),
+        analysisInterval: '实时生成',
+        dataRange: '当前数据',
+        dataSource: '前端降级生成'
+      }));
+      
+    } catch (error) {
+      console.error('生成降级告警失败:', error);
     }
   };
 
@@ -872,25 +809,40 @@ const AlertsScreen = ({ navigation }) => {
     return 'healthy';
   };
 
-  // 分析新患者并生成告警
-  const analyzeNewPatients = () => {
+  // 智能检查并为新病人生成告警（避免重复生成）
+  const checkAndGenerateAlertsForNewPatients = () => {
     if (!patientsList || patientsList.length === 0) return;
 
+    console.log('🔍 checkAndGenerateAlertsForNewPatients 开始检查，当前告警数量:', alertsData.alerts.length);
+    
     const newAlerts = [];
     let nextAlertId = Math.max(...alertsData.alerts.map(a => a.id), 0) + 1;
 
     patientsList.forEach(patient => {
-      // 检查是否已经为此患者生成过告警
-      const existingAlerts = alertsData.alerts.filter(alert => alert.patientId === patient.id);
+      // 检查是否已经为此患者生成过基础告警（更精确的检查）
+      const existingAlerts = alertsData.alerts.filter(alert => 
+        alert.patientId === patient.id && 
+        (alert.type === 'chronic_disease' || alert.type === 'risk_assessment' || alert.type === 'age_alert' || alert.type === 'welcome' || alert.type === 'new_patient')
+      );
       
-      // 检查是否是新患者（最近7天内添加）且还没有告警
+      console.log(`🔍 患者 ${patient.name} (ID: ${patient.id}) 的现有告警:`, existingAlerts.length);
+      
+      // 检查是否是新患者（最近7天内添加）且还没有基础告警
       const isNewPatient = patient.created_at && 
         new Date(patient.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
       
-      // 临时：为了测试，也分析没有created_at的患者
-      const shouldAnalyze = (isNewPatient || !patient.created_at) && existingAlerts.length === 0;
+      // 更智能的检查：只有真正的新患者且没有相关告警时才生成
+      const shouldGenerate = (isNewPatient || !patient.created_at) && existingAlerts.length === 0;
       
-      if (shouldAnalyze) {
+      if (shouldGenerate) {
+        console.log(`✅ 开始为新患者 ${patient.name} 生成基础告警`);
+        
+        // 为新患者生成欢迎/评估提醒（优先级最高）
+        const welcomeAlert = generateWelcomeAlert(patient, nextAlertId++);
+        if (welcomeAlert) {
+          newAlerts.push(welcomeAlert);
+        }
+        
         // 基于患者慢性疾病生成告警
         if (patient.chronic_diseases && patient.chronic_diseases.length > 0) {
           patient.chronic_diseases.forEach(disease => {
@@ -917,26 +869,50 @@ const AlertsScreen = ({ navigation }) => {
             newAlerts.push(ageAlert);
           }
         }
-
-        // 为新患者生成欢迎/评估提醒（即使没有慢性疾病）
-        if (newAlerts.length === 0) {
-          const welcomeAlert = generateWelcomeAlert(patient, nextAlertId++);
-          if (welcomeAlert) {
-            newAlerts.push(welcomeAlert);
-          }
-        }
+      } else {
+        console.log(`⏭️ 跳过患者 ${patient.name}，原因:`, {
+          isNewPatient,
+          existingAlertsCount: existingAlerts.length,
+          hasCreatedAt: !!patient.created_at
+        });
       }
     });
 
     // 如果有新生成的告警，更新状态
     if (newAlerts.length > 0) {
+      console.log(`🆕 为新病人生成了 ${newAlerts.length} 个基础告警`);
+      
+      // 确保新生成的告警不与现有告警重复
+      const allAlerts = [...alertsData.alerts, ...newAlerts];
+      const uniqueAlerts = allAlerts.reduce((acc, current) => {
+        const existingAlert = acc.find(alert => 
+          alert.id === current.id || 
+          (alert.patientId === current.patientId && 
+           alert.type === current.type && 
+           alert.createdAt === current.createdAt)
+        );
+        
+        if (!existingAlert) {
+          acc.push(current);
+        } else {
+          console.log('🔄 新生成的告警与现有告警重复，跳过:', {
+            id: current.id,
+            patientId: current.patientId,
+            type: current.type,
+            title: current.title
+          });
+        }
+        
+        return acc;
+      }, []);
+      
       setAlertsData(prevData => ({
         ...prevData,
-        alerts: [...prevData.alerts, ...newAlerts],
-        stats: recalculateStats([...prevData.alerts, ...newAlerts])
+        alerts: uniqueAlerts,
+        stats: recalculateStats(uniqueAlerts)
       }));
-      
-
+    } else {
+      console.log('✅ 所有患者都已有关联的告警，无需生成新告警');
     }
   };
 
@@ -1067,14 +1043,42 @@ const AlertsScreen = ({ navigation }) => {
   // 从告警解析出精确患者（尽量与 Redux 列表对齐）
   const resolvePatientFromAlert = (alertObj) => {
     if (!alertObj) {
+      console.log('❌ resolvePatientFromAlert: 告警对象为空');
       return null;
+    }
+    
+    console.log('🔍 resolvePatientFromAlert 开始解析:', {
+      alertPatientId: alertObj.patientId,
+      alertPatientName: alertObj.patientName,
+      patientsListLength: patientsList?.length || 0,
+      patientsListIds: patientsList?.map(p => ({ id: p.id, name: p.name })) || []
+    });
+    
+    // 如果患者列表为空，记录警告但不主动获取（应该在组件加载时获取）
+    if (!patientsList || patientsList.length === 0) {
+      console.log('⚠️ 患者列表为空，告警无法正确匹配患者信息');
+      // 返回告警中的基本信息，等待患者列表加载完成
+      return {
+        id: alertObj.patientId,
+        name: alertObj.patientName,
+        age: alertObj.patientAge
+      };
     }
     
     // 首先尝试通过 patientId 精确匹配
     if (alertObj.patientId && Array.isArray(patientsList)) {
       const byId = patientsList.find(p => p.id === alertObj.patientId);
       if (byId) {
+        console.log('✅ 通过ID精确匹配成功:', { 
+          alertId: alertObj.patientId, 
+          matchedPatient: { id: byId.id, name: byId.name, age: byId.age } 
+        });
         return byId;
+      } else {
+        console.log('❌ 通过ID匹配失败:', { 
+          alertId: alertObj.patientId, 
+          availableIds: patientsList.map(p => p.id) 
+        });
       }
     }
     
@@ -1082,11 +1086,28 @@ const AlertsScreen = ({ navigation }) => {
     if (alertObj.patientName && Array.isArray(patientsList)) {
       const byName = patientsList.find(p => p.name === alertObj.patientName);
       if (byName) {
+        console.log('✅ 通过名称精确匹配成功:', { 
+          alertName: alertObj.patientName, 
+          matchedPatient: { id: byName.id, name: byName.name, age: byName.age } 
+        });
         return byName;
+      } else {
+        console.log('❌ 通过名称匹配失败:', { 
+          alertName: alertObj.patientName, 
+          availableNames: patientsList.map(p => p.name) 
+        });
       }
     }
     
-    // 如果都匹配失败，返回告警中的基本信息
+    // 如果都匹配失败，记录详细信息并返回告警中的基本信息
+    console.log('⚠️ 所有匹配方式都失败，使用告警中的基本信息:', {
+      fallbackPatient: {
+        id: alertObj.patientId,
+        name: alertObj.patientName,
+        age: alertObj.patientAge
+      }
+    });
+    
     const fallbackPatient = {
       id: alertObj.patientId,
       name: alertObj.patientName,
@@ -1099,15 +1120,24 @@ const AlertsScreen = ({ navigation }) => {
   // 告警点击跳转规则
   const handleAlertPress = async (alert) => {
     try {
+      console.log('🔍 handleAlertPress 开始处理告警:', {
+        alertId: alert.id,
+        alertType: alert.type,
+        alertPatientId: alert.patientId,
+        alertPatientName: alert.patientName,
+        patientsListLength: patientsList?.length || 0
+      });
+      
       const type = (alert?.type || '').toLowerCase();
       const isEvaluation = type.includes('new_patient') || type.includes('high_risk') || type.includes('medium_risk') || type.includes('chronic_disease');
       const isNumeric = type.includes('threshold') || type.includes('blood_pressure') || type.includes('glucose') || type.includes('heart') || type.includes('trend');
       const isMedication = type.includes('medication') || type.includes('adherence') || type.includes('missed');
 
+      console.log('🔍 告警类型判断:', { type, isEvaluation, isNumeric, isMedication });
+
       // 确保使用正确的患者信息
       const resolvedPatient = resolvePatientFromAlert(alert);
-      
-
+      console.log('🔍 解析后的患者信息:', resolvedPatient);
 
       if (isEvaluation || isNumeric) {
         // 使用解析后的患者信息，如果没有则使用告警中的信息
@@ -1117,6 +1147,11 @@ const AlertsScreen = ({ navigation }) => {
           age: alert.patientAge
         };
         
+        console.log('🔍 准备导航到患者详情:', { 
+          patient, 
+          originTab: 'Alerts',
+          navigationTarget: 'Patients.PatientDetails'
+        });
 
         navigation.navigate('Patients', { 
           screen: 'PatientDetails', 
@@ -1968,6 +2003,6 @@ const styles = StyleSheet.create({
   },
 
 
-});
-
+  });
+  
 export default AlertsScreen; 

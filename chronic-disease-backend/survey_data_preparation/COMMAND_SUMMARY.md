@@ -22,6 +22,13 @@ python unified_test_data_manager.py health
 
 # 显示当前数据库状态
 python unified_test_data_manager.py status
+
+# 创建用药依从性报警测试数据
+python unified_test_data_manager.py medication [days]
+# 示例：
+python unified_test_data_manager.py medication      # 默认30天
+python unified_test_data_manager.py medication 14   # 14天
+python unified_test_data_manager.py medication 7    # 7天
 ```
 
 ### 🧠 智能分析功能
@@ -38,6 +45,10 @@ python unified_test_data_manager.py realtime <patient_id> <metric_type>
 python unified_test_data_manager.py realtime 1 blood_pressure
 python unified_test_data_manager.py realtime 2 blood_glucose
 python unified_test_data_manager.py realtime 3 heart_rate
+
+# 创建用药依从性报警数据
+python unified_test_data_manager.py medication [days]
+# 自动生成用药提醒记录，模拟漏服情况，触发智能报警
 ```
 
 ### 🧪 功能测试

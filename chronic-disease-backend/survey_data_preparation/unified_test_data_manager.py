@@ -24,7 +24,7 @@ django.setup()
 
 from accounts.models import User
 from health.models import DoctorPatientRelation, HealthMetric, Alert, ThresholdSetting
-from medication.models import MedicationPlan, MedicationReminder
+from medication.models import MedicationPlan, MedicationReminder, Medication
 from django.core.management import execute_from_command_line
 from django.db.models import Count
 
@@ -34,6 +34,10 @@ class UnifiedTestDataManager:
     
     def __init__(self):
         print("🎯 统一测试数据管理器初始化完成")
+    
+    def has_users(self):
+        """检查是否有用户存在"""
+        return User.objects.exists()
     
     def clear_database(self, confirm=False):
         """清除数据库所有数据，保留表结构"""
@@ -639,6 +643,202 @@ class UnifiedTestDataManager:
             print("\n👥 最近创建的用户:")
             for user in User.objects.order_by('-date_joined')[:5]:
                 print(f"     {user.name} ({user.role}) - {user.phone}")
+        
+        # 显示用药依从性统计
+        self.show_medication_adherence_status()
+    
+    def show_medication_adherence_status(self):
+        """显示用药依从性状态"""
+        print(f"\n💊 用药依从性状态:")
+        print(f"   📋 用药计划: {MedicationPlan.objects.count()}")
+        print(f"   🔔 用药提醒: {MedicationReminder.objects.count()}")
+        
+        # 统计不同状态的提醒
+        if MedicationReminder.objects.exists():
+            reminder_stats = MedicationReminder.objects.values('status').annotate(count=Count('id'))
+            print("   提醒状态分布:")
+            for stat in reminder_stats:
+                status_name = dict(MedicationReminder.STATUS_CHOICES).get(stat['status'], stat['status'])
+                print(f"     {status_name}: {stat['count']}个")
+            
+            # 计算总体依从性
+            total_reminders = MedicationReminder.objects.count()
+            taken_reminders = MedicationReminder.objects.filter(status='taken').count()
+            adherence_rate = taken_reminders / total_reminders if total_reminders > 0 else 0
+            
+            print(f"   总体依从性: {adherence_rate:.1%} ({taken_reminders}/{total_reminders})")
+            
+            # 按患者统计依从性
+            if MedicationPlan.objects.exists():
+                print("   患者依从性详情:")
+                for plan in MedicationPlan.objects.filter(status='active')[:5]:  # 只显示前5个
+                    patient_reminders = MedicationReminder.objects.filter(plan=plan)
+                    if patient_reminders.exists():
+                        patient_total = patient_reminders.count()
+                        patient_taken = patient_reminders.filter(status='taken').count()
+                        patient_adherence = patient_taken / patient_total if patient_total > 0 else 0
+                        print(f"     {plan.patient.name}: {patient_adherence:.1%} ({patient_taken}/{patient_total})")
+    
+    def create_medication_adherence_alerts(self, days=30):
+        """创建用药依从性报警测试数据"""
+        print(f"💊 创建用药依从性报警测试数据 (最近{days}天)...")
+        
+        # 检查是否有现有的用药数据
+        if not MedicationPlan.objects.exists():
+            print("   ⚠️  没有用药计划，先创建基本用户和用药计划...")
+            self.create_basic_medication_data()
+        
+        # 获取所有活跃的用药计划
+        active_plans = MedicationPlan.objects.filter(status='active')
+        if not active_plans.exists():
+            print("   ⚠️  没有活跃的用药计划")
+            return
+        
+        # 为每个计划创建用药提醒记录
+        total_reminders = 0
+        total_missed = 0
+        
+        for plan in active_plans:
+            plan_reminders = self._create_plan_reminders(plan, days)
+            total_reminders += len(plan_reminders)
+            total_missed += len([r for r in plan_reminders if r.status == 'missed'])
+        
+        print(f"   ✅ 创建了 {total_reminders} 个用药提醒记录")
+        print(f"   🚨 其中漏服记录: {total_missed} 个")
+        
+        # 计算依从性
+        adherence_rate = (total_reminders - total_missed) / total_reminders if total_reminders > 0 else 0
+        print(f"   📊 总体依从性: {adherence_rate:.1%}")
+        
+        # 触发智能分析生成报警
+        print("   🔍 触发智能分析生成报警...")
+        self.run_intelligent_analysis(all_doctors=True)
+        
+        return {
+            'total_reminders': total_reminders,
+            'total_missed': total_missed,
+            'adherence_rate': adherence_rate
+        }
+    
+    def create_basic_medication_data(self):
+        """创建基本的用药数据"""
+        print("   🔧 创建基本用药数据...")
+        
+        # 创建测试药品
+        medications = []
+        med_names = ['氨氯地平片', '二甲双胍片', '阿托伐他汀钙片']
+        med_categories = ['antihypertensive', 'hypoglycemic', 'lipid_lowering']
+        med_specs = ['5mg/片', '500mg/片', '20mg/片']
+        
+        for i, (name, category, spec) in enumerate(zip(med_names, med_categories, med_specs)):
+            med = Medication.objects.create(
+                name=name,
+                category=category,
+                unit='mg',
+                specification=spec,
+                instructions=f'测试用{name}',
+                is_prescription=True
+            )
+            medications.append(med)
+            print(f"     ✅ 创建药品: {name}")
+        
+        # 为现有患者创建用药计划
+        patients = User.objects.filter(role='patient')[:3]  # 取前3个患者
+        doctors = User.objects.filter(role='doctor')[:2]   # 取前2个医生
+        
+        if not patients.exists() or not doctors.exists():
+            print("     ⚠️  没有足够的患者或医生")
+            return
+        
+        plan_count = 0
+        for i, patient in enumerate(patients):
+            doctor = doctors[i % len(doctors)]
+            
+            # 创建用药计划
+            plan = MedicationPlan.objects.create(
+                patient=patient,
+                doctor=doctor,
+                medication=medications[i % len(medications)],
+                dosage=10.0,
+                frequency='BID' if i % 2 == 0 else 'QD',
+                time_of_day=['08:00', '20:00'] if i % 2 == 0 else ['08:00'],
+                start_date=timezone.now().date() - timedelta(days=30),
+                end_date=timezone.now().date() + timedelta(days=30),
+                special_instructions=f'测试用药计划 - {patient.name}',
+                status='active'
+            )
+            plan_count += 1
+            print(f"     ✅ 创建用药计划: {patient.name} - {plan.medication.name}")
+        
+        print(f"   ✅ 创建了 {plan_count} 个用药计划")
+    
+    def _create_plan_reminders(self, plan, days):
+        """为特定用药计划创建提醒记录"""
+        reminders = []
+        
+        # 计算时间范围
+        end_date = timezone.now().date()
+        start_date = end_date - timedelta(days=days)
+        
+        # 根据用药频次确定每日提醒次数
+        if plan.frequency == 'QD':
+            daily_times = 1
+        elif plan.frequency == 'BID':
+            daily_times = 2
+        elif plan.frequency == 'TID':
+            daily_times = 3
+        else:
+            daily_times = 1
+        
+        current_date = start_date
+        while current_date <= end_date:
+            for time_index in range(daily_times):
+                # 生成提醒时间
+                hour = 8 + (time_index * 6)  # 8:00, 14:00, 20:00
+                reminder_time = timezone.make_aware(
+                    datetime.combine(current_date, datetime.min.time().replace(hour=hour))
+                )
+                
+                # 根据日期和患者决定是否漏服
+                if self._should_miss_medication(plan.patient, current_date, time_index):
+                    status = 'missed'
+                    confirm_time = None
+                    dosage_taken = None
+                    notes = '患者未确认服药'
+                else:
+                    status = 'taken'
+                    confirm_time = reminder_time + timedelta(minutes=random.randint(5, 30))
+                    dosage_taken = plan.dosage
+                    notes = '患者已服药'
+                
+                reminder = MedicationReminder.objects.create(
+                    plan=plan,
+                    reminder_time=reminder_time,
+                    scheduled_time=reminder_time.time(),
+                    status=status,
+                    confirm_time=confirm_time,
+                    dosage_taken=dosage_taken,
+                    notes=notes
+                )
+                reminders.append(reminder)
+            
+            current_date += timedelta(days=1)
+        
+        return reminders
+    
+    def _should_miss_medication(self, patient, date, time_index):
+        """判断患者是否应该漏服药物"""
+        # 基于患者ID、日期和时间的简单算法
+        patient_id = patient.id
+        day_of_year = date.timetuple().tm_yday
+        
+        # 不同的漏服模式
+        if patient_id % 3 == 0:  # 患者1: 每3天漏服一次
+            return day_of_year % 3 == 0
+        elif patient_id % 3 == 1:  # 患者2: 每2天漏服一次
+            return day_of_year % 2 == 0
+        else:  # 患者3: 周末偶尔漏服
+            return date.weekday() in [5, 6] and time_index == 0  # 周末早上漏服
     
     def analyze_alerts_summary(self):
         """分析告警摘要"""
@@ -1255,6 +1455,10 @@ def main():
             # 生成大量测试数据
             count = int(sys.argv[2]) if len(sys.argv) > 2 else 100
             manager.generate_bulk_data(count)
+        elif command == 'medication':
+            # 创建用药依从性报警测试数据
+            days = int(sys.argv[2]) if len(sys.argv) > 2 else 30
+            manager.create_medication_adherence_alerts(days)
         elif command == 'report':
             manager.generate_report()
         elif command == 'test_apis':
@@ -1272,6 +1476,7 @@ def main():
             print("   数据清理: cleanup")
             print("   数据备份: backup")
             print("   批量生成: generate [count]")
+            print("   用药报警: medication [days]")
             print("   生成报告: report")
             print("   API测试: test_apis")
             print("   一键设置: setup, fullsetup")

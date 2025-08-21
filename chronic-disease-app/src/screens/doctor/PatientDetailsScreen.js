@@ -44,6 +44,7 @@ const PatientDetailsScreen = ({ route, navigation }) => {
   const [realMedicationPlans, setRealMedicationPlans] = useState([]); // 真实的用药计划数据
   const [medicationStatsMap, setMedicationStatsMap] = useState({}); // 计划ID -> 依从率
 
+
   // 等待国际化系统准备就绪
   if (!ready) {
     return (
@@ -1107,20 +1108,15 @@ const PatientDetailsScreen = ({ route, navigation }) => {
               const originTab = route.params?.originTab;
               console.log('🔙 后退键被点击，originTab:', originTab);
               
-              if (originTab && originTab !== 'Patients') {
-                // 如果有特定的返回目标，导航到那里
-                console.log('📍 导航到指定页面:', originTab);
-                navigation.navigate(originTab);
-              } else {
-                // 否则尝试返回上一页
+              // 优先尝试返回上一页
+              if (navigation.canGoBack()) {
                 console.log('⬅️ 执行 goBack()');
-                if (navigation.canGoBack()) {
-                  navigation.goBack();
-                } else {
-                  // 如果不能返回，导航到患者列表
-                  console.log('🔄 无法返回，导航到患者列表');
-                  navigation.navigate('Patients');
-                }
+                navigation.goBack();
+              } else {
+                // 如果无法返回上一页，直接导航到患者列表
+                // 无论originTab是什么，都返回到Patients（患者管理主界面）
+                console.log('🔄 无法返回上一页，导航到患者列表');
+                navigation.navigate('Patients');
               }
             } catch (error) {
               console.error('❌ 后退导航失败:', error);
