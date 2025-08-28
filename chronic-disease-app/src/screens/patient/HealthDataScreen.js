@@ -1,3 +1,20 @@
+/**
+ * 患者健康数据页面组件
+ * 
+ * 功能特性：
+ * - 显示患者健康指标数据和趋势
+ * - 支持多种健康指标类型（血压、血糖、心率等）
+ * - 多时间段数据查看（周、月、季度、年）
+ * - 健康状态评估和颜色标识
+ * - 图表可视化展示健康趋势
+ * - 实时数据刷新和同步
+ * - 多语言国际化支持
+ * - 数据录入入口和导航
+ * 
+ * @author 医疗测试应用开发团队
+ * @version 1.0.0
+ */
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, RefreshControl, Alert, TouchableOpacity } from 'react-native';
 import { 
@@ -20,36 +37,67 @@ import {
   getStatusText
 } from '../../utils/dataModels';
 
-// 工具函数：安全获取数字值
+/**
+ * 安全获取数字值的工具函数
+ * 处理无效数值，返回默认值
+ * 
+ * @param {*} value - 要转换的值
+ * @param {number} defaultValue - 默认值，默认为0
+ * @returns {number} 有效的数字值
+ */
 const safeNumber = (value, defaultValue = 0) => {
   const num = parseFloat(value);
   return (typeof num === 'number' && !isNaN(num) && isFinite(num)) ? num : defaultValue;
 };
 
+/**
+ * 患者健康数据页面主组件
+ * 
+ * 主要功能：
+ * - 展示和管理患者健康指标数据
+ * - 提供健康趋势分析和可视化
+ * - 支持多时间段数据筛选
+ * - 健康状态评估和显示
+ * - 数据录入和更新功能
+ * - 实时数据同步和刷新
+ * 
+ * @param {Object} navigation - 导航对象，用于页面跳转
+ * @returns {JSX.Element} 患者健康数据页面组件
+ */
 const HealthDataScreen = ({ navigation }) => {
   const { t } = useTranslation();
   const dispatch = useDispatch();
+  
+  // 从Redux store获取用户和健康数据
   const { user } = useSelector((state) => state?.auth || {});
   const { healthMetrics = [], healthTrends = {}, loading = false } = useSelector((state) => state?.user || {});
   
-  const [refreshing, setRefreshing] = useState(false);
-  const [selectedPeriod, setSelectedPeriod] = useState('week');
-  const [selectedMetric, setSelectedMetric] = useState(METRIC_TYPES.BLOOD_PRESSURE);
-  const [refreshKey, setRefreshKey] = useState(0);
+  // 界面状态管理
+  const [refreshing, setRefreshing] = useState(false);              // 下拉刷新状态
+  const [selectedPeriod, setSelectedPeriod] = useState('week');     // 选中的时间段：week, month, quarter, year
+  const [selectedMetric, setSelectedMetric] = useState(METRIC_TYPES.BLOOD_PRESSURE); // 选中的健康指标类型
+  const [refreshKey, setRefreshKey] = useState(0);                  // 刷新键，用于强制重新渲染
 
-  // 组件挂载时自动加载数据
+  /**
+   * 组件挂载时自动加载健康数据
+   */
   useEffect(() => {
     console.log('HealthDataScreen 组件挂载，开始加载数据');
     loadHealthData();
   }, []);
 
-  // 当selectedPeriod改变时重新加载数据
+  /**
+   * 当选择的时间段改变时重新加载数据
+   */
   useEffect(() => {
     console.log('selectedPeriod 改变:', selectedPeriod, '重新加载数据');
     loadHealthData();
   }, [selectedPeriod, loadHealthData]);
 
-  // 监听healthMetrics变化
+  /**
+   * 监听健康指标数据变化
+   * 当数据更新时刷新图表显示
+   */
   useEffect(() => {
     console.log('healthMetrics 数据变化:', healthMetrics ? healthMetrics.length : 'null');
     if (healthMetrics && healthMetrics.length > 0) {
@@ -57,7 +105,10 @@ const HealthDataScreen = ({ navigation }) => {
     }
   }, [healthMetrics]);
 
-  // 监听导航焦点变化，确保从数据录入页面返回时能更新
+  /**
+   * 监听导航焦点变化
+   * 确保从数据录入页面返回时能更新数据
+   */
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
       console.log('页面获得焦点，重新加载数据');
@@ -67,8 +118,13 @@ const HealthDataScreen = ({ navigation }) => {
     return unsubscribe;
   }, [navigation]);
 
-
-  // 安全的日期格式化函数
+  /**
+   * 安全的日期格式化函数
+   * 处理无效日期，返回简洁的月/日格式
+   * 
+   * @param {string} dateString - 日期字符串
+   * @returns {string} 格式化后的日期字符串
+   */
   const safeFormatDate = (dateString) => {
     try {
       if (!dateString) return '';
@@ -85,7 +141,14 @@ const HealthDataScreen = ({ navigation }) => {
     }
   };
 
-  // 时间过滤函数（统一逻辑）
+  /**
+   * 时间过滤函数（统一逻辑）
+   * 根据选择的时间段过滤健康指标数据
+   * 
+   * @param {Array} metrics - 健康指标数据数组
+   * @param {string} period - 时间段：week, month, quarter, year
+   * @returns {Array} 过滤后的数据数组
+   */
   const getTimeFilteredMetrics = (metrics, period) => {
     const now = new Date();
     let startTime;

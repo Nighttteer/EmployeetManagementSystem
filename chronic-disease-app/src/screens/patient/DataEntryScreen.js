@@ -1,3 +1,20 @@
+/**
+ * 患者健康数据录入页面组件
+ * 
+ * 功能特性：
+ * - 支持多种健康指标数据录入
+ * - 血压、血糖、心率、体重等指标管理
+ * - 灵活的日期和时间选择器
+ * - 数据验证和状态评估
+ * - 备注和说明信息录入
+ * - 实时数据保存和同步
+ * - 多语言国际化支持
+ * - 用户友好的录入界面
+ * 
+ * @author 医疗测试应用开发团队
+ * @version 1.0.0
+ */
+
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, Alert, SafeAreaView, Platform } from 'react-native';
 import { Text, TextInput, Button, Card, Divider, SegmentedButtons, Chip, IconButton } from 'react-native-paper';
@@ -15,50 +32,77 @@ import {
   getStatusText
 } from '../../utils/dataModels';
 
+/**
+ * 患者健康数据录入页面主组件
+ * 
+ * 主要功能：
+ * - 提供多种健康指标的数据录入界面
+ * - 处理日期和时间选择
+ * - 数据验证和状态评估
+ * - 保存和提交健康数据
+ * - 支持备注和说明信息
+ * - 实时数据同步和更新
+ * 
+ * @param {Object} navigation - 导航对象，用于页面跳转
+ * @returns {JSX.Element} 患者健康数据录入页面组件
+ */
 const DataEntryScreen = ({ navigation }) => {
   const { t } = useTranslation();
   const dispatch = useDispatch();
+  
+  // 从Redux store获取用户状态
   const { user } = useSelector((state) => state.auth);
   const { loading, error } = useSelector((state) => state.user);
   
-  const [selectedMetricType, setSelectedMetricType] = useState(METRIC_TYPES.BLOOD_PRESSURE);
-  const [metricData, setMetricData] = useState({});
-  const [notes, setNotes] = useState('');
+  // 数据录入状态管理
+  const [selectedMetricType, setSelectedMetricType] = useState(METRIC_TYPES.BLOOD_PRESSURE); // 选中的指标类型
+  const [metricData, setMetricData] = useState({});                                          // 指标数据对象
+  const [notes, setNotes] = useState('');                                                    // 备注信息
   
   // 时间选择相关状态
-  const [measurementTime, setMeasurementTime] = useState(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
-  
-
+  const [measurementTime, setMeasurementTime] = useState(new Date());                        // 测量时间
+  const [showDatePicker, setShowDatePicker] = useState(false);                               // 日期选择器显示状态
+  const [showTimePicker, setShowTimePicker] = useState(false);                               // 时间选择器显示状态
 
   // 获取当前选中指标的配置
   const currentConfig = HEALTH_METRIC_FIELDS[selectedMetricType];
   
-  // 获取指标类型的翻译键
+  /**
+   * 获取指标类型的翻译键
+   * 将指标类型代码映射到国际化键值
+   * 
+   * @param {string} metricType - 指标类型代码
+   * @returns {string} 国际化键值
+   */
   const getMetricTypeLabel = (metricType) => {
     const labelMap = {
-      [METRIC_TYPES.BLOOD_PRESSURE]: 'health.bloodPressure',
-      [METRIC_TYPES.BLOOD_GLUCOSE]: 'health.bloodGlucose',
-      [METRIC_TYPES.HEART_RATE]: 'health.heartRate',
-      [METRIC_TYPES.WEIGHT]: 'health.weight',
-      [METRIC_TYPES.URIC_ACID]: 'health.uricAcid',
-      [METRIC_TYPES.LIPIDS]: 'health.lipids'
+      [METRIC_TYPES.BLOOD_PRESSURE]: 'health.bloodPressure',    // 血压
+      [METRIC_TYPES.BLOOD_GLUCOSE]: 'health.bloodGlucose',      // 血糖
+      [METRIC_TYPES.HEART_RATE]: 'health.heartRate',            // 心率
+      [METRIC_TYPES.WEIGHT]: 'health.weight',                   // 体重
+      [METRIC_TYPES.URIC_ACID]: 'health.uricAcid',             // 尿酸
+      [METRIC_TYPES.LIPIDS]: 'health.lipids'                   // 血脂
     };
     return labelMap[metricType] || 'health.unknown';
   };
 
-  // 指标类型选择按钮
+  // 指标类型选择按钮配置
   const metricTypeButtons = [
-    { value: METRIC_TYPES.BLOOD_PRESSURE, label: t('health.bloodPressure') },
-    { value: METRIC_TYPES.BLOOD_GLUCOSE, label: t('health.bloodGlucose') },
-    { value: METRIC_TYPES.HEART_RATE, label: t('health.heartRate') },
-    { value: METRIC_TYPES.WEIGHT, label: t('health.weight') },
-    { value: METRIC_TYPES.URIC_ACID, label: t('health.uricAcid') },
-    { value: METRIC_TYPES.LIPIDS, label: t('health.lipids') }
+    { value: METRIC_TYPES.BLOOD_PRESSURE, label: t('health.bloodPressure') },   // 血压
+    { value: METRIC_TYPES.BLOOD_GLUCOSE, label: t('health.bloodGlucose') },     // 血糖
+    { value: METRIC_TYPES.HEART_RATE, label: t('health.heartRate') },           // 心率
+    { value: METRIC_TYPES.WEIGHT, label: t('health.weight') },                  // 体重
+    { value: METRIC_TYPES.URIC_ACID, label: t('health.uricAcid') },            // 尿酸
+    { value: METRIC_TYPES.LIPIDS, label: t('health.lipids') }                   // 血脂
   ];
 
-  // 更新指标数据
+  /**
+   * 更新指标数据字段
+   * 将输入值转换为数字并更新对应字段
+   * 
+   * @param {string} field - 字段名称
+   * @param {string} value - 输入值
+   */
   const updateMetricField = (field, value) => {
     setMetricData(prev => ({
       ...prev,
@@ -66,13 +110,24 @@ const DataEntryScreen = ({ navigation }) => {
     }));
   };
 
-  // 切换指标类型时重置数据
+  /**
+   * 切换指标类型时重置数据
+   * 清空之前录入的数据，准备录入新类型
+   * 
+   * @param {string} type - 新的指标类型
+   */
   const handleMetricTypeChange = (type) => {
     setSelectedMetricType(type);
     setMetricData({});
   };
 
-  // 处理日期选择
+  /**
+   * 处理日期选择
+   * 更新测量日期，保持时间部分不变
+   * 
+   * @param {Object} event - 日期选择事件
+   * @param {Date} selectedDate - 选择的日期
+   */
   const handleDateChange = (event, selectedDate) => {
     const currentDate = selectedDate || measurementTime;
     setShowDatePicker(Platform.OS === 'ios');
@@ -87,7 +142,13 @@ const DataEntryScreen = ({ navigation }) => {
     }
   };
 
-  // 处理时间选择
+  /**
+   * 处理时间选择
+   * 更新测量时间，保持日期部分不变
+   * 
+   * @param {Object} event - 时间选择事件
+   * @param {Date} selectedTime - 选择的时间
+   */
   const handleTimeChange = (event, selectedTime) => {
     const currentTime = selectedTime || measurementTime;
     setShowTimePicker(Platform.OS === 'ios');

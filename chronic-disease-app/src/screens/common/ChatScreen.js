@@ -22,41 +22,56 @@ import * as ImagePicker from 'expo-image-picker';
 import { Audio } from 'expo-av';
 import { api } from '../../services/api';
 import ImagePreviewModal from '../../components/ImagePreviewModal';
-
+//const 是因为这个“state variable + Modify function”的绑定不会改变
+// 声明常量，表示一个不可重新赋值的变量。Declare constants to represent a variable that cannot be reassigned.
 const ChatScreen = ({ route, navigation }) => {
   const { t } = useTranslation();
+  
+  // 从路由参数中获取会话信息
   const { conversationId, otherUser, returnTo } = route.params || {};
-  const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const flatListRef = useRef(null);
+  
+  // 基础聊天状态
+  const [message, setMessage] = useState('');           // 当前输入框的文本内容
+  const [messages, setMessages] = useState([]);         // 消息列表数组
+  const [loading, setLoading] = useState(true);         // 首次加载状态指示器
+  const [sending, setSending] = useState(false);        // 消息发送中状态
+  const [refreshing, setRefreshing] = useState(false);  // 下拉刷新状态
+  const [page, setPage] = useState(1);                  // 当前加载的页码
+  const [hasMore, setHasMore] = useState(true);         // 是否还有更多消息可加载
+  
+  // 引用对象
+  const flatListRef = useRef(null);                     // FlatList组件的引用，用于滚动控制
+  
+  // 从Redux store获取当前用户信息
   const { user } = useSelector(state => state.auth);
 
-  // 语音相关状态
-  const [recording, setRecording] = useState(null);
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingDuration, setRecordingDuration] = useState(0);
-  const [playingSound, setPlayingSound] = useState(null);
-  const [playingMessageId, setPlayingMessageId] = useState(null);
-  const [recordingTimer, setRecordingTimer] = useState(null);
+  // 语音录制相关状态
+  const [recording, setRecording] = useState(null);           // 录音对象实例
+  const [isRecording, setIsRecording] = useState(false);     // 是否正在录音
+  const [recordingDuration, setRecordingDuration] = useState(0); // 录音持续时间（秒）
+  const [playingSound, setPlayingSound] = useState(null);    // 当前播放的音频对象
+  const [playingMessageId, setPlayingMessageId] = useState(null); // 正在播放的消息ID
+  const [recordingTimer, setRecordingTimer] = useState(null); // 录音计时器
 
   // 图片预览相关状态
-  const [imagePreviewVisible, setImagePreviewVisible] = useState(false);
-  const [previewImageUrl, setPreviewImageUrl] = useState('');
+  const [imagePreviewVisible, setImagePreviewVisible] = useState(false); // 图片预览模态框显示状态
+  const [previewImageUrl, setPreviewImageUrl] = useState('');           // 预览图片的URL
 
+  /**
+   * 组件挂载和会话ID变化时的副作用
+   * 当会话ID存在时，加载消息并标记会话为已读
+   */
   useEffect(() => {
     if (conversationId) {
-      loadMessages();
-      // 标记会话为已读
-      markConversationAsRead();
+      loadMessages();                    // 加载聊天消息
+      markConversationAsRead();          // 标记会话为已读
     }
   }, [conversationId]);
 
-  // 清理资源
+  /**
+   * 组件卸载时的清理副作用
+   * 清理音频资源、录音对象和计时器，防止内存泄漏
+   */
   useEffect(() => {
     return () => {
       // 清理音频资源
@@ -73,42 +88,62 @@ const ChatScreen = ({ route, navigation }) => {
   }, []);
 
   const loadMessages = async (pageNumber = 1, refresh = false) => {
+    // 如果没有会话ID，直接返回
     if (!conversationId) return;
 
     try {
+      // 根据操作类型设置不同的加载状态
       if (refresh) {
+        // 下拉刷新：显示刷新指示器
         setRefreshing(true);
       } else if (pageNumber === 1) {
+        // 首次加载或重新加载第一页：显示主加载指示器
         setLoading(true);
       }
 
+      // 调用API获取消息数据
       const response = await api.get(`/communication/messages/`, {
         params: {
-          conversation_id: conversationId,
-          page: pageNumber,
-          page_size: 20,
+          conversation_id: conversationId,  // 会话ID
+          page: pageNumber,                 // 页码
+          page_size: 20,                   // 每页消息数量
         },
       });
 
+      // 检查API响应是否包含消息数据
       if (response.data.results) {
         if (pageNumber === 1 || refresh) {
+          // 第一页或刷新：完全替换消息列表
           setMessages(response.data.results);
         } else {
+          // 加载更多页：将新消息追加到现有列表末尾
           setMessages(prev => [...prev, ...response.data.results]);
         }
+        
+        // 更新是否还有更多页面的状态
+        // !!response.data.next 将值转换为布尔值
         setHasMore(!!response.data.next);
+        
+        // 更新当前页码
         setPage(pageNumber);
       }
     } catch (error) {
+      // 错误处理：记录错误并显示用户友好的提示
       console.error('加载消息失败:', error);
       Alert.alert(t('common.error'), t('chat.loadMessagesFailed'));
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      // 无论成功还是失败，都要重置加载状态
+      setLoading(false);      // 重置主加载状态
+      setRefreshing(false);   // 重置刷新状态
     }
   };
 
-  // 语音权限请求
+  /**
+   * 请求音频录制权限
+   * 检查并请求麦克风权限，如果被拒绝则显示提示
+   * 
+   * @returns {Promise<boolean>} 权限是否被授予
+   */
   const requestAudioPermission = async () => {
     const { status } = await Audio.requestPermissionsAsync();
     if (status !== 'granted') {
@@ -118,7 +153,11 @@ const ChatScreen = ({ route, navigation }) => {
     return true;
   };
 
-  // 开始录制语音
+  /**
+   * 开始录制语音消息
+   * 设置音频模式，创建录音实例，并启动录音计时器
+   * 支持Android、iOS和Web平台的音频配置
+   */
   const startRecording = async () => {
     try {
       const hasPermission = await requestAudioPermission();
@@ -159,7 +198,7 @@ const ChatScreen = ({ route, navigation }) => {
       setIsRecording(true);
       setRecordingDuration(0);
 
-      // 开始计时器
+      // 开始计时器，每秒更新录音持续时间
       const timer = setInterval(() => {
         setRecordingDuration(prev => prev + 1);
       }, 1000);
@@ -171,7 +210,10 @@ const ChatScreen = ({ route, navigation }) => {
     }
   };
 
-  // 停止录制并发送
+  /**
+   * 停止录制并发送语音消息
+   * 停止录音，获取音频文件URI，清理录音状态，然后发送消息
+   */
   const stopRecordingAndSend = async () => {
     if (!recording) return;
 
@@ -179,7 +221,7 @@ const ChatScreen = ({ route, navigation }) => {
       await recording.stopAndUnloadAsync();
       const uri = recording.getURI();
       
-      // 清理状态
+      // 清理录音相关状态
       setRecording(null);
       setIsRecording(false);
       setRecordingDuration(0);
@@ -198,7 +240,10 @@ const ChatScreen = ({ route, navigation }) => {
     }
   };
 
-  // 取消录制
+  /**
+   * 取消录音录制
+   * 停止录音并清理所有相关状态，不发送消息
+   */
   const cancelRecording = async () => {
     if (!recording) return;
 
@@ -324,14 +369,29 @@ const ChatScreen = ({ route, navigation }) => {
     }
   };
 
-  // 格式化录制时间
+  /**
+   * 格式化录制时间显示
+   * 将秒数转换为 "分:秒" 格式，秒数不足两位时补零
+   * 
+   * @param {number} seconds - 录制时间（秒）
+   * @returns {string} 格式化后的时间字符串，如 "1:05"
+   */
   const formatRecordingTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  /**
+   * 发送消息的核心函数
+   * 支持发送文本、图片和语音消息
+   * 自动处理文件上传和消息状态管理
+   * 
+   * @param {string} messageType - 消息类型：'text', 'image', 'audio'
+   * @param {string} mediaUri - 媒体文件URI（图片或语音），文本消息时可为null
+   */
   const sendMessage = async (messageType = 'text', mediaUri = null) => {
+    // 验证消息内容：文本消息必须有内容，媒体消息必须有URI
     if ((!message.trim() && !mediaUri) || sending) return;
 
     setSending(true);
@@ -343,12 +403,13 @@ const ChatScreen = ({ route, navigation }) => {
       };
 
       if ((messageType === 'image' || messageType === 'audio') && mediaUri) {
-        // 准备文件上传
+        // 处理媒体消息：创建FormData上传文件
         const formData = new FormData();
         formData.append('recipient', otherUser.id);
         formData.append('message_type', messageType);
         
         if (messageType === 'image') {
+          // 图片消息：设置图片相关参数
           formData.append('content', t('chat.sentAnImage'));
           formData.append('attachment', {
             uri: mediaUri,
@@ -356,6 +417,7 @@ const ChatScreen = ({ route, navigation }) => {
             name: 'image.jpg',
           });
         } else if (messageType === 'audio') {
+          // 语音消息：设置音频相关参数
           formData.append('content', t('chat.sentAVoiceMessage'));
           formData.append('attachment', {
             uri: mediaUri,
@@ -364,6 +426,7 @@ const ChatScreen = ({ route, navigation }) => {
           });
         }
 
+        // 发送媒体消息（使用multipart/form-data格式）
         const response = await api.post('/communication/messages/', formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
@@ -371,19 +434,25 @@ const ChatScreen = ({ route, navigation }) => {
         });
 
         if (response.data) {
+          // 将新消息添加到消息列表顶部
           setMessages(prev => [response.data, ...prev]);
+          // 滚动到顶部显示新消息
           flatListRef.current?.scrollToOffset({ animated: true, offset: 0 });
         }
       } else {
-        // 发送文本消息
+        // 处理文本消息
         const messageText = message.trim();
         messageData.content = messageText;
 
+        // 发送文本消息
         const response = await api.post('/communication/messages/', messageData);
 
         if (response.data) {
+          // 将新消息添加到消息列表顶部
           setMessages(prev => [response.data, ...prev]);
+          // 清空输入框
           setMessage('');
+          // 滚动到顶部显示新消息
           flatListRef.current?.scrollToOffset({ animated: true, offset: 0 });
         }
       }
@@ -391,6 +460,7 @@ const ChatScreen = ({ route, navigation }) => {
       console.error('发送消息失败:', error);
       Alert.alert(t('common.error'), t('chat.sendMessageFailed'));
     } finally {
+      // 无论成功还是失败，都要重置发送状态
       setSending(false);
     }
   };
@@ -761,6 +831,19 @@ const ChatScreen = ({ route, navigation }) => {
   );
 };
 
+/**
+ * 样式定义
+ * 包含聊天界面的所有UI样式，按功能模块分组
+ * 
+ * 主要样式组：
+ * - 容器和布局样式
+ * - 头部样式
+ * - 消息列表样式
+ * - 输入区域样式
+ * - 按钮样式
+ * - 录音相关样式
+ * - 加载和空状态样式
+ */
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -1036,4 +1119,8 @@ const styles = StyleSheet.create({
   },
 });
 
+/**
+ * 导出聊天界面组件
+ * 作为默认导出，供其他模块使用
+ */
 export default ChatScreen; 

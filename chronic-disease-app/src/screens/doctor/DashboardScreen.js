@@ -1,3 +1,19 @@
+/**
+ * 医生仪表板页面组件
+ * 
+ * 功能特性：
+ * - 显示患者统计信息（总数、增长趋势）
+ * - 展示健康指标趋势图表
+ * - 显示患者风险分布
+ * - 提供快速操作入口
+ * - 支持时间范围切换
+ * - 实时数据刷新
+ * - 多语言支持
+ * 
+ * @author 医疗测试应用开发团队
+ * @version 1.0.0
+ */
+
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, RefreshControl, Dimensions, TouchableOpacity } from 'react-native';
 import { 
@@ -23,31 +39,56 @@ import { api } from '../../services/api';
 import { resolvePatientRiskLevel, getRiskColor, getRiskText } from '../../utils/riskUtils';
 import { fetchPatientsList } from '../../store/slices/patientsSlice';
 
+/**
+ * 医生仪表板页面主组件
+ * 
+ * 主要功能：
+ * - 展示患者统计数据和趋势
+ * - 提供健康指标可视化图表
+ * - 管理患者风险分布信息
+ * - 处理数据刷新和加载
+ * - 支持不同时间范围的数据分析
+ * 
+ * @param {Object} navigation - 导航对象，用于页面跳转
+ * @returns {JSX.Element} 医生仪表板页面组件
+ */
 const DashboardScreen = ({ navigation }) => {
   const { t } = useTranslation();
   const dispatch = useDispatch();
-  const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [timeRange, setTimeRange] = useState('year');
   
-  // 获取认证信息和患者数据
+  // 界面状态管理
+  const [refreshing, setRefreshing] = useState(false);  // 下拉刷新状态
+  const [loading, setLoading] = useState(true);         // 首次加载状态
+  const [timeRange, setTimeRange] = useState('year');   // 时间范围选择
+  
+  // 从Redux store获取认证信息和患者数据
   const { isAuthenticated, user, role, token } = useSelector(state => state.auth);
   const { patientsList, loading: patientsLoading } = useSelector(state => state.patients);
 
-  // 基于真实数据的统计
+  /**
+   * 基于真实数据计算仪表板统计信息
+   * 包括患者增长、告警减少、咨询增长、依从性改善等指标
+   * 
+   * @returns {Object} 包含各种统计指标的对象
+   */
   const getDashboardStats = () => {
     const totalPatients = patientsList ? patientsList.length : 0;
     
-    // 计算基于实际数据的趋势变化
+    /**
+     * 计算基于实际数据的趋势变化
+     * 根据选择的时间范围计算各项指标的同比变化
+     * 
+     * @returns {Object} 包含各项指标趋势的对象
+     */
     const calculateTrends = () => {
       const now = new Date();
       let periodDays = 30; // 默认月度对比
       
       // 根据时间范围设置对比周期
       switch (timeRange) {
-        case 'week': periodDays = 7; break;
-        case 'month': periodDays = 30; break;
-        case 'year': periodDays = 365; break;
+        case 'week': periodDays = 7; break;      // 周度对比
+        case 'month': periodDays = 30; break;    // 月度对比
+        case 'year': periodDays = 365; break;    // 年度对比
       }
       
       const periodStart = new Date(now.getTime() - periodDays * 24 * 60 * 60 * 1000);

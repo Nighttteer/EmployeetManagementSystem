@@ -1,3 +1,20 @@
+/**
+ * 患者健康趋势分析页面组件
+ * 
+ * 功能特性：
+ * - 显示患者健康指标趋势图表
+ * - 支持多时间段分析（周、月、季度、年）
+ * - 多种健康指标类型（血压、血糖、心率等）
+ * - 趋势分析和状态评估
+ * - 目标达成进度显示
+ * - 数据统计和平均值计算
+ * - 实时数据刷新和同步
+ * - 多语言国际化支持
+ * 
+ * @author 医疗测试应用开发团队
+ * @version 1.0.0
+ */
+
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, RefreshControl, Dimensions } from 'react-native';
 import { 
@@ -25,25 +42,46 @@ import {
 
 const { width } = Dimensions.get('window');
 
+/**
+ * 患者健康趋势分析页面主组件
+ * 
+ * 主要功能：
+ * - 分析和展示健康指标趋势
+ * - 处理多时间段数据筛选
+ * - 提供趋势分析和状态评估
+ * - 显示目标达成进度
+ * - 数据统计和可视化
+ * - 实时数据同步和更新
+ * 
+ * @param {Object} navigation - 导航对象，用于页面跳转
+ * @returns {JSX.Element} 患者健康趋势分析页面组件
+ */
 const HealthTrendsScreen = ({ navigation }) => {
   const { t } = useTranslation();
   const dispatch = useDispatch();
+  
+  // 从Redux store获取用户和健康数据
   const { user } = useSelector((state) => state.auth);
   const { healthMetrics, healthTrends, loading } = useSelector((state) => state.user);
   
-  const [refreshing, setRefreshing] = useState(false);
-  const [selectedPeriod, setSelectedPeriod] = useState('month');
-  const [selectedMetric, setSelectedMetric] = useState(METRIC_TYPES.BLOOD_PRESSURE);
-  const [showModal, setShowModal] = useState(false);
-  const [modalContent, setModalContent] = useState(null);
+  // 界面状态管理
+  const [refreshing, setRefreshing] = useState(false);              // 下拉刷新状态
+  const [selectedPeriod, setSelectedPeriod] = useState('month');    // 选中的时间段：week, month, quarter, year
+  const [selectedMetric, setSelectedMetric] = useState(METRIC_TYPES.BLOOD_PRESSURE); // 选中的健康指标类型
+  const [showModal, setShowModal] = useState(false);                // 模态框显示状态
+  const [modalContent, setModalContent] = useState(null);           // 模态框内容
 
-  // 组件挂载时自动加载数据
+  /**
+   * 组件挂载时自动加载趋势数据
+   */
   useEffect(() => {
     console.log('HealthTrendsScreen 组件挂载，开始加载数据');
     loadTrendsData();
   }, []);
 
-  // 当selectedPeriod改变时重新加载数据
+  /**
+   * 当选择的时间段改变时重新加载数据
+   */
   useEffect(() => {
     if (selectedPeriod) {
       console.log('HealthTrendsScreen 时间段改变，重新加载数据:', selectedPeriod);
@@ -51,7 +89,12 @@ const HealthTrendsScreen = ({ navigation }) => {
     }
   }, [selectedPeriod]);
 
-  // 处理趋势数据
+  /**
+   * 处理趋势数据
+   * 根据选择的时间段过滤和分组健康指标数据
+   * 
+   * @returns {Object} 处理后的趋势数据对象
+   */
   const processTrendsData = () => {
     if (!healthMetrics || healthMetrics.length === 0) {
       return {};
@@ -126,7 +169,14 @@ const HealthTrendsScreen = ({ navigation }) => {
     return processed;
   };
 
-  // 提取指标值
+  /**
+   * 提取指标值
+   * 从单个健康指标记录中提取特定类型的值
+   * 
+   * @param {Object} metric - 健康指标记录
+   * @param {string} metricType - 指标类型
+   * @returns {Object} 提取的指标值
+   */
   const extractMetricValues = (metric, metricType) => {
     switch (metricType) {
       case METRIC_TYPES.BLOOD_PRESSURE:
@@ -145,7 +195,14 @@ const HealthTrendsScreen = ({ navigation }) => {
     }
   };
 
-  // 计算平均值
+  /**
+   * 计算平均值
+   * 计算指定指标类型在给定时间段内的平均值
+   * 
+   * @param {Array} metrics - 健康指标记录数组
+   * @param {string} metricType - 指标类型
+   * @returns {Object} 平均值对象
+   */
   const calculateAverage = (metrics, metricType) => {
     if (metrics.length === 0) return {};
     
@@ -171,7 +228,14 @@ const HealthTrendsScreen = ({ navigation }) => {
     }
   };
 
-  // 计算趋势
+  /**
+   * 计算趋势
+   * 分析指定指标类型在给定时间段内的趋势
+   * 
+   * @param {Array} metrics - 健康指标记录数组
+   * @param {string} metricType - 指标类型
+   * @returns {string} 趋势类型（improving, stable, worsening, increasing, decreasing）
+   */
   const calculateTrend = (metrics, metricType) => {
     if (metrics.length < 2) return 'stable';
     
@@ -211,7 +275,13 @@ const HealthTrendsScreen = ({ navigation }) => {
     return difference > 0 ? 'increasing' : 'decreasing';
   };
 
-  // 获取目标值
+  /**
+   * 获取目标值
+   * 根据指标类型返回一个示例目标值对象
+   * 
+   * @param {string} metricType - 指标类型
+   * @returns {Object} 目标值对象
+   */
   const getGoalValues = (metricType) => {
     switch (metricType) {
       case METRIC_TYPES.BLOOD_PRESSURE:
@@ -227,7 +297,15 @@ const HealthTrendsScreen = ({ navigation }) => {
     }
   };
 
-  // 计算进度
+  /**
+   * 计算进度
+   * 计算当前平均值与目标值之间的进度百分比
+   * 
+   * @param {Object} average - 当前平均值
+   * @param {Object} goal - 目标值
+   * @param {string} metricType - 指标类型
+   * @returns {number} 进度百分比
+   */
   const calculateProgress = (average, goal, metricType) => {
     if (!average || !goal) return 0;
     

@@ -1,3 +1,17 @@
+/**
+ * 语言设置页面组件
+ * 
+ * 功能特性：
+ * - 支持多语言切换（中文、英文）
+ * - 显示当前语言信息
+ * - 语言切换确认对话框
+ * - 语言图标和国旗显示
+ * - 与Redux状态同步管理
+ * 
+ * @author 医疗测试应用开发团队
+ * @version 1.0.0
+ */
+
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView, Alert } from 'react-native';
 import { 
@@ -27,31 +41,55 @@ import {
   clearError
 } from '../../store/slices/languageSlice';
 
+/**
+ * 语言设置页面主组件
+ * 
+ * 主要功能：
+ * - 初始化语言设置
+ * - 显示支持的语言列表
+ * - 处理语言切换操作
+ * - 显示语言切换确认对话框
+ * - 错误处理和用户提示
+ * 
+ * @param {Object} navigation - 导航对象，用于页面返回
+ * @returns {JSX.Element} 语言设置页面组件
+ */
 const LanguageSettingsScreen = ({ navigation }) => {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   
-  const currentLanguage = useSelector(selectCurrentLanguage);
-  const supportedLanguages = useSelector(selectSupportedLanguages);
-  const isLoading = useSelector(selectLanguageLoading);
-  const error = useSelector(selectLanguageError);
+  // 从Redux store获取语言相关状态
+  const currentLanguage = useSelector(selectCurrentLanguage);           // 当前选中的语言
+  const supportedLanguages = useSelector(selectSupportedLanguages);     // 支持的语言列表
+  const isLoading = useSelector(selectLanguageLoading);                 // 加载状态
+  const error = useSelector(selectLanguageError);                       // 错误信息
   
-  const [selectedLanguage, setSelectedLanguage] = useState(currentLanguage);
-  const [confirmDialogVisible, setConfirmDialogVisible] = useState(false);
-  const [pendingLanguage, setPendingLanguage] = useState(null);
+  // 本地状态管理
+  const [selectedLanguage, setSelectedLanguage] = useState(currentLanguage);  // 当前选中的语言
+  const [confirmDialogVisible, setConfirmDialogVisible] = useState(false);    // 确认对话框显示状态
+  const [pendingLanguage, setPendingLanguage] = useState(null);               // 待确认的语言
 
+  /**
+   * 组件挂载时初始化语言设置
+   * 从本地存储或默认设置加载语言配置
+   */
   useEffect(() => {
-    // 初始化语言设置
     dispatch(initializeLanguage());
   }, [dispatch]);
 
+  /**
+   * 同步当前语言状态
+   * 当Redux store中的语言状态变化时，更新本地状态
+   */
   useEffect(() => {
-    // 同步选中的语言
     setSelectedLanguage(currentLanguage);
   }, [currentLanguage]);
 
+  /**
+   * 处理语言切换错误
+   * 显示错误提示并清除错误状态
+   */
   useEffect(() => {
-    // 处理错误
     if (error) {
       Alert.alert(t('common.error'), error, [
         { text: t('common.confirm'), onPress: () => dispatch(clearError()) }
@@ -59,6 +97,12 @@ const LanguageSettingsScreen = ({ navigation }) => {
     }
   }, [error, t, dispatch]);
 
+  /**
+   * 处理语言选择
+   * 如果选择的是当前语言则不做操作，否则显示确认对话框
+   * 
+   * @param {string} languageCode - 选中的语言代码
+   */
   const handleLanguageSelect = (languageCode) => {
     if (languageCode === currentLanguage) {
       return; // 如果选择的是当前语言，不做任何操作
@@ -69,6 +113,10 @@ const LanguageSettingsScreen = ({ navigation }) => {
     setConfirmDialogVisible(true);
   };
 
+  /**
+   * 确认语言切换
+   * 调用Redux action切换语言，显示重启提示
+   */
   const confirmLanguageChange = async () => {
     setConfirmDialogVisible(false);
     
@@ -89,12 +137,22 @@ const LanguageSettingsScreen = ({ navigation }) => {
     }
   };
 
+  /**
+   * 取消语言切换
+   * 关闭确认对话框，恢复之前选择的语言
+   */
   const cancelLanguageChange = () => {
     setConfirmDialogVisible(false);
     setSelectedLanguage(currentLanguage); // 恢复之前的选择
     setPendingLanguage(null);
   };
 
+  /**
+   * 获取语言对应的图标名称
+   * 
+   * @param {string} languageCode - 语言代码
+   * @returns {string} 图标名称
+   */
   const getLanguageIcon = (languageCode) => {
     switch (languageCode) {
       case 'zh':
@@ -106,6 +164,12 @@ const LanguageSettingsScreen = ({ navigation }) => {
     }
   };
 
+  /**
+   * 获取语言对应的国旗表情符号
+   * 
+   * @param {string} languageCode - 语言代码
+   * @returns {string} 国旗表情符号
+   */
   const getLanguageFlag = (languageCode) => {
     switch (languageCode) {
       case 'zh':
@@ -117,6 +181,14 @@ const LanguageSettingsScreen = ({ navigation }) => {
     }
   };
 
+  /**
+   * 渲染单个语言选项
+   * 显示语言名称、描述、国旗和选择状态
+   * 
+   * @param {string} languageCode - 语言代码
+   * @param {Object} languageInfo - 语言信息对象
+   * @returns {JSX.Element} 语言选项组件
+   */
   const renderLanguageOption = (languageCode, languageInfo) => (
     <Card key={languageCode} style={styles.languageCard}>
       <List.Item
@@ -145,6 +217,12 @@ const LanguageSettingsScreen = ({ navigation }) => {
     </Card>
   );
 
+  /**
+   * 渲染当前语言信息卡片
+   * 显示当前选中的语言和国旗
+   * 
+   * @returns {JSX.Element} 当前语言信息卡片
+   */
   const renderCurrentLanguageInfo = () => (
     <Card style={styles.currentLanguageCard}>
       <Card.Content>
@@ -167,6 +245,7 @@ const LanguageSettingsScreen = ({ navigation }) => {
     </Card>
   );
 
+  // 加载状态显示
   if (isLoading && !currentLanguage) {
     return (
       <SafeAreaView style={styles.container}>
@@ -184,12 +263,14 @@ const LanguageSettingsScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* 页面头部导航栏 */}
       <Appbar.Header>
         <Appbar.BackAction onPress={() => navigation.goBack()} />
         <Appbar.Content title={t('settings.languageSettings')} />
       </Appbar.Header>
       
       <ScrollView style={styles.content}>
+        {/* 页面标题和说明 */}
         <View style={styles.header}>
           <Text variant="headlineMedium" style={styles.title}>
             {t('language.selectLanguage')}
@@ -199,8 +280,10 @@ const LanguageSettingsScreen = ({ navigation }) => {
           </Text>
         </View>
 
+        {/* 当前语言信息 */}
         {renderCurrentLanguageInfo()}
 
+        {/* 可选语言列表 */}
         <View style={styles.languagesList}>
           <Text variant="titleMedium" style={styles.sectionTitle}>
             {t('language.availableLanguages')}
@@ -211,6 +294,7 @@ const LanguageSettingsScreen = ({ navigation }) => {
           )}
         </View>
 
+        {/* 语言切换说明信息 */}
         <Card style={styles.infoCard}>
           <Card.Content>
             <View style={styles.infoContent}>
@@ -223,7 +307,7 @@ const LanguageSettingsScreen = ({ navigation }) => {
         </Card>
       </ScrollView>
 
-      {/* 确认对话框 */}
+      {/* 语言切换确认对话框 */}
       <Portal>
         <Dialog visible={confirmDialogVisible} onDismiss={cancelLanguageChange}>
           <Dialog.Title>{t('language.languageChanged')}</Dialog.Title>
@@ -253,6 +337,18 @@ const LanguageSettingsScreen = ({ navigation }) => {
   );
 };
 
+/**
+ * 样式定义
+ * 包含语言设置页面的所有UI样式，按功能模块分组
+ * 
+ * 主要样式组：
+ * - 容器和布局样式
+ * - 头部样式
+ * - 当前语言卡片样式
+ * - 语言选项样式
+ * - 信息卡片样式
+ * - 加载状态样式
+ */
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -353,4 +449,8 @@ const styles = StyleSheet.create({
   },
 });
 
+/**
+ * 导出语言设置页面组件
+ * 作为默认导出，供其他模块使用
+ */
 export default LanguageSettingsScreen; 

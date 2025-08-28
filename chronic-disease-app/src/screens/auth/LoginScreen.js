@@ -21,10 +21,19 @@ const LoginScreen = ({ navigation }) => {
   });
   const [showPassword, setShowPassword] = useState(false);
 
+  /**
+   * 处理表单输入变化
+   * 
+   * 当用户在登录表单的输入框中输入内容时，更新对应的表单状态
+   * 使用函数式更新确保状态更新的原子性和一致性
+   * 
+   * @param {string} field - 要更新的表单字段名（如：'phone', 'password', 'role'）
+   * @param {string} value - 用户输入的新值
+   */
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
-      ...prev,
-      [field]: value
+      ...prev,        // 保留之前的所有表单数据
+      [field]: value  // 只更新指定的字段为新值
     }));
   };
 

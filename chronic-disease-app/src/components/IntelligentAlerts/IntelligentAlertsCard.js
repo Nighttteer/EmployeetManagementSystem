@@ -3,26 +3,10 @@
  * 显示智能提醒的概览信息
  */
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  Alert,
-  RefreshControl,
-  FlatList
-} from 'react-native';
-import {
-  Card,
-  Text,
-  Button,
-  ActivityIndicator,
-  Chip,
-  Badge,
-  Avatar
-} from 'react-native-paper';
+import {View,StyleSheet,TouchableOpacity,Alert,RefreshControl,FlatList} from 'react-native';
+import {Card,Text,Button,ActivityIndicator,Chip,Badge,Avatar} from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-
 import intelligentAlertService from '../../services/intelligentAlertService';
 
 const IntelligentAlertsCard = ({ 

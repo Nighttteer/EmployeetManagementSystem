@@ -31,7 +31,7 @@ export const useSafeTranslation = () => {
 
   // 获取默认值
   const getDefaultValue = (key, options = {}) => {
-    // 根据键名提供智能默认值
+    // 根据键名提供智能默认值Smart Defaults
     const keyLower = key.toLowerCase();
     
     // 通用键值

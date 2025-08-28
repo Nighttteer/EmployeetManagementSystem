@@ -1,3 +1,19 @@
+/**
+ * 添加用药计划页面组件
+ * 
+ * 功能特性：
+ * - 为患者添加新的用药计划
+ * - 支持药品搜索和选择
+ * - 配置用药频次和时间
+ * - 设置用药周期和特殊说明
+ * - 支持编辑现有用药计划
+ * - 表单验证和错误处理
+ * - 多语言支持
+ * 
+ * @author 医疗测试应用开发团队
+ * @version 1.0.0
+ */
+
 import React, { useState, useEffect } from 'react';
 import { 
   View, 
@@ -26,65 +42,97 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useTranslation } from 'react-i18next';
 import { medicationAPI } from '../../services/api';
 
+/**
+ * 添加用药计划页面主组件
+ * 
+ * 主要功能：
+ * - 创建新的用药计划
+ * - 编辑现有用药计划
+ * - 管理用药表单数据
+ * - 处理药品搜索和选择
+ * - 配置用药时间和频次
+ * - 表单验证和提交
+ * 
+ * @param {Object} route - 路由参数对象
+ * @param {Object} route.params.patient - 患者信息对象
+ * @param {Object} route.params.editingPlan - 正在编辑的用药计划（可选）
+ * @param {Object} navigation - 导航对象
+ * @returns {JSX.Element} 添加用药计划页面组件
+ */
 const AddMedicationScreen = ({ route, navigation }) => {
   const { patient, editingPlan } = route.params || {};
   const { t } = useTranslation();
-  const [loading, setLoading] = useState(false);
-  const [medications, setMedications] = useState([]);
-  const [medicationSearch, setMedicationSearch] = useState('');
+  
+  // 基础状态管理
+  const [loading, setLoading] = useState(false);                    // 加载状态
+  const [medications, setMedications] = useState([]);              // 药品列表
+  const [medicationSearch, setMedicationSearch] = useState('');    // 药品搜索关键词
 
-  // 表单状态
+  // 表单数据状态
   const [formData, setFormData] = useState({
-    medication: null,
-    dosage: '',
-    frequency: 'QD',
-    time_of_day: ['08:00'], // 时间数组，支持多个时间点
-    start_date: new Date(),
-    end_date: null,
-    duration_days: '',
-    special_instructions: '',
-    dietary_requirements: '',
-    requires_monitoring: false,
-    monitoring_notes: ''
+    medication: null,                    // 选中的药品
+    dosage: '',                          // 用药剂量
+    frequency: 'QD',                     // 用药频次
+    time_of_day: ['08:00'],             // 服药时间数组，支持多个时间点
+    start_date: new Date(),              // 开始日期
+    end_date: null,                      // 结束日期
+    duration_days: '',                   // 持续天数
+    special_instructions: '',            // 特殊说明
+    dietary_requirements: '',            // 饮食要求
+    requires_monitoring: false,          // 是否需要监测
+    monitoring_notes: ''                 // 监测说明
   });
+  
+  // 表单错误状态
   const [formErrors, setFormErrors] = useState({});
 
   // 日期选择器状态
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [datePickerType, setDatePickerType] = useState('start');
+  const [showDatePicker, setShowDatePicker] = useState(false);     // 日期选择器显示状态
+  const [datePickerType, setDatePickerType] = useState('start');   // 当前编辑的日期类型
   
   // 时间选择器状态
-  const [showTimePicker, setShowTimePicker] = useState(false);
-  const [editingTimeIndex, setEditingTimeIndex] = useState(0);
+  const [showTimePicker, setShowTimePicker] = useState(false);     // 时间选择器显示状态
+  const [editingTimeIndex, setEditingTimeIndex] = useState(0);     // 正在编辑的时间索引
 
-  // 频次选项
+  // 用药频次选项配置
   const frequencyOptions = [
-    { label: t('medication.frequency.onceDaily'), value: 'QD' },
-    { label: t('medication.frequency.twiceDaily'), value: 'BID' },
-    { label: t('medication.frequency.threeTimesDaily'), value: 'TID' },
-    { label: t('medication.frequency.fourTimesDaily'), value: 'QID' },
-    { label: t('medication.frequency.every12Hours'), value: 'Q12H' },
-    { label: t('medication.frequency.every8Hours'), value: 'Q8H' },
-    { label: t('medication.frequency.every6Hours'), value: 'Q6H' },
-    { label: t('medication.frequency.asNeeded'), value: 'PRN' },
-    { label: t('medication.frequency.other'), value: 'OTHER' }
+    { label: t('medication.frequency.onceDaily'), value: 'QD' },           // 每日一次
+    { label: t('medication.frequency.twiceDaily'), value: 'BID' },         // 每日两次
+    { label: t('medication.frequency.threeTimesDaily'), value: 'TID' },    // 每日三次
+    { label: t('medication.frequency.fourTimesDaily'), value: 'QID' },     // 每日四次
+    { label: t('medication.frequency.every12Hours'), value: 'Q12H' },      // 每12小时一次
+    { label: t('medication.frequency.every8Hours'), value: 'Q8H' },        // 每8小时一次
+    { label: t('medication.frequency.every6Hours'), value: 'Q6H' },        // 每6小时一次
+    { label: t('medication.frequency.asNeeded'), value: 'PRN' },           // 按需服用
+    { label: t('medication.frequency.other'), value: 'OTHER' }             // 其他
   ];
   
-  // 根据频次获取建议的服药时间
+  /**
+   * 根据频次获取建议的服药时间
+   * 为不同的用药频次提供合理的默认时间安排
+   * 
+   * @param {string} frequency - 用药频次代码
+   * @returns {Array<string>} 建议的服药时间数组
+   */
   const getSuggestedTimes = (frequency) => {
     switch (frequency) {
-      case 'QD': return ['08:00'];
-      case 'BID': return ['08:00', '20:00'];
-      case 'TID': return ['08:00', '14:00', '20:00'];
-      case 'QID': return ['08:00', '12:00', '16:00', '20:00'];
-      case 'Q12H': return ['08:00', '20:00'];
-      case 'Q8H': return ['08:00', '16:00', '00:00'];
-      case 'Q6H': return ['06:00', '12:00', '18:00', '00:00'];
-      default: return ['08:00'];
+      case 'QD': return ['08:00'];                                    // 每日一次：早上8点
+      case 'BID': return ['08:00', '20:00'];                          // 每日两次：早8点和晚8点
+      case 'TID': return ['08:00', '14:00', '20:00'];                // 每日三次：早8点、下午2点、晚8点
+      case 'QID': return ['08:00', '12:00', '16:00', '20:00'];       // 每日四次：早8点、中午12点、下午4点、晚8点
+      case 'Q12H': return ['08:00', '20:00'];                         // 每12小时：早8点和晚8点
+      case 'Q8H': return ['08:00', '16:00', '00:00'];                // 每8小时：早8点、下午4点、午夜12点
+      case 'Q6H': return ['06:00', '12:00', '18:00', '00:00'];       // 每6小时：早6点、中午12点、下午6点、午夜12点
+      default: return ['08:00'];                                       // 默认：早上8点
     }
   };
 
-  // 当频次改变时，自动更新服药时间
+  /**
+   * 处理频次变化
+   * 当用户选择新的用药频次时，自动更新建议的服药时间
+   * 
+   * @param {string} newFrequency - 新选择的频次
+   */
   const handleFrequencyChange = (newFrequency) => {
     const suggestedTimes = getSuggestedTimes(newFrequency);
     setFormData(prev => ({
@@ -94,26 +142,35 @@ const AddMedicationScreen = ({ route, navigation }) => {
     }));
   };
 
-  // 显示文本映射
+  /**
+   * 获取药品分类的显示名称
+   * 将英文分类代码转换为用户友好的显示名称
+   * 
+   * @param {string} category - 药品分类代码
+   * @returns {string} 分类显示名称
+   */
   const getCategoryDisplay = (category) => {
     if (!category) return t('medication.uncategorized');
     const categoryMap = {
-      'antihypertensive': t('medication.category.antihypertensive'),
-      'hypoglycemic': t('medication.category.hypoglycemic'),
-      'lipid_lowering': t('medication.category.lipidLowering'),
-      'anticoagulant': t('medication.category.anticoagulant'),
-      'diuretic': t('medication.category.diuretic'),
-      'beta_blocker': t('medication.category.betaBlocker'),
-      'calcium_channel_blocker': t('medication.category.calciumChannelBlocker'),
-      'ace_inhibitor': t('medication.category.aceInhibitor'),
-      'antiplatelet': t('medication.category.antiplatelet'),
-      'statin': t('medication.category.statin'),
-      'other': t('medication.category.other')
+      'antihypertensive': t('medication.category.antihypertensive'),      // 降压药
+      'hypoglycemic': t('medication.category.hypoglycemic'),             // 降糖药
+      'lipid_lowering': t('medication.category.lipidLowering'),          // 降脂药
+      'anticoagulant': t('medication.category.anticoagulant'),           // 抗凝药
+      'diuretic': t('medication.category.diuretic'),                     // 利尿剂
+      'beta_blocker': t('medication.category.betaBlocker'),              // β受体阻滞剂
+      'calcium_channel_blocker': t('medication.category.calciumChannelBlocker'), // 钙通道阻滞剂
+      'ace_inhibitor': t('medication.category.aceInhibitor'),            // ACE抑制剂
+      'antiplatelet': t('medication.category.antiplatelet'),             // 抗血小板药
+      'statin': t('medication.category.statin'),                         // 他汀类
+      'other': t('medication.category.other')                            // 其他
     };
     return categoryMap[category] || category;
   };
 
-  // 加载药品列表
+  /**
+   * 加载药品列表
+   * 从API获取所有可用的药品信息
+   */
   const loadMedications = async () => {
     try {
       const response = await medicationAPI.getMedications();
@@ -124,7 +181,10 @@ const AddMedicationScreen = ({ route, navigation }) => {
     }
   };
 
-  // 初始化
+  /**
+   * 组件初始化副作用
+   * 加载药品列表，如果是编辑模式则加载现有用药计划数据
+   */
   useEffect(() => {
     loadMedications();
     
@@ -647,6 +707,18 @@ const AddMedicationScreen = ({ route, navigation }) => {
   );
 };
 
+/**
+ * 样式定义
+ * 包含添加用药计划页面的所有UI样式，按功能模块分组
+ * 
+ * 主要样式组：
+ * - 容器和布局样式
+ * - 表单输入样式
+ * - 药品选择样式
+ * - 时间选择样式
+ * - 日期选择样式
+ * - 按钮和操作样式
+ */
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -879,4 +951,8 @@ const styles = StyleSheet.create({
   },
 });
 
+/**
+ * 导出添加用药计划页面组件
+ * 作为默认导出，供其他模块使用
+ */
 export default AddMedicationScreen;

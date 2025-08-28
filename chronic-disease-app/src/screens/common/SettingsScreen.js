@@ -1,3 +1,18 @@
+/**
+ * 设置页面组件
+ * 
+ * 功能特性：
+ * - 显示用户基本信息（头像、姓名、角色、电话）
+ * - 个人设置管理（编辑资料、修改密码、隐私设置）
+ * - 应用设置（通知、语言设置）
+ * - 角色特定设置（患者健康设置、医生工作设置）
+ * - 帮助和反馈功能
+ * - 退出登录功能
+ * 
+ * @author 医疗测试应用开发团队
+ * @version 1.0.0
+ */
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, Alert, Switch, Platform } from 'react-native';
 import { 
@@ -20,17 +35,34 @@ import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { logoutUser } from '../../store/slices/authSlice';
 
+/**
+ * 设置页面主组件
+ * 
+ * 主要功能：
+ * - 展示用户个人信息和头像
+ * - 提供各种设置选项的导航
+ * - 根据用户角色显示不同的设置项
+ * - 处理退出登录确认
+ * - 实时监听用户信息变化
+ * 
+ * @param {Object} navigation - 导航对象，用于页面跳转
+ * @returns {JSX.Element} 设置页面组件
+ */
 const SettingsScreen = ({ navigation }) => {
   const { t } = useTranslation();
   const theme = useTheme();
   const dispatch = useDispatch();
   const { user, role } = useSelector((state) => state.auth);
   
-  const [notificationEnabled, setNotificationEnabled] = useState(true);
-  const [logoutDialogVisible, setLogoutDialogVisible] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
+  // 界面状态管理
+  const [notificationEnabled, setNotificationEnabled] = useState(true);  // 通知开关状态
+  const [logoutDialogVisible, setLogoutDialogVisible] = useState(false); // 退出登录对话框显示状态
+  const [refreshKey, setRefreshKey] = useState(0);                      // 强制刷新键
 
-  // 监听用户信息变化，确保界面能正确更新
+  /**
+   * 监听用户信息变化，确保界面能正确更新
+   * 当用户信息更新时，强制重新渲染组件
+   */
   useEffect(() => {
     console.log('SettingsScreen 用户信息更新:', user);
     console.log('SettingsScreen 用户姓名:', user?.name);
@@ -40,7 +72,10 @@ const SettingsScreen = ({ navigation }) => {
     setRefreshKey(prev => prev + 1);
   }, [user]);
 
-  // 监听导航焦点变化，确保从编辑页面返回时能更新
+  /**
+   * 监听导航焦点变化，确保从编辑页面返回时能更新
+   * 当页面获得焦点时，检查用户信息更新
+   */
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
       console.log('SettingsScreen 获得焦点，检查用户信息更新');
@@ -50,15 +85,30 @@ const SettingsScreen = ({ navigation }) => {
     return unsubscribe;
   }, [navigation]);
 
+  /**
+   * 处理退出登录按钮点击
+   * 显示退出登录确认对话框
+   */
   const handleLogout = () => {
     setLogoutDialogVisible(true);
   };
 
+  /**
+   * 确认退出登录
+   * 调用Redux action执行退出登录操作
+   */
   const confirmLogout = () => {
     dispatch(logoutUser());
     setLogoutDialogVisible(false);
   };
 
+  /**
+   * 获取角色显示名称
+   * 根据用户角色返回对应的本地化名称
+   * 
+   * @param {string} role - 用户角色
+   * @returns {string} 角色显示名称
+   */
   const getRoleDisplayName = (role) => {
     switch (role) {
       case 'patient':
@@ -70,6 +120,13 @@ const SettingsScreen = ({ navigation }) => {
     }
   };
 
+  /**
+   * 获取用户姓名首字母
+   * 用于头像显示，优先使用first_name和last_name
+   * 
+   * @param {string} name - 用户姓名
+   * @returns {string} 姓名首字母
+   */
   const getInitials = (name) => {
     if (!name) return 'U';
     const words = name.split(' ');
@@ -80,7 +137,7 @@ const SettingsScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView}>
-        {/* 用户信息卡片 */}
+        {/* 用户信息卡片 - 显示头像、姓名、角色和编辑按钮 */}
         <Card style={styles.userCard}>
           <Card.Content style={styles.userInfo}>
             <Avatar.Text 
@@ -108,7 +165,7 @@ const SettingsScreen = ({ navigation }) => {
           </Card.Content>
         </Card>
 
-        {/* 个人设置 */}
+        {/* 个人设置区域 - 编辑资料、修改密码、隐私设置 */}
         <Surface style={styles.section}>
           <Text variant="titleMedium" style={styles.sectionTitle}>
             {t('settings.personalSettings')}
@@ -143,7 +200,7 @@ const SettingsScreen = ({ navigation }) => {
           />
         </Surface>
 
-        {/* 应用设置 */}
+        {/* 应用设置区域 - 通知、语言设置等 */}
         <Surface style={styles.section}>
           <Text variant="titleMedium" style={styles.sectionTitle}>
             {t('settings.appSettings')}
@@ -176,7 +233,7 @@ const SettingsScreen = ({ navigation }) => {
           
         </Surface>
 
-        {/* 健康设置 (仅患者显示) */}
+        {/* 健康设置区域 - 仅患者显示 */}
         {role === 'patient' && (
           <Surface style={styles.section}>
             <Text variant="titleMedium" style={styles.sectionTitle}>
@@ -203,9 +260,9 @@ const SettingsScreen = ({ navigation }) => {
             
             <Divider />
             
-                      <List.Item
-            title={t('health.dataExport')}
-            description={t('settings.dataExportDesc')}
+            <List.Item
+              title={t('health.dataExport')}
+              description={t('settings.dataExportDesc')}
               left={(props) => <List.Icon {...props} icon="download" />}
               right={(props) => <List.Icon {...props} icon="chevron-right" />}
               onPress={() => navigation.navigate('DataExport')}
@@ -213,16 +270,16 @@ const SettingsScreen = ({ navigation }) => {
           </Surface>
         )}
 
-        {/* 医生设置 (仅医生显示) */}
+        {/* 医生设置区域 - 仅医生显示 */}
         {role === 'doctor' && (
           <Surface style={styles.section}>
             <Text variant="titleMedium" style={styles.sectionTitle}>
               {t('settings.doctorSettings')}
             </Text>
             
-                      <List.Item
-            title={t('settings.medicalInfo')}
-            description={t('settings.medicalInfoDesc')}
+            <List.Item
+              title={t('settings.medicalInfo')}
+              description={t('settings.medicalInfoDesc')}
               left={(props) => <List.Icon {...props} icon="medical-bag" />}
               right={(props) => <List.Icon {...props} icon="chevron-right" />}
               onPress={() => navigation.navigate('MedicalInfo')}
@@ -242,7 +299,7 @@ const SettingsScreen = ({ navigation }) => {
           </Surface>
         )}
 
-        {/* 帮助和反馈 */}
+        {/* 帮助和反馈区域 - FAQ、反馈、关于 */}
         <Surface style={styles.section}>
           <Text variant="titleMedium" style={styles.sectionTitle}>
             {t('settings.helpAndFeedback')}
@@ -310,6 +367,17 @@ const SettingsScreen = ({ navigation }) => {
   );
 };
 
+/**
+ * 样式定义
+ * 包含设置页面的所有UI样式，按功能模块分组
+ * 
+ * 主要样式组：
+ * - 容器和布局样式
+ * - 用户信息卡片样式
+ * - 设置区域样式
+ * - 列表项样式
+ * - 退出登录按钮样式
+ */
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -365,4 +433,8 @@ const styles = StyleSheet.create({
   },
 });
 
+/**
+ * 导出设置页面组件
+ * 作为默认导出，供其他模块使用
+ */
 export default SettingsScreen; 

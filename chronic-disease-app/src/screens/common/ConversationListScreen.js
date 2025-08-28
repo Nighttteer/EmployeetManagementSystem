@@ -16,32 +16,63 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { api } from '../../services/api';
 
+/**
+ * 会话列表界面主组件
+ * 
+ * 主要功能：
+ * - 加载和显示用户的所有会话
+ * - 处理会话点击导航到聊天界面
+ * - 管理会话列表的加载状态和刷新
+ * - 显示会话统计信息
+ * 
+ * @param {Object} navigation - 导航对象，用于页面跳转
+ * @returns {JSX.Element} 会话列表界面组件
+ */
 const ConversationListScreen = ({ navigation }) => {
   const { t } = useTranslation();
-  const [conversations, setConversations] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  
+  // 基础状态管理
+  const [conversations, setConversations] = useState([]);  // 会话列表数组
+  const [loading, setLoading] = useState(true);            // 首次加载状态指示器
+  const [refreshing, setRefreshing] = useState(false);     // 下拉刷新状态
+  
+  // 会话统计信息
   const [stats, setStats] = useState({
-    total_conversations: 0,
-    unread_count: 0,
+    total_conversations: 0,  // 总会话数量
+    unread_count: 0,         // 总未读消息数量
   });
+  
+  // 从Redux store获取当前用户信息
   const { user } = useSelector(state => state.auth);
 
+  /**
+   * 页面焦点效果钩子
+   * 每次页面获得焦点时，自动加载会话列表和统计信息
+   * 确保用户从其他页面返回时能看到最新数据
+   */
   useFocusEffect(
     useCallback(() => {
-      loadConversations();
-      loadStats();
+      loadConversations();  // 加载会话列表
+      loadStats();          // 加载统计信息
     }, [])
   );
 
+  /**
+   * 加载会话列表
+   * 从API获取用户的会话列表，支持刷新和首次加载两种模式
+   * 
+   * @param {boolean} refresh - 是否为刷新操作，默认为false
+   */
   const loadConversations = async (refresh = false) => {
     try {
+      // 根据操作类型设置不同的加载状态
       if (refresh) {
-        setRefreshing(true);
+        setRefreshing(true);  // 下拉刷新状态
       } else {
-        setLoading(true);
+        setLoading(true);     // 首次加载状态
       }
 
+      // 调用API获取会话列表
       const response = await api.get('/communication/conversations/');
       
       if (response.data.results) {
@@ -51,11 +82,16 @@ const ConversationListScreen = ({ navigation }) => {
       console.error('加载会话失败:', error);
       Alert.alert(t('common.error'), t('chat.loadConversationsFailed'));
     } finally {
+      // 无论成功还是失败，都要重置加载状态
       setLoading(false);
       setRefreshing(false);
     }
   };
 
+  /**
+   * 加载会话统计信息
+   * 获取总会话数和总未读消息数等统计数据
+   */
   const loadStats = async () => {
     try {
       const response = await api.get('/communication/stats/');
@@ -65,6 +101,12 @@ const ConversationListScreen = ({ navigation }) => {
     }
   };
 
+  /**
+   * 打开聊天界面
+   * 导航到聊天界面，传递会话ID和聊天对象信息
+   * 
+   * @param {Object} conversation - 会话对象，包含会话ID和参与者信息
+   */
   const openChat = (conversation) => {
     navigation.navigate('Chat', {
       conversationId: conversation.id,
@@ -72,10 +114,21 @@ const ConversationListScreen = ({ navigation }) => {
     });
   };
 
+  /**
+   * 开始新聊天
+   * 导航到用户搜索界面，让用户选择聊天对象
+   */
   const startNewChat = () => {
     navigation.navigate('UserSearch');
   };
 
+  /**
+   * 格式化时间显示
+   * 根据时间距离现在的时间差，显示相对时间或具体日期
+   * 
+   * @param {string} timestamp - ISO格式的时间戳字符串
+   * @returns {string} 格式化后的时间字符串
+   */
   const formatTime = (timestamp) => {
     if (!timestamp) return '';
     
@@ -85,12 +138,13 @@ const ConversationListScreen = ({ navigation }) => {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
     if (diffDays === 1) {
-      return t('time.today');
+      return t('time.today');                    // 今天
     } else if (diffDays === 2) {
-      return t('time.yesterday');
+      return t('time.yesterday');                // 昨天
     } else if (diffDays <= 7) {
-      return t('time.daysAgo', { days: diffDays - 1 });
+      return t('time.daysAgo', { days: diffDays - 1 }); // X天前
     } else {
+      // 超过7天显示具体日期
       return date.toLocaleDateString(i18n.language === 'zh' ? 'zh-CN' : 'en-US', {
         month: '2-digit',
         day: '2-digit',
@@ -98,12 +152,20 @@ const ConversationListScreen = ({ navigation }) => {
     }
   };
 
+  /**
+   * 渲染单个会话项
+   * 显示会话的头像、名称、角色、最后消息和时间
+   * 
+   * @param {Object} item - 会话数据对象
+   * @returns {JSX.Element} 会话项组件
+   */
   const renderConversation = ({ item }) => (
     <TouchableOpacity
       style={styles.conversationItem}
       onPress={() => openChat(item)}
       activeOpacity={0.7}
     >
+      {/* 头像容器，包含头像和未读消息徽章 */}
       <View style={styles.avatarContainer}>
         <View style={[
           styles.avatar,
@@ -115,6 +177,7 @@ const ConversationListScreen = ({ navigation }) => {
             color="#fff" 
           />
         </View>
+        {/* 未读消息数量徽章 */}
         {item.unread_count > 0 && (
           <View style={styles.unreadBadge}>
             <Text style={styles.unreadText}>
@@ -124,7 +187,9 @@ const ConversationListScreen = ({ navigation }) => {
         )}
       </View>
       
+      {/* 会话内容区域 */}
       <View style={styles.conversationContent}>
+        {/* 会话头部：名称和时间 */}
         <View style={styles.conversationHeader}>
           <Text style={styles.participantName} numberOfLines={1}>
             {item.other_participant?.name || t('chat.unknownUser')}
@@ -134,6 +199,7 @@ const ConversationListScreen = ({ navigation }) => {
           </Text>
         </View>
         
+        {/* 会话主体：角色标签和最后消息 */}
         <View style={styles.conversationBody}>
           <Text style={styles.roleText}>
             {item.other_participant?.role === 'doctor' ? t('auth.doctor') : t('auth.patient')}
@@ -146,6 +212,12 @@ const ConversationListScreen = ({ navigation }) => {
     </TouchableOpacity>
   );
 
+  /**
+   * 渲染空状态界面
+   * 当没有会话时显示，包含图标、提示文字和开始聊天按钮
+   * 
+   * @returns {JSX.Element} 空状态组件
+   */
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
       <Ionicons name="chatbubbles-outline" size={80} color="#ccc" />
@@ -157,6 +229,12 @@ const ConversationListScreen = ({ navigation }) => {
     </View>
   );
 
+  /**
+   * 渲染统计信息头部
+   * 显示总会话数和未读消息数的统计卡片
+   * 
+   * @returns {JSX.Element} 统计信息头部组件
+   */
   const renderHeader = () => (
     <View style={styles.statsContainer}>
       <View style={styles.statItem}>
@@ -172,6 +250,7 @@ const ConversationListScreen = ({ navigation }) => {
     </View>
   );
 
+  // 首次加载时显示加载界面
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -189,8 +268,10 @@ const ConversationListScreen = ({ navigation }) => {
     );
   }
 
+  // 主界面：显示会话列表
   return (
     <SafeAreaView style={styles.container}>
+      {/* 页面头部：标题和新建聊天按钮 */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>{t('navigation.messages')}</Text>
         <TouchableOpacity onPress={startNewChat} style={styles.newChatButton}>
@@ -198,6 +279,7 @@ const ConversationListScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
+      {/* 会话列表 */}
       <FlatList
         data={conversations}
         renderItem={renderConversation}
@@ -219,6 +301,18 @@ const ConversationListScreen = ({ navigation }) => {
   );
 };
 
+/**
+ * 样式定义
+ * 包含会话列表界面的所有UI样式，按功能模块分组
+ * 
+ * 主要样式组：
+ * - 容器和布局样式
+ * - 头部样式
+ * - 会话项样式
+ * - 头像和徽章样式
+ * - 统计信息样式
+ * - 空状态和加载样式
+ */
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -394,4 +488,8 @@ const styles = StyleSheet.create({
   },
 });
 
+/**
+ * 导出会话列表界面组件
+ * 作为默认导出，供其他模块使用
+ */
 export default ConversationListScreen; 

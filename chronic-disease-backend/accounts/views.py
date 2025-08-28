@@ -71,6 +71,7 @@ class UserLoginView(TokenObtainPairView):
     permission_classes = [permissions.AllowAny]
     
     def post(self, request, *args, **kwargs):
+        """继承兼容性：UserLoginView 继承自 TokenObtainPairView，父类可能定义了额外的参数"""
         serializer = UserLoginSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.validated_data['user']
@@ -83,7 +84,7 @@ class UserLoginView(TokenObtainPairView):
             user.save(update_fields=['last_login_ip'])
             
             return Response({
-                'message': '登录成功',
+                'message': '登录成功', #success
                 'user': UserProfileSerializer(user).data,
                 'tokens': {
                     'refresh': str(refresh),
@@ -94,12 +95,37 @@ class UserLoginView(TokenObtainPairView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     def get_client_ip(self, request):
-        """获取客户端IP地址 / Extract client IP from headers or socket."""
+        """
+        获取客户端真实IP地址
+        
+        由于现代网络架构中用户请求通常经过代理服务器（如CDN、负载均衡器等），
+        直接使用REMOTE_ADDR可能获取到的是代理服务器IP而不是真实用户IP。
+        此方法优先检查HTTP_X_FORWARDED_FOR头来获取真实IP。
+        
+        Args:
+            request: Django请求对象
+            
+        Returns:
+            str: 客户端的真实IP地址
+            
+        Example:
+            # 代理链: 用户IP → CDN → 负载均衡器 → 应用服务器
+            # HTTP_X_FORWARDED_FOR: "192.168.1.100, 10.0.0.1, 172.16.0.1"
+            # 返回: "192.168.1.100" (用户真实IP)
+        """
+        # 尝试从代理头中获取真实IP地址
+        # HTTP_X_FORWARDED_FOR 是代理服务器传递的原始客户端IP
         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        
         if x_forwarded_for:
+            # 如果存在代理头，取第一个IP（最原始的客户端IP）
+            # 格式通常是: "真实IP, 代理1IP, 代理2IP, ..."
             ip = x_forwarded_for.split(',')[0]
         else:
+            # 如果没有代理头，使用直接连接的IP地址
+            # 适用于本地开发或直接连接场景
             ip = request.META.get('REMOTE_ADDR')
+        
         return ip
 
 

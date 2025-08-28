@@ -33,7 +33,7 @@ DEBUG = config('DEBUG', default=True, cast=bool)
 
 # In production, restrict to your known domain(s)/IPs to mitigate Host
 # header attacks.
-ALLOWED_HOSTS = ['*']  # 在生产环境中需要限制
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '192.168.2.47']  # 限制为特定主机
 
 
 # Application definition
@@ -63,29 +63,29 @@ LOCAL_APPS = [
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',  # 处理跨域资源共享，允许前端应用访问后端API
+    'django.middleware.security.SecurityMiddleware',  # 提供基本的安全功能，如HTTPS重定向、安全头设置等
+    'django.contrib.sessions.middleware.SessionMiddleware',  # 管理用户会话，支持用户登录状态保持
+    'django.middleware.common.CommonMiddleware',  # 处理常见的HTTP请求处理任务
+    'django.middleware.csrf.CsrfViewMiddleware',  # 防止跨站请求伪造攻击，保护表单提交安全
+    'django.contrib.auth.middleware.AuthenticationMiddleware',  # 处理用户认证，为请求添加用户信息
+    'django.contrib.messages.middleware.MessageMiddleware',  # 处理用户消息和通知的显示
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',  # 防止页面被嵌入iframe进行点击劫持攻击
 ]
 
 ROOT_URLCONF = 'chronic_disease_backend.urls'
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',  # 使用Django默认模板引擎
+        'DIRS': [],  # 额外的模板目录列表，当前为空
+        'APP_DIRS': True,  # 允许在已安装的应用中查找模板
         'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+            'context_processors': [  # 上下文处理器，为所有模板提供通用变量
+                'django.template.context_processors.debug',  # 提供debug变量
+                'django.template.context_processors.request',  # 提供request对象到模板
+                'django.contrib.auth.context_processors.auth',  # 提供用户认证相关变量
+                'django.contrib.messages.context_processors.messages',  # 提供消息框架变量
             ],
         },
     },
@@ -168,20 +168,20 @@ AUTH_USER_MODEL = 'accounts.User'
 
 # Django Rest Framework
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
+    'DEFAULT_AUTHENTICATION_CLASSES': [  # 默认认证类列表
+        'rest_framework_simplejwt.authentication.JWTAuthentication',  # JWT令牌认证
+        'rest_framework.authentication.SessionAuthentication',  # 会话认证（备用方案）
     ],
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
+    'DEFAULT_PERMISSION_CLASSES': [  # 默认权限类列表
+        'rest_framework.permissions.IsAuthenticated',  # 要求用户必须已认证
     ],
-    'DEFAULT_RENDERER_CLASSES': [
-        'rest_framework.renderers.JSONRenderer',
+    'DEFAULT_RENDERER_CLASSES': [  # 默认渲染器类列表
+        'rest_framework.renderers.JSONRenderer',  # JSON格式响应渲染器
     ],
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 20,
-    'DATETIME_FORMAT': '%Y-%m-%d %H:%M:%S',
-    'DATE_FORMAT': '%Y-%m-%d',
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',  # 默认分页类
+    'PAGE_SIZE': 20,  # 每页显示的数据条数
+    'DATETIME_FORMAT': '%Y-%m-%d %H:%M:%S',  # 日期时间格式
+    'DATE_FORMAT': '%Y-%m-%d',  # 日期格式
 }
 
 # JWT Settings
@@ -219,10 +219,12 @@ SIMPLE_JWT = {
 # CORS settings - Allow React Native apps to access
 # In production, keep this list tight and avoid `CORS_ALLOW_ALL_ORIGINS`.
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:8081",  # Expode fault port
+    "http://localhost:8081",  # Expo default port
     "http://127.0.0.1:8081",
     "http://localhost:19006",  # Expo web port
     "http://127.0.0.1:19006",
+    "http://192.168.2.47:8081",  # Your local IP:Expo port
+    "http://192.168.2.47:19006",  # Your local IP:Expo Web port
 ]
 
 # Development convenience only; must be False in production.

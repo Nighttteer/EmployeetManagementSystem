@@ -1,3 +1,19 @@
+/**
+ * 添加患者页面组件
+ * 
+ * 功能特性：
+ * - 搜索未分配医生的患者
+ * - 支持患者多选和批量添加
+ * - 显示患者风险等级和基本信息
+ * - 实时搜索和筛选功能
+ * - 患者绑定到当前医生
+ * - 多语言支持和国际化
+ * - 错误处理和用户反馈
+ * 
+ * @author 医疗测试应用开发团队
+ * @version 1.0.0
+ */
+
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -24,6 +40,18 @@ import { useSafeTranslation } from '../../hooks/useSafeTranslation';
 import { searchUnassignedPatients, bindPatientToDoctor } from '../../store/slices/patientsSlice';
 import { resolvePatientRiskLevel, getRiskColor, getRiskText } from '../../utils/riskUtils';
 
+/**
+ * 添加患者页面主组件
+ * 
+ * 主要功能：
+ * - 搜索和显示未分配医生的患者
+ * - 支持患者多选和批量操作
+ * - 管理患者绑定到医生
+ * - 处理搜索和筛选逻辑
+ * - 国际化支持和错误处理
+ * 
+ * @returns {JSX.Element} 添加患者页面组件
+ */
 const AddPatientScreen = () => {
   const { t, ready } = useSafeTranslation();
   const dispatch = useDispatch();

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-增强的健康数据创建脚本
-创建能够触发各种报警的真实健康数据
+Enhanced Health Data Creation Script
+Creates realistic health data that can trigger various alerts
 """
 import os
 import sys
@@ -10,11 +10,11 @@ from datetime import datetime, timedelta
 import random
 import json
 
-# 添加项目根目录到Python路径
+# Add project root to Python path
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
-# 设置Django环境
+# Setup Django environment
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'chronic_disease_backend.settings')
 django.setup()
 
@@ -25,12 +25,12 @@ from django.utils import timezone
 
 
 class EnhancedDataCreator:
-    """增强的健康数据创建器"""
+    """Enhanced Health Data Creator"""
     
     def __init__(self):
-        print("🎯 增强健康数据创建器初始化完成")
+        print("🎯 Enhanced Health Data Creator initialization completed")
         
-        # 定义各种健康指标的阈值和异常值
+        # Define thresholds and abnormal values for various health metrics
         self.thresholds = {
             'blood_pressure': {
                 'normal': {'systolic': (90, 140), 'diastolic': (60, 90)},
@@ -71,32 +71,32 @@ class EnhancedDataCreator:
         }
     
     def create_realistic_health_data(self, patient, days_back=30):
-        """为患者创建真实的健康数据，包含各种异常情况"""
-        print(f"📊 为患者 {patient.name} 创建健康数据...")
+        """Create realistic health data for a patient, including various abnormal situations"""
+        print(f"📊 Creating health data for patient {patient.name}...")
         
         created_metrics = []
         
-        # 为每个患者创建不同模式的健康数据
+        # Create different patterns of health data for each patient
         patient_pattern = self._get_patient_pattern(patient)
         
         for day in range(days_back, -1, -1):
             date = timezone.now() - timedelta(days=day)
             
-            # 每天创建1-3条记录
+            # Create 1-3 records per day
             records_per_day = random.randint(1, 3)
             
             for record in range(records_per_day):
-                # 随机选择指标类型（根据HealthMetric模型支持的字段）
+                # Randomly select metric type (based on HealthMetric model supported fields)
                 metric_type = random.choice(['blood_pressure', 'blood_glucose', 'heart_rate', 'weight', 'uric_acid', 'lipids'])
                 
-                # 根据患者模式生成数据
+                # Generate data based on patient pattern
                 metric_data = self._generate_metric_data(metric_type, patient_pattern, date)
                 
                 if metric_data:
-                    # 创建健康记录
+                    # Create health record
                     health_metric = HealthMetric.objects.create(
                         patient=patient,
-                        measured_by=patient,  # 患者自己测量
+                        measured_by=patient,  # Patient measures themselves
                         metric_type=metric_type,
                         **metric_data,
                         measured_at=date + timedelta(hours=random.randint(0, 23)),
@@ -105,28 +105,28 @@ class EnhancedDataCreator:
                     
                     created_metrics.append(health_metric)
                     
-                    # 检查是否需要创建阈值超标告警
+                    # Check if threshold alert needs to be created
                     if self._should_create_threshold_alert(metric_type, metric_data):
                         self._create_threshold_alert(patient, health_metric, metric_type, metric_data)
         
-        print(f"   ✅ 创建了 {len(created_metrics)} 条健康记录")
+        print(f"   ✅ Created {len(created_metrics)} health records")
         return created_metrics
     
     def _get_patient_pattern(self, patient):
-        """根据患者特征确定健康数据模式"""
-        # 基于患者ID生成不同的模式，确保可重现性
+        """Determine health data pattern based on patient characteristics"""
+        # Generate different patterns based on patient ID for reproducibility
         random.seed(patient.id)
         
         patterns = ['healthy', 'hypertension', 'diabetes', 'cardiac', 'mixed']
         pattern = random.choice(patterns)
         
-        # 重置随机种子
+        # Reset random seed
         random.seed()
         
         return pattern
     
     def _generate_metric_data(self, metric_type, patient_pattern, date):
-        """根据指标类型和患者模式生成数据"""
+        """Generate data based on metric type and patient pattern"""
         if metric_type == 'blood_pressure':
             return self._generate_blood_pressure(patient_pattern, date)
         elif metric_type == 'blood_glucose':
@@ -143,9 +143,9 @@ class EnhancedDataCreator:
         return None
     
     def _generate_blood_pressure(self, pattern, date):
-        """生成血压数据"""
+        """Generate blood pressure data"""
         if pattern == 'healthy':
-            # 健康模式：大部分正常，偶尔偏高
+            # Healthy pattern: mostly normal, occasionally high
             if random.random() < 0.8:
                 systolic = random.randint(100, 135)
                 diastolic = random.randint(65, 85)
@@ -153,7 +153,7 @@ class EnhancedDataCreator:
                 systolic = random.randint(135, 145)
                 diastolic = random.randint(85, 95)
         elif pattern == 'hypertension':
-            # 高血压模式：大部分偏高，偶尔正常
+            # Hypertension pattern: mostly high, occasionally normal
             if random.random() < 0.7:
                 systolic = random.randint(140, 180)
                 diastolic = random.randint(90, 110)
@@ -161,7 +161,7 @@ class EnhancedDataCreator:
                 systolic = random.randint(120, 140)
                 diastolic = random.randint(80, 90)
         else:
-            # 其他模式：混合
+            # Other patterns: mixed
             if random.random() < 0.6:
                 systolic = random.randint(110, 150)
                 diastolic = random.randint(70, 95)
@@ -175,21 +175,21 @@ class EnhancedDataCreator:
         }
     
     def _generate_blood_glucose(self, pattern, date):
-        """生成血糖数据"""
+        """Generate blood glucose data"""
         if pattern == 'diabetes':
-            # 糖尿病模式：大部分偏高
+            # Diabetes pattern: mostly high
             if random.random() < 0.8:
                 glucose = random.uniform(8.0, 18.0)
             else:
                 glucose = random.uniform(6.0, 8.0)
         elif pattern == 'healthy':
-            # 健康模式：大部分正常
+            # Healthy pattern: mostly normal
             if random.random() < 0.9:
                 glucose = random.uniform(4.0, 7.0)
             else:
                 glucose = random.uniform(7.0, 8.5)
         else:
-            # 其他模式：混合
+            # Other patterns: mixed
             if random.random() < 0.7:
                 glucose = random.uniform(4.5, 7.5)
             else:
@@ -198,21 +198,21 @@ class EnhancedDataCreator:
         return {'blood_glucose': round(glucose, 1)}
     
     def _generate_heart_rate(self, pattern, date):
-        """生成心率数据"""
+        """Generate heart rate data"""
         if pattern == 'cardiac':
-            # 心脏问题模式：心率不稳定
+            # Cardiac issue pattern: unstable heart rate
             if random.random() < 0.6:
                 heart_rate = random.randint(110, 140)
             else:
                 heart_rate = random.randint(50, 70)
         elif pattern == 'healthy':
-            # 健康模式：心率稳定
+            # Healthy pattern: stable heart rate
             if random.random() < 0.9:
                 heart_rate = random.randint(65, 95)
             else:
                 heart_rate = random.randint(95, 105)
         else:
-            # 其他模式：混合
+            # Other patterns: mixed
             if random.random() < 0.8:
                 heart_rate = random.randint(70, 100)
             else:
@@ -221,61 +221,61 @@ class EnhancedDataCreator:
         return {'heart_rate': heart_rate}
     
     def _generate_weight(self, pattern, date):
-        """生成体重数据"""
-        base_weight = 65.0  # 基础体重
+        """Generate weight data"""
+        base_weight = 65.0  # Base weight
         
         if pattern == 'healthy':
-            # 健康模式：体重稳定
+            # Healthy pattern: stable weight
             variation = random.uniform(-2.0, 2.0)
         else:
-            # 其他模式：体重可能有变化
+            # Other patterns: weight may vary
             variation = random.uniform(-5.0, 5.0)
         
         weight = base_weight + variation
         return {'weight': round(weight, 1)}
     
     def _generate_uric_acid(self, pattern, date):
-        """生成尿酸数据"""
+        """Generate uric acid data"""
         if pattern == 'healthy':
-            # 健康模式：尿酸正常
+            # Healthy pattern: normal uric acid
             if random.random() < 0.9:
-                uric_acid = random.uniform(150, 420)  # 正常范围：150-420 μmol/L
+                uric_acid = random.uniform(150, 420)  # Normal range: 150-420 μmol/L
             else:
-                uric_acid = random.uniform(420, 500)  # 偶尔偏高
+                uric_acid = random.uniform(420, 500)  # Occasionally high
         else:
-            # 其他模式：尿酸可能偏高
+            # Other patterns: uric acid may be high
             if random.random() < 0.7:
-                uric_acid = random.uniform(420, 600)  # 偏高
+                uric_acid = random.uniform(420, 600)  # High
             else:
-                uric_acid = random.uniform(150, 420)  # 偶尔正常
+                uric_acid = random.uniform(150, 420)  # Occasionally normal
         
         return {'uric_acid': round(uric_acid, 1)}
     
     def _generate_lipids(self, pattern, date):
-        """生成血脂数据"""
+        """Generate lipid data"""
         if pattern == 'healthy':
-            # 健康模式：血脂正常
+            # Healthy pattern: normal lipids
             if random.random() < 0.9:
-                lipids_total = random.uniform(3.1, 5.7)  # 总胆固醇正常范围
-                hdl = random.uniform(1.0, 1.6)          # HDL正常范围
-                ldl = random.uniform(2.1, 3.4)          # LDL正常范围
-                triglyceride = random.uniform(0.4, 1.7)  # 甘油三酯正常范围
+                lipids_total = random.uniform(3.1, 5.7)  # Normal total cholesterol range
+                hdl = random.uniform(1.0, 1.6)          # Normal HDL range
+                ldl = random.uniform(2.1, 3.4)          # Normal LDL range
+                triglyceride = random.uniform(0.4, 1.7)  # Normal triglyceride range
             else:
-                # 偶尔偏高
+                # Occasionally high
                 lipids_total = random.uniform(5.7, 6.5)
                 hdl = random.uniform(0.9, 1.0)
                 ldl = random.uniform(3.4, 4.1)
                 triglyceride = random.uniform(1.7, 2.3)
         else:
-            # 其他模式：血脂可能异常
+            # Other patterns: lipids may be abnormal
             if random.random() < 0.6:
-                # 血脂异常
+                # Abnormal lipids
                 lipids_total = random.uniform(5.7, 8.0)
                 hdl = random.uniform(0.8, 1.0)
                 ldl = random.uniform(3.4, 5.0)
                 triglyceride = random.uniform(1.7, 4.0)
             else:
-                # 偶尔正常
+                # Occasionally normal
                 lipids_total = random.uniform(3.1, 5.7)
                 hdl = random.uniform(1.0, 1.6)
                 ldl = random.uniform(2.1, 3.4)
@@ -291,7 +291,7 @@ class EnhancedDataCreator:
 
     
     def _should_create_threshold_alert(self, metric_type, metric_data):
-        """判断是否需要创建阈值超标告警"""
+        """Determine if a threshold alert needs to be created"""
         if metric_type == 'blood_pressure':
             systolic = metric_data.get('systolic', 0)
             diastolic = metric_data.get('diastolic', 0)
@@ -304,7 +304,7 @@ class EnhancedDataCreator:
             return heart_rate > 120 or heart_rate < 50
         elif metric_type == 'uric_acid':
             uric_acid = metric_data.get('uric_acid', 0)
-            return uric_acid > 420  # 尿酸正常上限
+            return uric_acid > 420  # Normal upper limit for uric acid
         elif metric_type == 'lipids':
             lipids_total = metric_data.get('lipids_total', 0)
             hdl = metric_data.get('hdl', 0)
@@ -315,8 +315,8 @@ class EnhancedDataCreator:
         return False
     
     def _create_threshold_alert(self, patient, health_metric, metric_type, metric_data):
-        """创建阈值超标告警"""
-        # 获取患者的医生
+        """Create a threshold alert"""
+        # Get the patient's doctor
         doctor_relations = DoctorPatientRelation.objects.filter(
             patient=patient,
             status='active'
@@ -327,37 +327,37 @@ class EnhancedDataCreator:
         
         doctor = doctor_relations.doctor
         
-        # 根据指标类型生成告警内容
+        # Generate alert content based on metric type
         if metric_type == 'blood_pressure':
-            title = '血压异常警报'
-            message = f'患者{patient.name}血压异常：{metric_data["systolic"]}/{metric_data["diastolic"]}mmHg，超出正常范围'
+            title = 'Blood Pressure Alert'
+            message = f'Patient {patient.name} has abnormal blood pressure: {metric_data["systolic"]}/{metric_data["diastolic"]}mmHg, exceeding normal range'
             priority = 'critical' if metric_data['systolic'] > 180 else 'high'
         elif metric_type == 'blood_glucose':
-            title = '血糖异常警报'
-            message = f'患者{patient.name}血糖异常：{metric_data["blood_glucose"]}mmol/L，超出正常范围'
+            title = 'Blood Glucose Alert'
+            message = f'Patient {patient.name} has abnormal blood glucose: {metric_data["blood_glucose"]}mmol/L, exceeding normal range'
             priority = 'critical' if metric_data['blood_glucose'] > 15.0 else 'high'
         elif metric_type == 'heart_rate':
-            title = '心率异常警报'
-            message = f'患者{patient.name}心率异常：{metric_data["heart_rate"]}bpm，超出正常范围'
+            title = 'Heart Rate Alert'
+            message = f'Patient {patient.name} has abnormal heart rate: {metric_data["heart_rate"]}bpm, exceeding normal range'
             priority = 'critical' if metric_data['heart_rate'] > 150 else 'high'
         elif metric_type == 'weight':
-            title = '体重异常警报'
-            message = f'患者{patient.name}体重异常：{metric_data["weight"]}kg，超出正常范围'
+            title = 'Weight Alert'
+            message = f'Patient {patient.name} has abnormal weight: {metric_data["weight"]}kg, exceeding normal range'
             priority = 'medium'
         elif metric_type == 'uric_acid':
-            title = '尿酸异常警报'
-            message = f'患者{patient.name}尿酸异常：{metric_data["uric_acid"]}μmol/L，超出正常范围'
+            title = 'Uric Acid Alert'
+            message = f'Patient {patient.name} has abnormal uric acid: {metric_data["uric_acid"]}μmol/L, exceeding normal range'
             priority = 'high'
         elif metric_type == 'lipids':
-            title = '血脂异常警报'
-            message = f'患者{patient.name}血脂异常：总胆固醇{metric_data["lipids_total"]}mmol/L，HDL{metric_data["hdl"]}mmol/L，LDL{metric_data["ldl"]}mmol/L，甘油三酯{metric_data["triglyceride"]}mmol/L'
+            title = 'Lipid Alert'
+            message = f'Patient {patient.name} has abnormal lipids: Total Cholesterol {metric_data["lipids_total"]}mmol/L, HDL {metric_data["hdl"]}mmol/L, LDL {metric_data["ldl"]}mmol/L, Triglyceride {metric_data["triglyceride"]}mmol/L'
             priority = 'high'
         else:
-            title = '健康指标异常'
-            message = f'患者{patient.name}{metric_type}异常'
+            title = 'Health Metric Alert'
+            message = f'Patient {patient.name} has abnormal {metric_type}'
             priority = 'medium'
         
-        # 检查是否已有相似告警（避免重复）
+        # Check if a similar alert already exists (to avoid duplicates)
         existing_alert = Alert.objects.filter(
             patient=patient,
             assigned_doctor=doctor,
@@ -377,56 +377,56 @@ class EnhancedDataCreator:
                 status='pending',
                 related_metric=health_metric
             )
-            print(f"   🚨 创建{priority}优先级告警: {title}")
+            print(f"   🚨 Created {priority} priority alert: {title}")
     
     def _generate_note(self, metric_type, metric_data):
-        """生成健康记录备注"""
+        """Generate health record note"""
         notes = {
             'blood_pressure': [
-                '晨起测量',
-                '服药后测量',
-                '运动后测量',
-                '睡前测量',
-                '静息状态测量'
+                'Morning measurement',
+                'After medication',
+                'After exercise',
+                'Before bed',
+                'Resting state measurement'
             ],
             'blood_glucose': [
-                '空腹测量',
-                '餐后2小时',
-                '睡前测量',
-                '运动前测量',
-                '感觉不适时测量'
+                'Fasting measurement',
+                '2 hours after meal',
+                'Before bed',
+                'Before exercise',
+                'When feeling unwell'
             ],
             'heart_rate': [
-                '静息状态',
-                '轻度活动后',
-                '测量前休息5分钟',
-                '连续测量3次取平均',
-                '感觉心跳异常时测量'
+                'Resting state',
+                'After light activity',
+                'Rest for 5 minutes before measurement',
+                'Average of 3 consecutive measurements',
+                'When feeling abnormal'
             ],
             'weight': [
-                '晨起空腹',
-                '每周固定时间',
-                '运动后测量',
-                '饮食调整后测量',
-                '定期监测体重变化'
+                'Morning fasting',
+                'Fixed time weekly',
+                'After exercise',
+                'After diet adjustment',
+                'Regularly monitor weight changes'
             ],
             'uric_acid': [
-                '空腹测量',
-                '避免高嘌呤食物后测量',
-                '定期监测尿酸水平',
-                '痛风发作时测量',
-                '用药后监测'
+                'Fasting measurement',
+                'Measure after avoiding high-purine foods',
+                'Regularly monitor uric acid levels',
+                'When gout attack occurs',
+                'Monitor after medication'
             ],
             'lipids': [
-                '空腹12小时后测量',
-                '避免高脂食物后测量',
-                '定期血脂检查',
-                '用药后监测',
-                '饮食调整后测量'
+                'Measure after 12 hours fasting',
+                'After avoiding high-fat foods',
+                'Regular lipid check',
+                'Monitor after medication',
+                'After diet adjustment'
             ]
         }
         
-        note_list = notes.get(metric_type, ['常规测量'])
+        note_list = notes.get(metric_type, ['Regular measurement'])
         return random.choice(note_list)
     
 
@@ -434,38 +434,38 @@ class EnhancedDataCreator:
 
     
     def create_trend_alerts(self, patient, days_back=30):
-        """创建趋势异常告警"""
-        print(f"📈 为患者 {patient.name} 创建趋势告警...")
+        """Create trend alerts"""
+        print(f"📈 Creating trend alerts for patient {patient.name}...")
         
-        # 获取患者的医生
+        # Get the patient's doctor
         doctor_relations = DoctorPatientRelation.objects.filter(
             patient=patient,
             status='active'
         ).first()
         
         if not doctor_relations:
-            print(f"     ⚠️ 患者 {patient.name} 没有关联的医生，跳过趋势告警创建")
+            print(f"     ⚠️ Patient {patient.name} has no associated doctor, skipping trend alert creation")
             return []
         
         doctor = doctor_relations.doctor
         
-        # 创建趋势异常告警
+        # Create trend alerts
         trend_alerts = [
             {
-                'title': '血压持续偏高趋势',
-                'message': f'患者{patient.name}最近7天血压持续偏高，建议调整治疗方案',
+                'title': 'Blood Pressure Continues to Rise',
+                'message': f'Patient {patient.name} has been experiencing high blood pressure for the last 7 days, suggest adjusting treatment plan',
                 'priority': 'high',
                 'alert_type': 'abnormal_trend'
             },
             {
-                'title': '血糖控制不稳定',
-                'message': f'患者{patient.name}血糖波动较大，需要加强监测',
+                'title': 'Blood Glucose Control Unstable',
+                'message': f'Patient {patient.name} has unstable blood glucose levels, need to strengthen monitoring',
                 'priority': 'medium',
                 'alert_type': 'abnormal_trend'
             },
             {
-                'title': '体重持续增加',
-                'message': f'患者{patient.name}体重连续3周增加，建议调整饮食和运动',
+                'title': 'Weight Continues to Increase',
+                'message': f'Patient {patient.name} has been experiencing weight gain for 3 weeks, suggest adjusting diet and exercise',
                 'priority': 'medium',
                 'alert_type': 'abnormal_trend'
             }
@@ -473,7 +473,7 @@ class EnhancedDataCreator:
         
         created_alerts = []
         for alert_data in trend_alerts:
-            if random.random() < 0.6:  # 60%概率创建趋势告警
+            if random.random() < 0.6:  # 60% probability to create trend alert
                 alert = Alert.objects.create(
                     patient=patient,
                     assigned_doctor=doctor,
@@ -485,58 +485,58 @@ class EnhancedDataCreator:
                 )
                 created_alerts.append(alert)
         
-        print(f"   ✅ 创建了 {len(created_alerts)} 个趋势告警")
+        print(f"   ✅ Created {len(created_alerts)} trend alerts")
         return created_alerts
     
     def create_comprehensive_data(self, days_back=30):
-        """创建完整的健康数据"""
-        print("🏗️ 开始创建完整的健康数据...")
+        """Create comprehensive health data"""
+        print("🏗️ Starting comprehensive health data creation...")
         
-        # 获取所有患者
+        # Get all patients
         patients = User.objects.filter(role='patient', is_active=True)
         
         if not patients.exists():
-            print("❌ 没有找到患者用户，请先创建用户")
+            print("❌ No patient users found, please create users first")
             return False
         
         total_metrics = 0
         total_alerts = 0
         
         for patient in patients:
-            print(f"\n👤 处理患者: {patient.name}")
+            print(f"\n👤 Processing patient: {patient.name}")
             
-            # 创建健康数据
+            # Create health data
             metrics = self.create_realistic_health_data(patient, days_back)
             total_metrics += len(metrics)
             
-            # 创建趋势告警
+            # Create trend alerts
             trend_alerts = self.create_trend_alerts(patient, days_back)
             total_alerts += len(trend_alerts)
         
-        print(f"\n🎉 数据创建完成！")
-        print(f"📊 总计:")
-        print(f"   健康记录: {total_metrics} 条")
-        print(f"   趋势告警: {total_alerts} 个")
+        print(f"\n🎉 Data creation completed!")
+        print(f"📊 Summary:")
+        print(f"   Health records: {total_metrics} records")
+        print(f"   Trend alerts: {total_alerts} alerts")
         
         return True
 
 
 def main():
-    """主函数"""
+    """Main function"""
     creator = EnhancedDataCreator()
     
-    # 创建30天的健康数据
+    # Create 30 days of health data
     success = creator.create_comprehensive_data(days_back=30)
     
     if success:
-        print("\n✅ 增强健康数据创建完成！")
-        print("🎯 现在您可以:")
-        print("   1. 查看各种类型的健康告警")
-        print("   2. 测试阈值超标检测")
-        print("   3. 查看趋势分析")
-        print("   4. 测试健康数据录入功能")
+        print("\n✅ Enhanced health data creation completed!")
+        print("🎯 You can now:")
+        print("   1. View various types of health alerts")
+        print("   2. Test threshold alert detection")
+        print("   3. View trend analysis")
+        print("   4. Test health data entry functionality")
     else:
-        print("\n❌ 数据创建失败")
+        print("\n❌ Data creation failed")
 
 
 if __name__ == '__main__':

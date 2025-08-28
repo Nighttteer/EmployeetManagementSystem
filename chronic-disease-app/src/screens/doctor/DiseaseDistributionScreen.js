@@ -1,3 +1,19 @@
+/**
+ * 疾病分布分析页面组件
+ * 
+ * 功能特性：
+ * - 显示患者慢性疾病分布统计
+ * - 支持多种图表类型（饼图、柱状图、趋势图）
+ * - 疾病风险等级分析
+ * - 患者年龄和性别分布统计
+ * - 实时数据刷新和筛选
+ * - 多语言国际化支持
+ * - 疾病详情深度分析
+ * 
+ * @author 医疗测试应用开发团队
+ * @version 1.0.0
+ */
+
 import React, { useState, useEffect } from 'react';
 import { 
   View, 
@@ -32,59 +48,87 @@ import LineChart from '../../components/Charts/LineChart';
 
 const { width } = Dimensions.get('window');
 
+/**
+ * 疾病分布分析页面主组件
+ * 
+ * 主要功能：
+ * - 分析和展示患者疾病分布情况
+ * - 提供多种图表可视化方式
+ * - 疾病风险等级和患者特征分析
+ * - 支持疾病详情深度查看
+ * - 数据导出和报告生成
+ * 
+ * @param {Object} navigation - 导航对象，用于页面跳转
+ * @returns {JSX.Element} 疾病分布分析页面组件
+ */
 const DiseaseDistributionScreen = ({ navigation }) => {
   const { t } = useTranslation();
   const dispatch = useDispatch();
+  
+  // 从Redux store获取患者数据
   const { patientsList } = useSelector(state => state.patients);
   
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [chartType, setChartType] = useState('pie'); // pie, bar, trend
-  const [selectedDisease, setSelectedDisease] = useState(null);
-  const [menuVisible, setMenuVisible] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  // 界面状态管理
+  const [loading, setLoading] = useState(true);                    // 首次加载状态
+  const [refreshing, setRefreshing] = useState(false);             // 下拉刷新状态
+  const [chartType, setChartType] = useState('pie');               // 图表类型：pie, bar, trend
+  const [selectedDisease, setSelectedDisease] = useState(null);    // 选中的疾病对象
+  const [menuVisible, setMenuVisible] = useState(false);           // 菜单显示状态
+  const [searchQuery, setSearchQuery] = useState('');              // 疾病搜索关键词
+  
+  // 疾病分布数据状态
   const [diseaseData, setDiseaseData] = useState({
-    totalPatients: 0,
-    totalWithDiseases: 0,
-    diseaseDistribution: []
+    totalPatients: 0,                    // 患者总数
+    totalWithDiseases: 0,                // 有慢性疾病的患者数
+    diseaseDistribution: []               // 疾病分布数据
   });
 
-  // 慢性疾病列表
+  // 慢性疾病列表配置
   const chronicDiseases = [
-    { id: 'alzheimer', name: t('diseases.alzheimer') },
-    { id: 'arthritis', name: t('diseases.arthritis') },
-    { id: 'asthma', name: t('diseases.asthma') },
-    { id: 'cancer', name: t('diseases.cancer') },
-    { id: 'copd', name: t('diseases.copd') },
-    { id: 'crohn', name: t('diseases.crohn') },
-    { id: 'cystic_fibrosis', name: t('diseases.cysticFibrosis') },
-    { id: 'dementia', name: t('diseases.dementia') },
-    { id: 'diabetes', name: t('diseases.diabetes') },
-    { id: 'endometriosis', name: t('diseases.endometriosis') },
-    { id: 'epilepsy', name: t('diseases.epilepsy') },
-    { id: 'fibromyalgia', name: t('diseases.fibromyalgia') },
-    { id: 'heart_disease', name: t('diseases.heartDisease') },
-    { id: 'hypertension', name: t('diseases.hypertension') },
-    { id: 'hiv_aids', name: t('diseases.hivAids') },
-    { id: 'migraine', name: t('diseases.migraine') },
-    { id: 'mood_disorder', name: t('diseases.moodDisorder') },
-    { id: 'multiple_sclerosis', name: t('diseases.multipleSclerosis') },
-    { id: 'narcolepsy', name: t('diseases.narcolepsy') },
-    { id: 'parkinson', name: t('diseases.parkinson') },
-    { id: 'sickle_cell', name: t('diseases.sickleCell') },
-    { id: 'ulcerative_colitis', name: t('diseases.ulcerativeColitis') }
+    { id: 'alzheimer', name: t('diseases.alzheimer') },              // 阿尔茨海默病
+    { id: 'arthritis', name: t('diseases.arthritis') },              // 关节炎
+    { id: 'asthma', name: t('diseases.asthma') },                    // 哮喘
+    { id: 'cancer', name: t('diseases.cancer') },                    // 癌症
+    { id: 'copd', name: t('diseases.copd') },                        // 慢性阻塞性肺疾病
+    { id: 'crohn', name: t('diseases.crohn') },                      // 克罗恩病
+    { id: 'cystic_fibrosis', name: t('diseases.cysticFibrosis') },   // 囊性纤维化
+    { id: 'dementia', name: t('diseases.dementia') },                // 痴呆症
+    { id: 'diabetes', name: t('diseases.diabetes') },                // 糖尿病
+    { id: 'endometriosis', name: t('diseases.endometriosis') },      // 子宫内膜异位症
+    { id: 'epilepsy', name: t('diseases.epilepsy') },                // 癫痫
+    { id: 'fibromyalgia', name: t('diseases.fibromyalgia') },        // 纤维肌痛
+    { id: 'heart_disease', name: t('diseases.heartDisease') },       // 心脏病
+    { id: 'hypertension', name: t('diseases.hypertension') },        // 高血压
+    { id: 'hiv_aids', name: t('diseases.hivAids') },                 // HIV/艾滋病
+    { id: 'migraine', name: t('diseases.migraine') },                // 偏头痛
+    { id: 'mood_disorder', name: t('diseases.moodDisorder') },       // 情绪障碍
+    { id: 'multiple_sclerosis', name: t('diseases.multipleSclerosis') }, // 多发性硬化症
+    { id: 'narcolepsy', name: t('diseases.narcolepsy') },            // 发作性睡病
+    { id: 'parkinson', name: t('diseases.parkinson') },              // 帕金森病
+    { id: 'sickle_cell', name: t('diseases.sickleCell') },           // 镰状细胞病
+    { id: 'ulcerative_colitis', name: t('diseases.ulcerativeColitis') } // 溃疡性结肠炎
   ];
 
+  /**
+   * 组件加载时获取疾病数据
+   */
   useEffect(() => {
     loadDiseaseData();
   }, []);
   
+  /**
+   * 当患者列表数据变化时，重新计算疾病分布
+   */
   useEffect(() => {
     if (patientsList && patientsList.length > 0) {
       calculateDiseaseDistribution();
     }
   }, [patientsList]);
 
+  /**
+   * 加载疾病分布数据
+   * 获取患者列表并计算疾病统计信息
+   */
   const loadDiseaseData = async () => {
     setLoading(true);
     try {
@@ -97,7 +141,10 @@ const DiseaseDistributionScreen = ({ navigation }) => {
     }
   };
   
-  // 从真实患者数据计算疾病分布
+  /**
+   * 从真实患者数据计算疾病分布
+   * 统计每种疾病的患者数量、风险分布、年龄分布和性别分布
+   */
   const calculateDiseaseDistribution = () => {
     if (!patientsList || patientsList.length === 0) {
       setDiseaseData({
@@ -110,20 +157,22 @@ const DiseaseDistributionScreen = ({ navigation }) => {
     
     const totalPatients = patientsList.length;
     const diseaseCount = {};
+    
+    // 疾病颜色配置
     const diseaseColors = {
-      'hypertension': '#FF6B6B',
-      'diabetes': '#4ECDC4', 
-      'heart_disease': '#45B7D1',
-      'arthritis': '#96CEB4',
-      'asthma': '#FFEAA7',
-      'copd': '#DDA0DD',
-      'cancer': '#FF8A80',
-      'alzheimer': '#CE93D8',
-      'dementia': '#F8BBD9',
-      'parkinson': '#A5D6A7',
-      'epilepsy': '#FFD54F',
-      'migraine': '#FFAB91',
-      'other': '#B0BEC5'
+      'hypertension': '#FF6B6B',        // 高血压 - 红色
+      'diabetes': '#4ECDC4',            // 糖尿病 - 青色
+      'heart_disease': '#45B7D1',       // 心脏病 - 蓝色
+      'arthritis': '#96CEB4',           // 关节炎 - 绿色
+      'asthma': '#FFEAA7',              // 哮喘 - 黄色
+      'copd': '#DDA0DD',                // 慢性阻塞性肺疾病 - 紫色
+      'cancer': '#FF8A80',              // 癌症 - 粉红色
+      'alzheimer': '#CE93D8',           // 阿尔茨海默病 - 淡紫色
+      'dementia': '#F8BBD9',            // 痴呆症 - 浅粉色
+      'parkinson': '#A5D6A7',           // 帕金森病 - 浅绿色
+      'epilepsy': '#FFD54F',            // 癫痫 - 橙色
+      'migraine': '#FFAB91',            // 偏头痛 - 浅橙色
+      'other': '#B0BEC5'                // 其他疾病 - 灰色
     };
     
     let patientsWithDiseases = 0;
@@ -178,7 +227,13 @@ const DiseaseDistributionScreen = ({ navigation }) => {
     });
   };
   
-  // 计算风险等级分布
+  /**
+   * 计算风险等级分布
+   * 统计患者中高、中、低风险的数量
+   * 
+   * @param {Array} patients - 患者数组
+   * @returns {Object} 风险等级分布统计
+   */
   const calculateRiskDistribution = (patients) => {
     const riskCount = { high: 0, medium: 0, low: 0 };
     patients.forEach(patient => {
@@ -190,7 +245,13 @@ const DiseaseDistributionScreen = ({ navigation }) => {
     return riskCount;
   };
   
-  // 计算年龄分布
+  /**
+   * 计算年龄分布
+   * 按年龄段统计患者数量
+   * 
+   * @param {Array} patients - 患者数组
+   * @returns {Object} 年龄分布统计
+   */
   const calculateAgeDistribution = (patients) => {
     const ageCount = { '18-30': 0, '31-50': 0, '51-70': 0, '70+': 0 };
     patients.forEach(patient => {
@@ -203,7 +264,13 @@ const DiseaseDistributionScreen = ({ navigation }) => {
     return ageCount;
   };
   
-  // 计算性别分布
+  /**
+   * 计算性别分布
+   * 统计男性和女性患者数量
+   * 
+   * @param {Array} patients - 患者数组
+   * @returns {Object} 性别分布统计
+   */
   const calculateGenderDistribution = (patients) => {
     const genderCount = { male: 0, female: 0 };
     patients.forEach(patient => {
@@ -215,12 +282,22 @@ const DiseaseDistributionScreen = ({ navigation }) => {
     return genderCount;
   };
 
+  /**
+   * 下拉刷新处理
+   * 重新加载疾病分布数据
+   */
   const onRefresh = async () => {
     setRefreshing(true);
     await loadDiseaseData();
     setRefreshing(false);
   };
 
+  /**
+   * 渲染图表类型选择器
+   * 提供饼图、柱状图、趋势图三种选择
+   * 
+   * @returns {JSX.Element} 图表类型选择器组件
+   */
   const renderChartTypeSelector = () => (
     <View style={styles.chartTypeSelector}>
       <Chip 
@@ -250,6 +327,12 @@ const DiseaseDistributionScreen = ({ navigation }) => {
     </View>
   );
 
+  /**
+   * 渲染主图表
+   * 根据当前选择的图表类型和数据渲染不同的图表
+   * 
+   * @returns {JSX.Element} 主图表组件
+   */
   const renderChart = () => {
     const chartData = diseaseData.diseaseDistribution.map(item => ({
       label: item.name,
@@ -311,6 +394,12 @@ const DiseaseDistributionScreen = ({ navigation }) => {
     }
   };
 
+  /**
+   * 渲染疾病详情卡片
+   * 显示选定疾病的详细统计信息
+   * 
+   * @returns {JSX.Element} 疾病详情卡片组件
+   */
   const renderDiseaseDetails = () => {
     if (!selectedDisease) return null;
 
@@ -386,6 +475,12 @@ const DiseaseDistributionScreen = ({ navigation }) => {
     );
   };
 
+  /**
+   * 渲染疾病列表
+   * 显示所有疾病，支持搜索和筛选
+   * 
+   * @returns {JSX.Element} 疾病列表组件
+   */
   const renderDiseaseList = () => {
     const filteredDiseases = diseaseData.diseaseDistribution.filter(disease =>
       disease.name.toLowerCase().includes(searchQuery.toLowerCase())

@@ -5,7 +5,7 @@ export const COUNTRY_CODES = [
     country: '中国',
     flag: '🇨🇳',
     phoneLength: 11,
-    phoneRegex: /^1[3-9]\d{9}$/,
+    phoneRegex: /^1[3-9]\d{9}$/, // 中国手机号：以1开头，第二位是3-9，后面9位数字
     placeholder: '请输入手机号码',
     example: '13800138000'
   },
@@ -14,7 +14,7 @@ export const COUNTRY_CODES = [
     country: '美国',
     flag: '🇺🇸',
     phoneLength: 10,
-    phoneRegex: /^[2-9]\d{9}$/,
+    phoneRegex: /^[2-9]\d{9}$/, // 美国手机号：以2-9开头，后面9位数字
     placeholder: 'Enter phone number',
     example: '2025551234'
   },
@@ -23,7 +23,7 @@ export const COUNTRY_CODES = [
     country: '加拿大',
     flag: '🇨🇦',
     phoneLength: 10,
-    phoneRegex: /^[2-9]\d{9}$/,
+    phoneRegex: /^[2-9]\d{9}$/, // 加拿大手机号：以2-9开头，后面9位数字
     placeholder: 'Enter phone number',
     example: '4165551234'
   },
@@ -32,7 +32,7 @@ export const COUNTRY_CODES = [
     country: '英国',
     flag: '🇬🇧',
     phoneLength: 10,
-    phoneRegex: /^[1-9]\d{9}$/,
+    phoneRegex: /^[1-9]\d{9}$/, // 英国手机号：以1-9开头，后面9位数字
     placeholder: 'Enter phone number',
     example: '7700123456'
   },
@@ -41,7 +41,7 @@ export const COUNTRY_CODES = [
     country: '法国',
     flag: '🇫🇷',
     phoneLength: 9,
-    phoneRegex: /^[1-9]\d{8}$/,
+    phoneRegex: /^[1-9]\d{8}$/, // 法国手机号：以1-9开头，后面8位数字
     placeholder: 'Entrez le numéro',
     example: '123456789'
   },
@@ -50,7 +50,7 @@ export const COUNTRY_CODES = [
     country: '德国',
     flag: '🇩🇪',
     phoneLength: 11,
-    phoneRegex: /^[1-9]\d{10}$/,
+    phoneRegex: /^[1-9]\d{10}$/, // 德国手机号：以1-9开头，后面10位数字
     placeholder: 'Telefonnummer eingeben',
     example: '17012345678'
   },
@@ -59,7 +59,7 @@ export const COUNTRY_CODES = [
     country: '日本',
     flag: '🇯🇵',
     phoneLength: 11,
-    phoneRegex: /^[7-9]\d{10}$/,
+    phoneRegex: /^[7-9]\d{10}$/, // 日本手机号：以7-9开头，后面10位数字
     placeholder: '電話番号を入力',
     example: '09012345678'
   },
@@ -68,7 +68,7 @@ export const COUNTRY_CODES = [
     country: '韩国',
     flag: '🇰🇷',
     phoneLength: 11,
-    phoneRegex: /^[1-9]\d{10}$/,
+    phoneRegex: /^[1-9]\d{10}$/, // 韩国手机号：以1-9开头，后面10位数字
     placeholder: '전화번호를 입력하세요',
     example: '01012345678'
   },
@@ -77,7 +77,7 @@ export const COUNTRY_CODES = [
     country: '新加坡',
     flag: '🇸🇬',
     phoneLength: 8,
-    phoneRegex: /^[6-9]\d{7}$/,
+    phoneRegex: /^[6-9]\d{7}$/, // 新加坡手机号：以6-9开头，后面7位数字
     placeholder: 'Enter phone number',
     example: '81234567'
   },
@@ -86,7 +86,7 @@ export const COUNTRY_CODES = [
     country: '马来西亚',
     flag: '🇲🇾',
     phoneLength: 10,
-    phoneRegex: /^[1-9]\d{9}$/,
+    phoneRegex: /^[1-9]\d{9}$/, // 马来西亚手机号：以1-9开头，后面9位数字
     placeholder: 'Masukkan nombor telefon',
     example: '1234567890'
   },
@@ -95,7 +95,7 @@ export const COUNTRY_CODES = [
     country: '泰国',
     flag: '🇹🇭',
     phoneLength: 9,
-    phoneRegex: /^[6-9]\d{8}$/,
+    phoneRegex: /^[6-9]\d{8}$/, // 泰国手机号：以6-9开头，后面8位数字
     placeholder: 'ใส่หมายเลขโทรศัพท์',
     example: '812345678'
   },
@@ -104,7 +104,7 @@ export const COUNTRY_CODES = [
     country: '印度',
     flag: '🇮🇳',
     phoneLength: 10,
-    phoneRegex: /^[6-9]\d{9}$/,
+    phoneRegex: /^[6-9]\d{9}$/, // 印度手机号：以6-9开头，后面9位数字
     placeholder: 'Enter phone number',
     example: '9876543210'
   },
@@ -113,7 +113,7 @@ export const COUNTRY_CODES = [
     country: '澳大利亚',
     flag: '🇦🇺',
     phoneLength: 9,
-    phoneRegex: /^[4-5]\d{8}$/,
+    phoneRegex: /^[4-5]\d{8}$/, // 澳大利亚手机号：以4-5开头，后面8位数字
     placeholder: 'Enter phone number',
     example: '412345678'
   },
@@ -122,7 +122,7 @@ export const COUNTRY_CODES = [
     country: '新西兰',
     flag: '🇳🇿',
     phoneLength: 9,
-    phoneRegex: /^[2-9]\d{8}$/,
+    phoneRegex: /^[2-9]\d{8}$/, // 新西兰手机号：以2-9开头，后面8位数字
     placeholder: 'Enter phone number',
     example: '212345678'
   },
@@ -131,7 +131,7 @@ export const COUNTRY_CODES = [
     country: '巴西',
     flag: '🇧🇷',
     phoneLength: 11,
-    phoneRegex: /^[1-9]\d{10}$/,
+    phoneRegex: /^[1-9]\d{10}$/, // 巴西手机号：以1-9开头，后面10位数字
     placeholder: 'Digite o número',
     example: '11987654321'
   },
@@ -140,7 +140,7 @@ export const COUNTRY_CODES = [
     country: '俄罗斯',
     flag: '🇷🇺',
     phoneLength: 10,
-    phoneRegex: /^[9]\d{9}$/,
+    phoneRegex: /^[9]\d{9}$/, // 俄罗斯手机号：以9开头，后面9位数字
     placeholder: 'Введите номер',
     example: '9123456789'
   },

@@ -1,223 +1,243 @@
-# 统一测试数据管理工具 - 完整命令总结
+# Command Summary
 
-## 🎯 功能概览
+This document summarizes all available commands for the test data management system.
 
-这是一个功能强大的测试数据管理工具，整合了慢性疾病应用后端的所有测试数据生成和管理功能。
+## 🚀 Quick Start Commands
 
-## 📋 完整命令列表
-
-### 🔧 基础数据管理
+### One-Click Complete Setup
 ```bash
-# 清除数据库（保留表结构）
-python unified_test_data_manager.py clear
+# Automatically execute complete system setup
+python survey_data_preparation/unified_test_data_manager.py
+```
 
-# 创建基本测试用户（3医生+3患者）
+### Basic Setup
+```bash
+# Quick setup with minimal users
+python survey_data_preparation/quick_setup.py
+
+# Clean up test data
+python survey_data_preparation/quick_setup.py cleanup
+```
+
+## 📊 Data Management Commands
+
+### User Management
+```bash
+# Create basic users (3 doctors + 3 patients)
 python unified_test_data_manager.py basic
 
-# 创建完整测试用户（3医生+8患者）
+# Create comprehensive users (3 doctors + 8 patients)
 python unified_test_data_manager.py full
 
-# 创建健康数据和告警
-python unified_test_data_manager.py health
-
-# 显示当前数据库状态
-python unified_test_data_manager.py status
-
-# 创建用药依从性报警测试数据
-python unified_test_data_manager.py medication [days]
-# 示例：
-python unified_test_data_manager.py medication      # 默认30天
-python unified_test_data_manager.py medication 14   # 14天
-python unified_test_data_manager.py medication 7    # 7天
+# Clear all database data
+python unified_test_data_manager.py clear
 ```
 
-### 🧠 智能分析功能
+### Health Data Generation
 ```bash
-# 运行智能告警分析
+# Generate health data using Django management command
+python manage.py create_test_data --days 30
+python manage.py create_test_data --days 7 --patients 1
+
+# Generate enhanced health data
+python unified_test_data_manager.py enhanced 30
+```
+
+### Intelligent Analysis
+```bash
+# Run intelligent alert analysis for all doctors
 python unified_test_data_manager.py analyze
 
-# 查看告警摘要
-python unified_test_data_manager.py summary
+# Run analysis for specific doctor
+python unified_test_data_manager.py analyze 1
 
-# 模拟实时分析
-python unified_test_data_manager.py realtime <patient_id> <metric_type>
-# 示例：
+# Generate alert summary
+python unified_test_data_manager.py summary
+```
+
+## 🎯 Special Feature Commands
+
+### 5-Level Risk Assessment System
+```bash
+# Set up 5-level risk assessment system
+python unified_test_data_manager.py risk5
+```
+
+### Real-time Analysis Simulation
+```bash
+# Simulate real-time analysis for specific patient and metric
 python unified_test_data_manager.py realtime 1 blood_pressure
 python unified_test_data_manager.py realtime 2 blood_glucose
-python unified_test_data_manager.py realtime 3 heart_rate
-
-# 创建用药依从性报警数据
-python unified_test_data_manager.py medication [days]
-# 自动生成用药提醒记录，模拟漏服情况，触发智能报警
 ```
 
-### 🧪 功能测试
+### Medication Adherence Testing
 ```bash
-# 测试搜索功能
+# Create medication adherence alert test data
+python unified_test_data_manager.py medication 30
+
+# Test medication alert system
+python survey_data_preparation/test_medication_alerts.py
+```
+
+## 🔍 Testing and Validation Commands
+
+### Function Testing
+```bash
+# Test search functionality
 python unified_test_data_manager.py test
 
-# 测试所有API端点
+# Test all APIs
 python unified_test_data_manager.py test_apis
+
+# Test enhanced data creator
+python survey_data_preparation/test_enhanced_data.py
 ```
 
-### 🎯 风险评估系统
+### Data Validation
 ```bash
-# 设置5级疾病风险评估系统
-python unified_test_data_manager.py risk5
-```
-
-### 📊 数据管理
-```bash
-# 导出测试数据（JSON格式）
-python unified_test_data_manager.py export json
-
-# 导出测试数据（CSV格式）
-python unified_test_data_manager.py export csv
-
-# 验证数据完整性
+# Validate data integrity
 python unified_test_data_manager.py validate
 
-# 性能测试（基本）
-python unified_test_data_manager.py performance basic
+# Check database status
+python unified_test_data_manager.py status
 
-# 性能测试（压力测试）
-python unified_test_data_manager.py performance stress
+# Analyze alerts summary
+python unified_test_data_manager.py summary
+```
 
-# 清理孤立数据
+## 📤 Export and Backup Commands
+
+### Data Export
+```bash
+# Export data as JSON
+python unified_test_data_manager.py export json
+
+# Export data as CSV
+python unified_test_data_manager.py export csv
+```
+
+### Database Operations
+```bash
+# Backup database
+python unified_test_data_manager.py backup
+
+# Clean up orphaned data
 python unified_test_data_manager.py cleanup
 
-# 备份数据库
-python unified_test_data_manager.py backup
-
-# 生成大量测试数据
-python unified_test_data_manager.py generate <count>
-# 示例：
+# Generate bulk test data
 python unified_test_data_manager.py generate 100
-python unified_test_data_manager.py generate 500
-
-# 生成数据统计报告
-python unified_test_data_manager.py report
 ```
 
-### 🚀 一键设置
+## 📈 Performance and Analysis Commands
+
+### Performance Testing
 ```bash
-# 完整系统设置（不包含5级风险）
-python unified_test_data_manager.py setup
+# Basic performance test
+python unified_test_data_manager.py performance basic
 
-# 完整系统设置（包含5级风险系统）
-python unified_test_data_manager.py fullsetup
-```
-
-## 🎨 5级风险评估系统说明
-
-工具会自动设置5种不同的风险状态：
-
-1. **未评估** (unassessed): 医生尚未评估
-2. **健康** (healthy): 无慢性疾病
-3. **低风险** (low): 关节炎、偏头痛等
-4. **中风险** (medium): 糖尿病、高血压等
-5. **高风险** (high): 癌症、心脏病等
-
-## 📋 测试账号信息
-
-### 医生账号
-- **李医生**: +8613800138001 / test123456
-- **王医生**: +8613800138021 / test123456  
-- **张医生**: +8613800138022 / test123456
-
-### 患者账号
-- **张三**: +8613800138000 / test123456
-- **李四**: +8613800138002 / test123456
-- **王五**: +8613800138003 / test123456
-- **赵六**: +8613800138004 / test123456
-- **刘七**: +8613800138005 / test123456
-- **陈八**: +8613800138006 / test123456
-- **孙九**: +8613800138007 / test123456
-- **周十**: +8613800138008 / test123456
-
-## 🔄 典型工作流程
-
-### 1. 快速开始
-```bash
-# 一键创建完整系统（推荐）
-python unified_test_data_manager.py fullsetup
-```
-
-### 2. 分步创建
-```bash
-# 清除现有数据
-python unified_test_data_manager.py clear
-
-# 创建用户
-python unified_test_data_manager.py full
-
-# 创建健康数据
-python unified_test_data_manager.py health
-
-# 运行智能分析
-python unified_test_data_manager.py analyze
-
-# 设置5级风险系统
-python unified_test_data_manager.py risk5
-```
-
-### 3. 数据验证和测试
-```bash
-# 验证数据完整性
-python unified_test_data_manager.py validate
-
-# 测试搜索功能
-python unified_test_data_manager.py test
-
-# 测试API
-python unified_test_data_manager.py test_apis
-
-# 性能测试
+# Stress test
 python unified_test_data_manager.py performance stress
 ```
 
-### 4. 数据管理
+### Report Generation
 ```bash
-# 生成报告
+# Generate data report
 python unified_test_data_manager.py report
-
-# 导出数据
-python unified_test_data_manager.py export json
-
-# 备份数据库
-python unified_test_data_manager.py backup
 ```
 
-## ⚠️ 注意事项
+## 🎮 Interactive Mode
 
-1. **数据安全**: 清除数据库操作不可逆，请谨慎使用
-2. **环境要求**: 确保Django环境已正确配置
-3. **权限要求**: 确保有足够的数据库操作权限
-4. **备份建议**: 重要数据请提前备份
-5. **5级风险系统**: 需要至少5个患者才能完整演示
+### Start Interactive Menu
+```bash
+python survey_data_preparation/unified_test_data_manager.py
+```
 
-## 🆘 常见问题
+Interactive menu options:
+1. Display database status
+2. Clear database data
+3. Create basic test users
+4. Create comprehensive test users
+5. Create health data and alerts
+6. Run intelligent alert analysis
+7. Test search functionality
+8. Analyze alert summary
+9. Simulate real-time analysis
+10. Set up 5-level risk assessment system
+11. One-click create full system
+12. Export test data
+13. Validate data integrity
+14. Perform performance test
+15. Clean up orphaned data
+16. Backup database
+17. Generate bulk data
+18. Generate data report
+19. Test all APIs
+0. Exit
 
-### Q: 运行时报错"ModuleNotFoundError"
-A: 确保在正确的Django项目目录下运行，并且虚拟环境已激活
+## 🔧 Advanced Usage Examples
 
-### Q: 数据库连接失败
-A: 检查Django设置文件中的数据库配置
+### Complete System Setup with Risk Assessment
+```bash
+# Full setup including 5-level risk system
+python unified_test_data_manager.py fullsetup
+```
 
-### Q: 权限不足
-A: 确保当前用户有数据库读写权限
+### Custom Data Generation
+```bash
+# Generate 60 days of data for specific patient
+python manage.py create_test_data --days 60 --patients 3
 
-### Q: 5级风险系统设置失败
-A: 确保先创建了足够的患者用户（至少5个）
+# Generate enhanced data for last 14 days
+python unified_test_data_manager.py enhanced 14
+```
 
-### Q: 性能测试很慢
-A: 这是正常的，压力测试会执行大量查询来评估性能
+### Testing Specific Features
+```bash
+# Test medication alerts with 7 days of data
+python unified_test_data_manager.py medication 7
 
-## 📞 技术支持
+# Test real-time analysis for heart rate
+python unified_test_data_manager.py realtime 1 heart_rate
 
-如有问题，请检查：
-1. Django环境配置
-2. 数据库连接状态
-3. 模型字段定义
-4. 依赖包安装情况
-5. 文件权限设置
+# Test API endpoints
+python unified_test_data_manager.py test_apis
+```
+
+## 📋 Command Categories
+
+### Data Creation
+- `basic`, `full`, `enhanced` - User and data creation
+- `health`, `medication` - Specific data type generation
+
+### Analysis and Testing
+- `analyze`, `summary`, `realtime` - Intelligent analysis
+- `test`, `test_apis` - Function testing
+- `validate` - Data validation
+
+### System Management
+- `clear`, `cleanup` - Data management
+- `backup`, `export` - Data operations
+- `performance` - System testing
+
+### Special Features
+- `risk5` - Risk assessment system
+- `fullsetup` - Complete system setup
+
+## ⚠️ Important Notes
+
+1. **Environment**: Ensure you are in the `chronic-disease-backend` directory
+2. **Dependencies**: Django environment must be properly configured
+3. **Data Safety**: Clear operations are irreversible
+4. **Backup**: Always backup important data before testing
+
+## 🆘 Troubleshooting
+
+### Common Issues
+- **ModuleNotFoundError**: Check directory and Django setup
+- **Database errors**: Verify database configuration
+- **Permission errors**: Check file and database permissions
+
+### Getting Help
+- Use `python unified_test_data_manager.py status` to check system state
+- Use `python unified_test_data_manager.py validate` to check data integrity
+- Check Django logs for detailed error information

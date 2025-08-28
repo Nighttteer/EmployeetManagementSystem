@@ -1,3 +1,19 @@
+/**
+ * 患者用药设置页面组件
+ * 
+ * 功能特性：
+ * - 管理用药提醒偏好设置
+ * - 支持提醒开关、声音、震动配置
+ * - 提前提醒时间和重复间隔设置
+ * - 静音时段配置（夜间免打扰）
+ * - 实时保存和加载用户偏好
+ * - 多语言国际化支持
+ * - 用户友好的设置界面
+ * 
+ * @author 医疗测试应用开发团队
+ * @version 1.0.0
+ */
+
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -20,27 +36,49 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import medicationReminderService from '../../services/medicationReminder';
 
+/**
+ * 患者用药设置页面主组件
+ * 
+ * 主要功能：
+ * - 管理用药提醒的各种设置选项
+ * - 处理用户偏好的保存和加载
+ * - 提供直观的设置界面
+ * - 支持静音时段配置
+ * - 实时更新设置状态
+ * 
+ * @param {Object} navigation - 导航对象，用于页面跳转
+ * @returns {JSX.Element} 患者用药设置页面组件
+ */
 const MedicationSettingsScreen = ({ navigation }) => {
+  // 用药提醒偏好设置状态
   const [preferences, setPreferences] = useState({
-    enabled: true,
-    sound: true,
-    vibration: true,
-    advanceMinutes: 5,
-    repeatInterval: 15,
+    enabled: true,                    // 是否启用用药提醒
+    sound: true,                      // 是否启用声音提醒
+    vibration: true,                  // 是否启用震动提醒
+    advanceMinutes: 5,                // 提前提醒时间（分钟）
+    repeatInterval: 15,               // 重复提醒间隔（分钟）
     quietHours: {
-      enabled: false,
-      startTime: '22:00',
-      endTime: '08:00',
+      enabled: false,                 // 是否启用静音时段
+      startTime: '22:00',             // 静音开始时间
+      endTime: '08:00',               // 静音结束时间
     },
   });
 
-  const [showTimePicker, setShowTimePicker] = useState(false);
-  const [timePickerType, setTimePickerType] = useState('start');
+  // 时间选择器状态
+  const [showTimePicker, setShowTimePicker] = useState(false);     // 时间选择器显示状态
+  const [timePickerType, setTimePickerType] = useState('start');   // 当前编辑的时间类型
 
+  /**
+   * 组件加载时加载用户偏好设置
+   */
   useEffect(() => {
     loadPreferences();
   }, []);
 
+  /**
+   * 加载用户偏好设置
+   * 从本地存储或服务中获取保存的设置
+   */
   const loadPreferences = async () => {
     try {
       const savedPreferences = await medicationReminderService.getReminderPreferences();
@@ -50,6 +88,10 @@ const MedicationSettingsScreen = ({ navigation }) => {
     }
   };
 
+  /**
+   * 保存用户偏好设置
+   * 将当前设置保存到本地存储或服务中
+   */
   const savePreferences = async () => {
     try {
       await medicationReminderService.setReminderPreferences(preferences);
@@ -60,6 +102,12 @@ const MedicationSettingsScreen = ({ navigation }) => {
     }
   };
 
+  /**
+   * 切换开关状态
+   * 处理布尔类型设置的开关操作
+   * 
+   * @param {string} key - 要切换的设置键名
+   */
   const toggleSwitch = (key) => {
     setPreferences(prev => ({
       ...prev,
@@ -67,6 +115,10 @@ const MedicationSettingsScreen = ({ navigation }) => {
     }));
   };
 
+  /**
+   * 切换静音时段开关
+   * 启用或禁用静音时段功能
+   */
   const toggleQuietHours = () => {
     setPreferences(prev => ({
       ...prev,
@@ -77,6 +129,12 @@ const MedicationSettingsScreen = ({ navigation }) => {
     }));
   };
 
+  /**
+   * 更新提前提醒时间
+   * 设置用药提醒的提前时间，范围0-60分钟
+   * 
+   * @param {string} value - 输入的分钟数
+   */
   const updateAdvanceMinutes = (value) => {
     const minutes = parseInt(value) || 0;
     setPreferences(prev => ({
@@ -85,6 +143,12 @@ const MedicationSettingsScreen = ({ navigation }) => {
     }));
   };
 
+  /**
+   * 更新重复提醒间隔
+   * 设置重复提醒的时间间隔，范围5-60分钟
+   * 
+   * @param {string} value - 输入的分钟数
+   */
   const updateRepeatInterval = (value) => {
     const interval = parseInt(value) || 15;
     setPreferences(prev => ({
@@ -93,11 +157,23 @@ const MedicationSettingsScreen = ({ navigation }) => {
     }));
   };
 
+  /**
+   * 显示时间选择器模态框
+   * 打开时间选择器用于设置静音时段
+   * 
+   * @param {string} type - 时间类型：'start' 或 'end'
+   */
   const showTimePickerModal = (type) => {
     setTimePickerType(type);
     setShowTimePicker(true);
   };
 
+  /**
+   * 处理时间选择器的确认事件
+   * 更新静音时段的开始或结束时间
+   * 
+   * @param {string} time - 选择的时间字符串 (HH:mm)
+   */
   const handleTimeChange = (time) => {
     setPreferences(prev => ({
       ...prev,
@@ -109,6 +185,10 @@ const MedicationSettingsScreen = ({ navigation }) => {
     setShowTimePicker(false);
   };
 
+  /**
+   * 发送测试通知
+   * 用于验证本地通知功能是否正常工作
+   */
   const testNotification = async () => {
     try {
       await medicationReminderService.scheduleLocalNotification(
@@ -126,6 +206,10 @@ const MedicationSettingsScreen = ({ navigation }) => {
 
 
 
+  /**
+   * 清除所有已安排的用药提醒
+   * 提供一个确认对话框
+   */
   const clearAllReminders = async () => {
     Alert.alert(
       '清除所有提醒',
@@ -149,6 +233,12 @@ const MedicationSettingsScreen = ({ navigation }) => {
     );
   };
 
+  /**
+   * 渲染基本设置卡片
+   * 包含提醒开关、声音、震动配置
+   * 
+   * @returns {JSX.Element} 基本设置卡片
+   */
   const renderGeneralSettings = () => (
     <Card style={styles.card}>
       <Card.Content>
@@ -201,6 +291,12 @@ const MedicationSettingsScreen = ({ navigation }) => {
     </Card>
   );
 
+  /**
+   * 渲染时间设置卡片
+   * 包含提前提醒时间、重复间隔设置
+   * 
+   * @returns {JSX.Element} 时间设置卡片
+   */
   const renderTimingSettings = () => (
     <Card style={styles.card}>
       <Card.Content>
@@ -235,6 +331,12 @@ const MedicationSettingsScreen = ({ navigation }) => {
     </Card>
   );
 
+  /**
+   * 渲染静音时段设置卡片
+   * 包含静音时段开关和时间选择器
+   * 
+   * @returns {JSX.Element} 静音时段设置卡片
+   */
   const renderQuietHoursSettings = () => (
     <Card style={styles.card}>
       <Card.Content>
@@ -282,6 +384,12 @@ const MedicationSettingsScreen = ({ navigation }) => {
     </Card>
   );
 
+  /**
+   * 渲染测试设置卡片
+   * 包含发送测试通知和清除所有提醒按钮
+   * 
+   * @returns {JSX.Element} 测试设置卡片
+   */
   const renderTestSettings = () => (
     <Card style={styles.card}>
       <Card.Content>
@@ -310,6 +418,12 @@ const MedicationSettingsScreen = ({ navigation }) => {
     </Card>
   );
 
+  /**
+   * 渲染时间选择器模态框
+   * 用于选择静音时段的开始或结束时间
+   * 
+   * @returns {JSX.Element} 时间选择器模态框
+   */
   const renderTimePickerModal = () => (
     <Portal>
       <Modal

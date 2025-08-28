@@ -1,3 +1,20 @@
+/**
+ * 患者详情页面组件
+ * 
+ * 功能特性：
+ * - 显示患者基本信息和健康数据
+ * - 支持多标签页查看（概览、健康数据、用药信息、病史记录）
+ * - 健康指标趋势图表展示
+ * - 用药计划管理和依从性分析
+ * - 医生建议管理（新增、编辑、删除）
+ * - 患者疾病状态和风险等级显示
+ * - 多语言国际化支持
+ * - 实时数据同步和状态更新
+ * 
+ * @author 医疗测试应用开发团队
+ * @version 1.0.0
+ */
+
 import React, { useState, useEffect } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { 
@@ -33,17 +50,34 @@ import { api, medicationAPI, patientsAPI } from '../../services/api';
 import reportService from '../../services/reportService';
 import { resolvePatientRiskLevel, getRiskColor as getUnifiedRiskColor, getRiskText as getUnifiedRiskText } from '../../utils/riskUtils';
 
+/**
+ * 患者详情页面主组件
+ * 
+ * 主要功能：
+ * - 展示患者详细信息和健康数据
+ * - 管理患者用药计划和依从性
+ * - 处理医生建议和病史记录
+ * - 提供健康指标趋势分析
+ * - 支持患者信息编辑和报告生成
+ * - 实时数据同步和状态管理
+ * 
+ * @param {Object} route - 路由参数对象
+ * @param {Object} route.params.patient - 患者信息对象
+ * @param {Object} navigation - 导航对象
+ * @returns {JSX.Element} 患者详情页面组件
+ */
 const PatientDetailsScreen = ({ route, navigation }) => {
   const { patient } = route.params || {};
   const { t, ready } = useTranslation();
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState('overview'); // overview, health, medication, history
-  const [menuVisible, setMenuVisible] = useState(false);
-  const [currentPatient, setCurrentPatient] = useState(patient); // 跟踪最新的患者信息
+  
+  // 界面状态管理
+  const [loading, setLoading] = useState(true);                    // 首次加载状态
+  const [refreshing, setRefreshing] = useState(false);             // 下拉刷新状态
+  const [activeTab, setActiveTab] = useState('overview');          // 当前标签页：overview, health, medication, history
+  const [menuVisible, setMenuVisible] = useState(false);           // 菜单显示状态
+  const [currentPatient, setCurrentPatient] = useState(patient);   // 跟踪最新的患者信息
   const [realMedicationPlans, setRealMedicationPlans] = useState([]); // 真实的用药计划数据
-  const [medicationStatsMap, setMedicationStatsMap] = useState({}); // 计划ID -> 依从率
-
+  const [medicationStatsMap, setMedicationStatsMap] = useState({});   // 计划ID -> 依从率映射
 
   // 等待国际化系统准备就绪
   if (!ready) {
@@ -55,7 +89,10 @@ const PatientDetailsScreen = ({ route, navigation }) => {
     );
   }
 
-  // 检查导航状态
+  /**
+   * 检查导航状态
+   * 调试导航相关的问题
+   */
   useEffect(() => {
     console.log('🔍 检查导航状态:');
     console.log('  - 当前路由参数:', route.params);
@@ -63,7 +100,14 @@ const PatientDetailsScreen = ({ route, navigation }) => {
     console.log('  - 导航状态:', navigation.getState());
   }, [route.params, navigation]);
 
-  // 安全的t函数包装器
+  /**
+   * 安全的t函数包装器
+   * 处理国际化函数调用失败的情况
+   * 
+   * @param {string} key - 国际化键值
+   * @param {Object} options - 国际化选项
+   * @returns {string} 本地化文本或默认值
+   */
   const safeT = (key, options) => {
     if (typeof t !== 'function') {
       console.error('❌ t函数未定义，使用默认值:', key);
@@ -157,28 +201,28 @@ const PatientDetailsScreen = ({ route, navigation }) => {
 
   // 慢性疾病列表（延迟初始化，确保国际化系统准备好）
   const chronicDiseases = [
-    { id: 'alzheimer', name: safeT('diseases.alzheimer') },
-    { id: 'arthritis', name: safeT('diseases.arthritis') },
-    { id: 'asthma', name: safeT('diseases.asthma') },
-    { id: 'cancer', name: safeT('diseases.cancer') },
-    { id: 'copd', name: safeT('diseases.copd') },
-    { id: 'crohn', name: safeT('diseases.crohn') },
-    { id: 'cystic_fibrosis', name: safeT('diseases.cysticFibrosis') },
-    { id: 'dementia', name: safeT('diseases.dementia') },
-    { id: 'diabetes', name: safeT('diseases.diabetes') },
-    { id: 'endometriosis', name: safeT('diseases.endometriosis') },
-    { id: 'epilepsy', name: safeT('diseases.epilepsy') },
-    { id: 'fibromyalgia', name: safeT('diseases.fibromyalgia') },
-    { id: 'heart_disease', name: safeT('diseases.heartDisease') },
-    { id: 'hypertension', name: safeT('diseases.hypertension') },
-    { id: 'hiv_aids', name: safeT('diseases.hivAids') },
-    { id: 'migraine', name: safeT('diseases.migraine') },
-    { id: 'mood_disorder', name: safeT('diseases.moodDisorder') },
-    { id: 'multiple_sclerosis', name: safeT('diseases.multipleSclerosis') },
-    { id: 'narcolepsy', name: safeT('diseases.narcolepsy') },
-    { id: 'parkinson', name: safeT('diseases.parkinson') },
-    { id: 'sickle_cell', name: safeT('diseases.sickleCell') },
-    { id: 'ulcerative_colitis', name: safeT('diseases.ulcerativeColitis') }
+    { id: 'alzheimer', name: safeT('diseases.alzheimer') },              // 阿尔茨海默病
+    { id: 'arthritis', name: safeT('diseases.arthritis') },              // 关节炎
+    { id: 'asthma', name: safeT('diseases.asthma') },                    // 哮喘
+    { id: 'cancer', name: safeT('diseases.cancer') },                    // 癌症
+    { id: 'copd', name: safeT('diseases.copd') },                        // 慢性阻塞性肺疾病
+    { id: 'crohn', name: safeT('diseases.crohn') },                      // 克罗恩病
+    { id: 'cystic_fibrosis', name: safeT('diseases.cysticFibrosis') },   // 囊性纤维化
+    { id: 'dementia', name: safeT('diseases.dementia') },                // 痴呆症
+    { id: 'diabetes', name: safeT('diseases.diabetes') },                // 糖尿病
+    { id: 'endometriosis', name: safeT('diseases.endometriosis') },      // 子宫内膜异位症
+    { id: 'epilepsy', name: safeT('diseases.epilepsy') },                // 癫痫
+    { id: 'fibromyalgia', name: safeT('diseases.fibromyalgia') },        // 纤维肌痛
+    { id: 'heart_disease', name: safeT('diseases.heartDisease') },       // 心脏病
+    { id: 'hypertension', name: safeT('diseases.hypertension') },        // 高血压
+    { id: 'hiv_aids', name: safeT('diseases.hivAids') },                 // HIV/艾滋病
+    { id: 'migraine', name: safeT('diseases.migraine') },                // 偏头痛
+    { id: 'mood_disorder', name: safeT('diseases.moodDisorder') },       // 情绪障碍
+    { id: 'multiple_sclerosis', name: safeT('diseases.multipleSclerosis') }, // 多发性硬化症
+    { id: 'narcolepsy', name: safeT('diseases.narcolepsy') },            // 发作性睡病
+    { id: 'parkinson', name: safeT('diseases.parkinson') },              // 帕金森病
+    { id: 'sickle_cell', name: safeT('diseases.sickleCell') },           // 镰状细胞病
+    { id: 'ulcerative_colitis', name: safeT('diseases.ulcerativeColitis') } // 溃疡性结肠炎
   ];
 
   // 模拟患者详细数据
@@ -248,17 +292,27 @@ const PatientDetailsScreen = ({ route, navigation }) => {
     medicalHistory: [] // 移除硬编码，使用真实API数据
   });
 
+  /**
+   * 组件加载时获取患者数据
+   */
   useEffect(() => {
     loadPatientData();
   }, []);
 
-  // 使用useFocusEffect在页面聚焦时刷新患者基本信息
+  /**
+   * 使用useFocusEffect在页面聚焦时刷新患者基本信息
+   * 确保从其他页面返回时数据是最新的
+   */
   useFocusEffect(
     React.useCallback(() => {
       loadPatientBasicInfo();
     }, [patient.id])
   );
 
+  /**
+   * 加载患者基本信息
+   * 获取患者的最新疾病列表和风险等级
+   */
   const loadPatientBasicInfo = async () => {
     try {
       // 获取患者基本信息，包括最新的疾病列表
@@ -287,6 +341,10 @@ const PatientDetailsScreen = ({ route, navigation }) => {
 
   // 兼容旧代码：移除本地硬编码的风险判断，统一走 riskUtils
 
+  /**
+   * 加载患者健康数据
+   * 从API获取患者的血压、血糖、心率等健康指标数据
+   */
   const loadPatientData = async () => {
     setLoading(true);
     try {
@@ -432,6 +490,10 @@ const PatientDetailsScreen = ({ route, navigation }) => {
     }
   };
 
+  /**
+   * 下拉刷新数据
+   * 重新加载患者基本信息和健康数据
+   */
   const onRefresh = async () => {
     setRefreshing(true);
     await loadPatientData();

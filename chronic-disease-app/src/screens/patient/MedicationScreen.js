@@ -1,3 +1,20 @@
+/**
+ * 患者用药管理页面组件
+ * 
+ * 功能特性：
+ * - 显示和管理患者用药计划
+ * - 用药提醒和通知管理
+ * - 用药依从性记录和统计
+ * - 本地数据存储和同步
+ * - 用药状态管理（已服用、待服用、跳过）
+ * - 用药历史记录查看
+ * - 多语言国际化支持
+ * - 离线数据支持
+ * 
+ * @author 医疗测试应用开发团队
+ * @version 1.0.0
+ */
+
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
@@ -26,23 +43,43 @@ import i18n from 'i18next';
 import { userAPI, medicationAPI } from '../../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-
-
+/**
+ * 患者用药管理页面主组件
+ * 
+ * 主要功能：
+ * - 管理患者的用药计划和提醒
+ * - 处理用药依从性记录
+ * - 本地数据存储和服务器同步
+ * - 用药通知和提醒管理
+ * - 用药历史和统计展示
+ * - 离线数据支持和同步
+ * 
+ * @param {Object} navigation - 导航对象，用于页面跳转
+ * @returns {JSX.Element} 患者用药管理页面组件
+ */
 const MedicationScreen = ({ navigation }) => {
   const { t, ready, i18n } = useTranslation();
   const dispatch = useDispatch();
+  
+  // 从Redux store获取用户和语言设置
   const { user } = useSelector((state) => state.auth);
   const currentLanguage = useSelector((state) => state.language.currentLanguage);
 
+  // 国际化状态管理
   const [i18nReady, setI18nReady] = useState(false);
   
-  // 本地存储键名
+  // 本地存储键名配置
   const STORAGE_KEYS = {
-    MEDICATION_DATA: `medication_data_${user?.id || 'guest'}`,
-    LAST_SYNC_TIME: `last_sync_time_${user?.id || 'guest'}`
+    MEDICATION_DATA: `medication_data_${user?.id || 'guest'}`,      // 用药数据存储键
+    LAST_SYNC_TIME: `last_sync_time_${user?.id || 'guest'}`        // 最后同步时间存储键
   };
   
-  // 本地存储相关函数
+  /**
+   * 保存用药数据到本地存储
+   * 将用药数据持久化到设备本地存储
+   * 
+   * @param {Object} data - 要保存的用药数据
+   */
   const saveMedicationDataToStorage = useCallback(async (data) => {
     try {
       await AsyncStorage.setItem(STORAGE_KEYS.MEDICATION_DATA, JSON.stringify(data));
@@ -53,6 +90,12 @@ const MedicationScreen = ({ navigation }) => {
     }
   }, [STORAGE_KEYS.MEDICATION_DATA, STORAGE_KEYS.LAST_SYNC_TIME]);
   
+  /**
+   * 从本地存储加载用药数据
+   * 检查数据是否过期，返回有效的本地数据
+   * 
+   * @returns {Object|null} 本地存储的用药数据或null
+   */
   const loadMedicationDataFromStorage = useCallback(async () => {
     try {
       const storedData = await AsyncStorage.getItem(STORAGE_KEYS.MEDICATION_DATA);
@@ -79,6 +122,10 @@ const MedicationScreen = ({ navigation }) => {
     }
   }, [STORAGE_KEYS.MEDICATION_DATA, STORAGE_KEYS.LAST_SYNC_TIME]);
   
+  /**
+   * 清除本地用药数据
+   * 删除本地存储的用药数据和同步时间
+   */
   const clearLocalMedicationData = useCallback(async () => {
     try {
       await AsyncStorage.removeItem(STORAGE_KEYS.MEDICATION_DATA);
@@ -89,7 +136,14 @@ const MedicationScreen = ({ navigation }) => {
     }
   }, [STORAGE_KEYS.MEDICATION_DATA, STORAGE_KEYS.LAST_SYNC_TIME]);
 
-  // 合并服务器数据和本地数据，优先保留本地记录
+  /**
+   * 合并服务器数据和本地数据
+   * 优先保留本地记录，确保离线操作不丢失
+   * 
+   * @param {Object} serverData - 服务器返回的用药数据
+   * @param {Object} localData - 本地存储的用药数据
+   * @returns {Object} 合并后的用药数据
+   */
   const mergeServerAndLocalData = useCallback((serverData, localData) => {
     if (!localData || !localData.medicationPlans) return serverData;
     

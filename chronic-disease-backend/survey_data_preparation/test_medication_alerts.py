@@ -1,122 +1,130 @@
 #!/usr/bin/env python3
 """
-测试用药依从性报警功能
-验证新添加的功能是否正常工作
+Test Medication Alert System
+Test the medication adherence alert functionality
 """
+
 import os
 import sys
 import django
 
-# 设置Django环境
+# Add project root to Python path
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
+
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'chronic_disease_backend.settings')
 django.setup()
 
-from unified_test_data_manager import UnifiedTestDataManager
+from medication.models import MedicationPlan, MedicationReminder
+from health.models import Alert
+from accounts.models import User
 
-def test_medication_functionality():
-    """测试用药依从性报警功能"""
-    print("🧪 测试用药依从性报警功能...")
-    print("=" * 60)
+
+def test_medication_alerts():
+    """Test medication alert system"""
+    print("💊 Testing medication alert system...")
     
-    manager = UnifiedTestDataManager()
-    
-    try:
-        # 1. 检查当前状态
-        print("📊 步骤1: 检查当前数据库状态...")
-        manager.show_status()
-        
-        # 2. 创建基本用户（如果没有的话）
-        print("\n👥 步骤2: 检查/创建基本用户...")
-        if not manager.has_users():
-            print("   创建基本用户...")
-            manager.create_basic_users()
-        else:
-            print("   用户已存在，跳过创建")
-        
-        # 3. 创建用药依从性报警数据
-        print("\n💊 步骤3: 创建用药依从性报警数据...")
-        result = manager.create_medication_adherence_alerts(days=7)  # 7天数据
-        
-        if result:
-            print(f"   ✅ 成功创建用药数据:")
-            print(f"      - 总提醒记录: {result['total_reminders']}")
-            print(f"      - 漏服记录: {result['total_missed']}")
-            print(f"      - 依从率: {result['adherence_rate']:.1%}")
-        
-        # 4. 再次检查状态
-        print("\n📊 步骤4: 检查更新后的状态...")
-        manager.show_status()
-        
-        # 5. 查看报警摘要
-        print("\n🚨 步骤5: 查看报警摘要...")
-        manager.analyze_alerts_summary()
-        
-        print("\n🎉 用药依从性报警功能测试完成！")
-        return True
-        
-    except Exception as e:
-        print(f"\n❌ 测试过程中出错: {e}")
-        import traceback
-        traceback.print_exc()
+    # Check if medication plans exist
+    plans = MedicationPlan.objects.filter(status='active')
+    if not plans.exists():
+        print("⚠️  No active medication plans found")
         return False
-
-def test_quick_medication():
-    """快速测试用药功能"""
-    print("⚡ 快速测试用药依从性报警...")
-    print("=" * 40)
     
-    manager = UnifiedTestDataManager()
+    print(f"📋 Found {plans.count()} active medication plans")
     
-    try:
-        # 直接创建7天的用药数据
-        result = manager.create_medication_adherence_alerts(days=7)
+    # Check medication reminders
+    reminders = MedicationReminder.objects.all()
+    print(f"🔔 Found {reminders.count()} medication reminders")
+    
+    # Check alerts
+    alerts = Alert.objects.filter(alert_type='medication_adherence')
+    print(f"🚨 Found {alerts.count()} medication adherence alerts")
+    
+    # Test alert generation for missed medications
+    missed_reminders = reminders.filter(status='missed')
+    if missed_reminders.exists():
+        print(f"⚠️  Found {missed_reminders.count()} missed medication reminders")
         
-        if result:
-            print(f"✅ 快速测试成功!")
-            print(f"   依从率: {result['adherence_rate']:.1%}")
-            print(f"   应该触发报警级别: ", end="")
-            
-            if result['adherence_rate'] <= 0.5:
-                print("🚨 危急 (critical)")
-            elif result['adherence_rate'] <= 0.7:
-                print("⚠️  高风险 (high)")
-            elif result['adherence_rate'] <= 0.85:
-                print("🔶 中等风险 (medium)")
-            else:
-                print("✅ 正常")
+        # Show details of missed medications
+        for reminder in missed_reminders[:3]:
+            print(f"   - {reminder.plan.patient.name}: {reminder.plan.medication.name}")
+    else:
+        print("✅ No missed medication reminders found")
+    
+    # Test alert generation for low adherence
+    total_reminders = reminders.count()
+    taken_reminders = reminders.filter(status='taken').count()
+    
+    if total_reminders > 0:
+        adherence_rate = taken_reminders / total_reminders
+        print(f"📊 Medication adherence rate: {adherence_rate:.1%}")
+        
+        if adherence_rate < 0.8:
+            print("⚠️  Low adherence rate detected, should generate alerts")
         else:
-            print("❌ 快速测试失败")
-            
-        return True
-        
-    except Exception as e:
-        print(f"❌ 快速测试出错: {e}")
-        return False
+            print("✅ Good adherence rate")
+    
+    print("🎉 Medication alert system test completed!")
+    return True
 
-def main():
-    """主函数"""
-    print("💊 用药依从性报警功能测试")
-    print("=" * 60)
+
+def create_test_medication_data():
+    """Create test medication data for testing"""
+    print("🔧 Creating test medication data...")
     
-    if len(sys.argv) > 1 and sys.argv[1] == 'quick':
-        # 快速测试
-        success = test_quick_medication()
-    else:
-        # 完整测试
-        success = test_medication_functionality()
+    # Check if users exist
+    doctors = User.objects.filter(role='doctor')
+    patients = User.objects.filter(role='patient')
     
-    if success:
-        print("\n🎯 测试结果: 成功")
-        print("💡 提示: 使用以下命令查看详细状态:")
-        print("   python unified_test_data_manager.py status")
-        print("   python unified_test_data_manager.py summary")
-    else:
-        print("\n🎯 测试结果: 失败")
-        print("💡 提示: 检查错误信息并修复问题")
+    if not doctors.exists() or not patients.exists():
+        print("❌ No doctors or patients found")
+        return False
     
-    return success
+    # Create test medication
+    from medication.models import Medication
+    medication = Medication.objects.create(
+        name='Test Medication',
+        category='test',
+        unit='mg',
+        specification='10mg/tablet',
+        instructions='Test medication for alert testing',
+        is_prescription=False
+    )
+    
+    # Create medication plan
+    plan = MedicationPlan.objects.create(
+        patient=patients.first(),
+        medication=medication,
+        dosage=10,
+        frequency='QD',
+        time_of_day=['08:00'],
+        start_date='2024-01-01',
+        end_date='2024-12-31',
+        special_instructions='Test plan for alert testing',
+        status='active'
+    )
+    
+    # Create medication reminders
+    from django.utils import timezone
+    from datetime import timedelta
+    
+    for i in range(7):
+        date = timezone.now().date() - timedelta(days=i)
+        reminder = MedicationReminder.objects.create(
+            plan=plan,
+            scheduled_time=timezone.make_aware(
+                timezone.datetime.combine(date, timezone.datetime.min.time().replace(hour=8))
+            ),
+            status='missed' if i % 3 == 0 else 'taken',
+            notes='Test reminder'
+        )
+    
+    print("✅ Test medication data created")
+    return True
+
 
 if __name__ == '__main__':
-    main()
+    if len(sys.argv) > 1 and sys.argv[1] == 'create':
+        create_test_medication_data()
+    else:
+        test_medication_alerts()

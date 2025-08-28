@@ -1,3 +1,19 @@
+/**
+ * 患者列表页面组件
+ * 
+ * 功能特性：
+ * - 显示医生管理的所有患者列表
+ * - 支持患者搜索和筛选
+ * - 显示患者风险等级和状态
+ * - 提供快速操作入口（查看详情、开始聊天、编辑信息）
+ * - 支持下拉刷新和实时更新
+ * - 患者风险等级可视化显示
+ * - 多语言支持
+ * 
+ * @author 医疗测试应用开发团队
+ * @version 1.0.0
+ */
+
 import React, { useState, useEffect } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { View, StyleSheet, FlatList, RefreshControl, Alert, TouchableOpacity } from 'react-native';
@@ -18,43 +34,63 @@ import { fetchPatientsList, setSearchQuery } from '../../store/slices/patientsSl
 import { resolvePatientRiskLevel, getRiskColor as getUnifiedRiskColor, getRiskText as getUnifiedRiskText } from '../../utils/riskUtils';
 import { api } from '../../services/api';
 
-
+/**
+ * 患者列表页面主组件
+ * 
+ * 主要功能：
+ * - 管理和显示患者列表
+ * - 处理患者搜索和筛选
+ * - 提供患者操作入口
+ * - 管理患者风险等级显示
+ * - 处理患者聊天功能
+ * - 支持实时数据更新
+ * 
+ * @param {Object} navigation - 导航对象，用于页面跳转
+ * @returns {JSX.Element} 患者列表页面组件
+ */
 const PatientsListScreen = ({ navigation }) => {
   const { t } = useTranslation();
   const dispatch = useDispatch();
+  
+  // 从Redux store获取患者相关状态
   const { 
-    patientsList, 
-    filteredPatients, 
-    searchQuery, 
-    loading, 
-    error 
+    patientsList,        // 患者列表数据
+    filteredPatients,    // 筛选后的患者列表
+    searchQuery,         // 搜索关键词
+    loading,             // 加载状态
+    error                // 错误信息
   } = useSelector(state => state.patients);
   
   // 获取认证状态
   const { isAuthenticated, user, role, token } = useSelector(state => state.auth);
   
-  const [refreshing, setRefreshing] = useState(false);
-  const [filterType, setFilterType] = useState('all'); // all, critical, stable
-  const [chatLoading, setChatLoading] = useState(false);
-  
+  // 本地状态管理
+  const [refreshing, setRefreshing] = useState(false);      // 下拉刷新状态
+  const [filterType, setFilterType] = useState('all');      // 筛选类型：all, critical, stable
+  const [chatLoading, setChatLoading] = useState(false);    // 聊天功能加载状态
 
-  
-
-
-  
+  /**
+   * 组件加载时获取患者列表
+   * 确保页面显示最新的患者数据
+   */
   useEffect(() => {
-    // 组件加载时获取患者列表
     dispatch(fetchPatientsList());
   }, [dispatch]);
 
-  // 使用useFocusEffect在页面聚焦时刷新患者列表
+  /**
+   * 页面聚焦时刷新患者列表
+   * 确保从其他页面返回时数据是最新的
+   */
   useFocusEffect(
     React.useCallback(() => {
       dispatch(fetchPatientsList());
     }, [dispatch])
   );
   
-  // 添加调试信息
+  /**
+   * 调试信息输出
+   * 在开发环境中监控患者列表状态变化
+   */
   useEffect(() => {
     console.log('📊 患者列表状态更新:', {
       patientsList: patientsList ? patientsList.length : 'null',
@@ -65,19 +101,32 @@ const PatientsListScreen = ({ navigation }) => {
     });
   }, [patientsList, filteredPatients, loading, error, searchQuery]);
   
-  // 下拉刷新
+  /**
+   * 下拉刷新处理
+   * 重新获取患者列表数据
+   */
   const onRefresh = async () => {
     setRefreshing(true);
     await dispatch(fetchPatientsList());
     setRefreshing(false);
   };
   
-  // 搜索处理
+  /**
+   * 搜索处理
+   * 更新搜索关键词，触发患者列表筛选
+   * 
+   * @param {string} query - 搜索关键词
+   */
   const handleSearch = (query) => {
     dispatch(setSearchQuery(query));
   };
 
-  // 开始与患者聊天
+  /**
+   * 开始与患者聊天
+   * 检查现有会话或创建新会话，然后导航到聊天界面
+   * 
+   * @param {Object} patient - 患者对象
+   */
   const startChatWithPatient = async (patient) => {
     try {
       setChatLoading(true);

@@ -1,3 +1,20 @@
+/**
+ * 患者消息页面组件
+ * 
+ * 功能特性：
+ * - 显示与医生的对话列表
+ * - 支持消息搜索和筛选
+ * - 未读消息计数和状态管理
+ * - 医生在线状态显示
+ * - 对话状态管理（活跃、归档）
+ * - 实时消息刷新和同步
+ * - 多语言国际化支持
+ * - 快速导航到聊天界面
+ * 
+ * @author 医疗测试应用开发团队
+ * @version 1.0.0
+ */
+
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, FlatList, RefreshControl, Alert } from 'react-native';
 import { 
@@ -16,15 +33,31 @@ import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
 
+/**
+ * 患者消息页面主组件
+ * 
+ * 主要功能：
+ * - 管理患者与医生的对话列表
+ * - 处理消息搜索和筛选
+ * - 显示未读消息和在线状态
+ * - 提供快速聊天入口
+ * - 实时数据刷新和更新
+ * 
+ * @param {Object} navigation - 导航对象，用于页面跳转
+ * @returns {JSX.Element} 患者消息页面组件
+ */
 const MessagesScreen = ({ navigation }) => {
   const { t } = useTranslation();
+  
+  // 从Redux store获取用户信息
   const { user } = useSelector((state) => state.auth);
   
-  const [refreshing, setRefreshing] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedFilter, setSelectedFilter] = useState('all');
+  // 界面状态管理
+  const [refreshing, setRefreshing] = useState(false);              // 下拉刷新状态
+  const [searchQuery, setSearchQuery] = useState('');               // 搜索关键词
+  const [selectedFilter, setSelectedFilter] = useState('all');      // 选中的筛选条件
 
-  // 模拟对话数据
+  // 模拟对话数据（实际应用中应从API获取）
   const [conversations, setConversations] = useState([
     {
       id: 1,
@@ -76,26 +109,44 @@ const MessagesScreen = ({ navigation }) => {
     }
   ]);
 
+  // 筛选按钮配置
   const filterButtons = [
-    { value: 'all', label: t('messages.all') },
-    { value: 'unread', label: t('messages.unread') },
-    { value: 'active', label: t('messages.active') }
+    { value: 'all', label: t('messages.all') },        // 全部对话
+    { value: 'unread', label: t('messages.unread') },  // 未读对话
+    { value: 'active', label: t('messages.active') }   // 活跃对话
   ];
 
+  /**
+   * 组件加载时获取对话数据
+   */
   useEffect(() => {
     loadConversations();
   }, []);
 
+  /**
+   * 加载对话列表数据
+   * 从API获取真实的对话数据（当前为模拟数据）
+   */
   const loadConversations = async () => {
     // 这里应该调用API获取真实的对话数据
   };
 
+  /**
+   * 下拉刷新处理
+   * 重新加载对话列表数据
+   */
   const onRefresh = async () => {
     setRefreshing(true);
     await loadConversations();
     setRefreshing(false);
   };
 
+  /**
+   * 获取筛选后的对话列表
+   * 根据搜索关键词和筛选条件过滤对话
+   * 
+   * @returns {Array} 筛选后的对话列表
+   */
   const getFilteredConversations = () => {
     let filtered = conversations;
 

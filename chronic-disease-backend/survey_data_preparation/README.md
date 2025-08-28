@@ -1,241 +1,241 @@
-# 智能测试数据生成系统
+# Intelligent Test Data Generation System
 
-这是一个基于算法的智能测试数据生成系统，为慢性疾病应用后端提供真实、多样化的测试数据。
+This is an algorithm-based intelligent test data generation system that provides authentic, diverse test data for the chronic disease application backend.
 
-## 🎯 系统特点
+## 🎯 System Features
 
-### ✨ 智能算法驱动
-- **个性化数据生成**: 基于患者年龄、性别、健康状况等特征动态生成数据
-- **生理学原理**: 考虑昼夜节律、季节性影响、压力因素等真实生理现象
-- **疾病风险评估**: 动态计算各种疾病风险，生成相应的健康指标
-- **无固定模式**: 每次运行都会产生不同的、更真实的测试数据
+### ✨ Algorithm-Driven Intelligence
+- **Personalized Data Generation**: Dynamically generates data based on patient age, gender, health status, and other characteristics
+- **Physiological Principles**: Considers circadian rhythms, seasonal effects, stress factors, and other real physiological phenomena
+- **Disease Risk Assessment**: Dynamically calculates various disease risks and generates corresponding health indicators
+- **No Fixed Patterns**: Each run produces different, more realistic test data
 
-### 🔬 科学的数据模型
-- **血压数据**: 考虑年龄、性别、疾病风险、压力、昼夜变化、季节性影响
-- **心率数据**: 基于年龄、活动水平、压力、昼夜节律
-- **体重数据**: 考虑长期趋势、活动水平、季节性变化
-- **血糖数据**: 基于疾病风险、餐后时间、活动水平、压力因素
+### 🔬 Scientific Data Models
+- **Blood Pressure Data**: Considers age, gender, disease risk, stress, diurnal variation, seasonal effects
+- **Heart Rate Data**: Based on age, activity level, stress, circadian rhythm
+- **Weight Data**: Considers long-term trends, activity level, seasonal changes
+- **Blood Glucose Data**: Based on disease risk, post-meal timing, activity level, stress factors
 
-## 📁 文件结构
+## 📁 File Structure
 
 ```
 survey_data_preparation/
-├── unified_test_data_manager.py    # 统一测试数据管理器（主要脚本）
-└── README.md                       # 本说明文档
+├── unified_test_data_manager.py    # Unified test data manager (main script)
+└── README.md                       # This documentation
 
 chronic-disease-backend/
 ├── health/management/commands/
-│   └── create_test_data.py        # Django管理命令：智能健康数据生成
-└── manage.py                       # Django管理脚本
+│   └── create_test_data.py        # Django management command: intelligent health data generation
+└── manage.py                       # Django management script
 ```
 
-## 🚀 快速开始
+## 🚀 Quick Start
 
-### 1. 一键完整设置（推荐）
+### 1. One-Click Complete Setup (Recommended)
 ```bash
 cd chronic-disease-backend
 python survey_data_preparation/unified_test_data_manager.py
 ```
-这将自动执行：
-- 清除数据库
-- 创建完整用户（3医生+8患者）
-- 生成智能健康数据（30天）
-- 运行智能告警分析
-- 设置5级风险评估系统
-- 验证数据完整性
+This will automatically execute:
+- Clear database
+- Create complete users (3 doctors + 8 patients)
+- Generate intelligent health data (30 days)
+- Run intelligent alert analysis
+- Set up 5-level risk assessment system
+- Verify data integrity
 
-### 2. 分步执行
+### 2. Step-by-Step Execution
 ```bash
-# 步骤1: 创建用户
+# Step 1: Create users
 python survey_data_preparation/unified_test_data_manager.py full
 
-# 步骤2: 生成健康数据
+# Step 2: Generate health data
 python manage.py create_test_data --days 30
 
-# 步骤3: 运行智能分析
+# Step 3: Run intelligent analysis
 python survey_data_preparation/unified_test_data_manager.py analyze
 ```
 
-## 🎨 智能数据生成算法
+## 🎨 Intelligent Data Generation Algorithms
 
-### 患者特征分析
+### Patient Characteristic Analysis
 ```python
-# 动态计算患者特征
-- 基础健康水平: 基于年龄、性别
-- 压力水平: 考虑年龄相关压力因素
-- 活动水平: 基于年龄和随机因素
-- 疾病风险: 动态计算各种疾病风险
-- 季节性影响: 考虑冬夏春秋的健康影响
+# Dynamically calculate patient characteristics
+- Basic health level: Based on age, gender
+- Stress level: Consider age-related stress factors
+- Activity level: Based on age and random factors
+- Disease risk: Dynamically calculate various disease risks
+- Seasonal effects: Consider health impacts of winter, summer, spring, autumn
 ```
 
-### 数据生成示例
+### Data Generation Examples
 ```python
-# 血压生成算法
+# Blood pressure generation algorithm
 base_systolic = 110 + (age - 30) * 0.5
-+ 疾病风险影响 (高血压风险 > 0.6 时 +20)
-+ 压力影响 (压力水平 * 15)
-+ 昼夜变化 (早晨/晚上 +10, 其他时间 -5)
-+ 季节性影响 (冬季 +5, 夏季 -3)
-+ 随机波动 (-8 到 +8)
++ Disease risk impact (+20 when hypertension risk > 0.6)
++ Stress impact (stress level * 15)
++ Diurnal variation (+10 in morning/evening, -5 at other times)
++ Seasonal effects (+5 in winter, -3 in summer)
++ Random fluctuation (-8 to +8)
 
-# 心率生成算法
+# Heart rate generation algorithm
 base_hr = 80 - (age - 30) * 0.3
-+ 活动水平影响 ((1 - 活动水平) * 20)
-+ 压力影响 (压力水平 * 15)
-+ 昼夜变化 (早晨 +10, 夜间 -15)
-+ 随机波动 (-10 到 +10)
++ Activity level impact ((1 - activity level) * 20)
++ Stress impact (stress level * 15)
++ Diurnal variation (+10 in morning, -15 at night)
++ Random fluctuation (-10 to +10)
 ```
 
-## 📊 生成的数据类型
+## 📊 Generated Data Types
 
-### 健康指标
-- **血压**: 收缩压/舒张压，考虑昼夜和季节性变化
-- **心率**: 基于活动和压力水平
-- **体重**: 长期趋势 + 短期波动
-- **血糖**: 餐后影响 + 疾病风险
+### Health Indicators
+- **Blood Pressure**: Systolic/diastolic, considering diurnal and seasonal changes
+- **Heart Rate**: Based on activity and stress levels
+- **Weight**: Long-term trends + short-term fluctuations
+- **Blood Glucose**: Post-meal effects + disease risk
 
-### 数据量
-- 每个患者每天生成 4 种健康指标
-- 默认生成 30 天数据
-- 8个患者 × 4种指标 × 30天 = 960条健康记录
+### Data Volume
+- Each patient generates 4 health indicators daily
+- Default generation: 30 days
+- 8 patients × 4 indicators × 30 days = 960 health records
 
-## 🔧 使用方法
+## 🔧 Usage Methods
 
-### 交互式模式
+### Interactive Mode
 ```bash
 python survey_data_preparation/unified_test_data_manager.py
 ```
 
-### 命令行模式
+### Command Line Mode
 
-#### 基础数据管理
+#### Basic Data Management
 ```bash
-# 查看状态
+# Check status
 python unified_test_data_manager.py status
 
-# 清除数据库
+# Clear database
 python unified_test_data_manager.py clear
 
-# 创建用户
-python unified_test_data_manager.py basic      # 3医生+3患者
-python unified_test_data_manager.py full       # 3医生+8患者
+# Create users
+python unified_test_data_manager.py basic      # 3 doctors + 3 patients
+python unified_test_data_manager.py full       # 3 doctors + 8 patients
 ```
 
-#### 智能数据生成
+#### Intelligent Data Generation
 ```bash
-# 使用Django管理命令生成数据
-python manage.py create_test_data --days 30           # 生成30天数据
-python manage.py create_test_data --days 7 --patients 1  # 为1个患者生成7天数据
+# Use Django management command to generate data
+python manage.py create_test_data --days 30           # Generate 30 days of data
+python manage.py create_test_data --days 7 --patients 1  # Generate 7 days for 1 patient
 
-# 运行智能分析
+# Run intelligent analysis
 python unified_test_data_manager.py analyze
 ```
 
-#### 高级功能
+#### Advanced Features
 ```bash
-# 设置5级风险系统
+# Set up 5-level risk system
 python unified_test_data_manager.py risk5
 
-# 验证数据完整性
+# Verify data integrity
 python unified_test_data_manager.py validate
 
-# 导出数据
+# Export data
 python unified_test_data_manager.py export json
 python unified_test_data_manager.py export csv
 ```
 
-## 📋 测试账号
+## 📋 Test Accounts
 
-### 医生账号
-- **李医生**: +8613800138001 / test123456
-- **王医生**: +8613800138021 / test123456  
-- **张医生**: +8613800138022 / test123456
+### Doctor Accounts
+- **Dr. Li**: +8613800138001 / test123456
+- **Dr. Wang**: +8613800138021 / test123456  
+- **Dr. Zhang**: +8613800138022 / test123456
 
-### 患者账号
-- **张三**: +8613800138000 / test123456
-- **李四**: +8613800138002 / test123456
-- **王五**: +8613800138003 / test123456
-- **赵六**: +8613800138004 / test123456
-- **刘七**: +8613800138005 / test123456
-- **陈八**: +8613800138006 / test123456
-- **孙九**: +8613800138007 / test123456
-- **周十**: +8613800138008 / test123456
+### Patient Accounts
+- **Zhang San**: +8613800138000 / test123456
+- **Li Si**: +8613800138002 / test123456
+- **Wang Wu**: +8613800138003 / test123456
+- **Zhao Liu**: +8613800138004 / test123456
+- **Liu Qi**: +8613800138005 / test123456
+- **Chen Ba**: +8613800138006 / test123456
+- **Sun Jiu**: +8613800138007 / test123456
+- **Zhou Shi**: +8613800138008 / test123456
 
-## 🎯 5级风险评估系统
+## 🎯 5-Level Risk Assessment System
 
-系统自动设置5种风险状态：
+The system automatically sets up 5 risk states:
 
-1. **未评估** (unassessed): 医生尚未评估
-2. **健康** (healthy): 无慢性疾病
-3. **低风险** (low): 关节炎、偏头痛等
-4. **中风险** (medium): 糖尿病、高血压等
-5. **高风险** (high): 癌症、心脏病等
+1. **Unassessed** (unassessed): Doctor has not yet assessed
+2. **Healthy** (healthy): No chronic diseases
+3. **Low Risk** (low): Arthritis, migraines, etc.
+4. **Medium Risk** (medium): Diabetes, hypertension, etc.
+5. **High Risk** (high): Cancer, heart disease, etc.
 
-## 🔬 技术架构
+## 🔬 Technical Architecture
 
-### 核心组件
-- **患者特征分析器**: 动态分析患者特征
-- **健康数据生成器**: 基于算法生成个性化数据
-- **季节性因子计算器**: 考虑季节对健康的影响
-- **疾病风险评估器**: 动态计算疾病风险
+### Core Components
+- **Patient Characteristic Analyzer**: Dynamically analyzes patient characteristics
+- **Health Data Generator**: Generates personalized data based on algorithms
+- **Seasonal Factor Calculator**: Considers seasonal impacts on health
+- **Disease Risk Assessor**: Dynamically calculates disease risks
 
-### 算法特性
-- **个性化**: 每个患者都有独特的健康模式
-- **真实性**: 基于生理学原理的数据生成
-- **多样性**: 每次运行产生不同的数据
-- **关联性**: 不同健康指标之间有合理的关联
+### Algorithm Features
+- **Personalization**: Each patient has unique health patterns
+- **Authenticity**: Data generation based on physiological principles
+- **Diversity**: Each run produces different data
+- **Correlation**: Reasonable correlations between different health indicators
 
-## 📈 数据质量保证
+## 📈 Data Quality Assurance
 
-### 数据范围控制
-- 血压: 收缩压 90-200 mmHg, 舒张压 60-120 mmHg
-- 心率: 45-120 bpm
-- 体重: 40-120 kg
-- 血糖: 3.5-15.0 mmol/L
+### Data Range Control
+- Blood pressure: Systolic 90-200 mmHg, Diastolic 60-120 mmHg
+- Heart rate: 45-120 bpm
+- Weight: 40-120 kg
+- Blood glucose: 3.5-15.0 mmol/L
 
-### 生理合理性
-- 昼夜节律: 早晨血压和心率较高
-- 季节性影响: 冬季血压略高，夏季活动增加
-- 年龄相关性: 年龄越大，基础血压和心率略有变化
-- 压力影响: 压力增加时血压和心率上升
+### Physiological Reasonableness
+- Circadian rhythm: Higher blood pressure and heart rate in the morning
+- Seasonal effects: Slightly higher blood pressure in winter, increased activity in summer
+- Age correlation: Slight changes in baseline blood pressure and heart rate with age
+- Stress impact: Increased blood pressure and heart rate under stress
 
-## ⚠️ 注意事项
+## ⚠️ Important Notes
 
-1. **环境要求**: 确保Django环境已正确配置
-2. **数据库权限**: 确保有足够的数据库操作权限
-3. **数据安全**: 清除数据库操作不可逆，请谨慎使用
-4. **备份建议**: 重要数据请提前备份
+1. **Environment Requirements**: Ensure Django environment is properly configured
+2. **Database Permissions**: Ensure sufficient database operation permissions
+3. **Data Safety**: Database clearing operations are irreversible, use with caution
+4. **Backup Recommendations**: Please backup important data in advance
 
-## 🆘 常见问题
+## 🆘 Common Issues
 
-### Q: 运行时报错"ModuleNotFoundError"
-A: 确保在 `chronic-disease-backend` 目录下运行
+### Q: Runtime error "ModuleNotFoundError"
+A: Ensure you are running in the `chronic-disease-backend` directory
 
-### Q: 数据库连接失败
-A: 检查Django设置文件中的数据库配置
+### Q: Database connection failure
+A: Check database configuration in Django settings file
 
-### Q: 5级风险系统设置失败
-A: 确保先创建了足够的患者用户（至少5个）
+### Q: 5-level risk system setup failure
+A: Ensure sufficient patient users are created first (at least 5)
 
-### Q: 数据生成速度慢
-A: 这是正常现象，算法需要为每个患者计算个性化参数
+### Q: Slow data generation
+A: This is normal, the algorithm needs to calculate personalized parameters for each patient
 
-## 🎉 系统优势
+## 🎉 System Advantages
 
-1. **真实性强**: 基于生理学原理，数据更接近真实情况
-2. **个性化**: 每个患者都有独特的健康模式
-3. **智能化**: 自动分析患者特征，生成相应数据
-4. **可扩展**: 易于添加新的健康指标和算法
-5. **一致性**: 数据之间有合理的医学关联性
+1. **High Authenticity**: Based on physiological principles, data closer to real situations
+2. **Personalization**: Each patient has unique health patterns
+3. **Intelligence**: Automatically analyzes patient characteristics and generates corresponding data
+4. **Scalability**: Easy to add new health indicators and algorithms
+5. **Consistency**: Reasonable medical correlations between data
 
-## 📞 技术支持
+## 📞 Technical Support
 
-如有问题，请检查：
-1. Django环境配置
-2. 数据库连接状态
-3. 模型字段定义
-4. 依赖包安装情况
+If you have issues, please check:
+1. Django environment configuration
+2. Database connection status
+3. Model field definitions
+4. Dependency package installation status
 
 ---
 
-**注意**: 本系统生成的是测试数据，不应用于临床诊断或医疗决策。
+**Note**: The data generated by this system is for testing purposes only and should not be used for clinical diagnosis or medical decision-making.

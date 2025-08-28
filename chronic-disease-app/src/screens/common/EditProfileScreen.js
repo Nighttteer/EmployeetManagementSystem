@@ -1,3 +1,17 @@
+/**
+ * 编辑个人资料页面组件
+ * 
+ * 功能特性：
+ * - 编辑用户基本信息（姓名、邮箱、电话、地址等）
+ * - 支持紧急联系人信息编辑
+ * - 表单验证和错误处理
+ * - 保存确认对话框
+ * - 与Redux状态同步更新
+ * 
+ * @author 医疗测试应用开发团队
+ * @version 1.0.0
+ */
+
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, Alert } from 'react-native';
 import { 
@@ -16,28 +30,51 @@ import { updateUserProfile, fetchUserProfile } from '../../store/slices/userSlic
 import { updateAuthUser } from '../../store/slices/authSlice';
 import { useTranslation } from 'react-i18next';
 
+/**
+ * 编辑个人资料页面主组件
+ * 
+ * 主要功能：
+ * - 加载和显示当前用户信息
+ * - 提供表单编辑界面
+ * - 处理表单提交和保存
+ * - 同步更新Redux状态
+ * - 显示保存确认对话框
+ * 
+ * @param {Object} navigation - 导航对象，用于页面返回
+ * @returns {JSX.Element} 编辑个人资料页面组件
+ */
 const EditProfileScreen = ({ navigation }) => {
   const { t } = useTranslation();
   const { user } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
   
+  // 表单数据状态，从Redux store中的用户信息初始化
   const [formData, setFormData] = useState({
-    firstName: user?.first_name || '',
-    lastName: user?.last_name || '',
-    email: user?.email || '',
-    phone: user?.phone || '',
-    address: user?.address || '',
-    dateOfBirth: user?.date_of_birth || '',
-    emergencyContact: user?.emergency_contact || '',
+    firstName: user?.first_name || '',        // 姓
+    lastName: user?.last_name || '',          // 名
+    email: user?.email || '',                 // 邮箱
+    phone: user?.phone || '',                 // 电话
+    address: user?.address || '',             // 地址
+    dateOfBirth: user?.date_of_birth || '',  // 出生日期
+    emergencyContact: user?.emergency_contact || '', // 紧急联系人
   });
   
-  const [loading, setLoading] = useState(false);
-  const [saveDialogVisible, setSaveDialogVisible] = useState(false);
+  // 界面状态管理
+  const [loading, setLoading] = useState(false);           // 保存中状态
+  const [saveDialogVisible, setSaveDialogVisible] = useState(false); // 保存确认对话框显示状态
 
+  /**
+   * 处理保存按钮点击
+   * 显示保存确认对话框
+   */
   const handleSave = () => {
     setSaveDialogVisible(true);
   };
 
+  /**
+   * 确认保存用户信息
+   * 调用API更新用户信息，同步更新Redux状态
+   */
   const confirmSave = async () => {
     setLoading(true);
     try {
@@ -79,6 +116,12 @@ const EditProfileScreen = ({ navigation }) => {
     }
   };
 
+  /**
+   * 更新表单字段值
+   * 
+   * @param {string} field - 字段名
+   * @param {string} value - 字段值
+   */
   const updateField = (field, value) => {
     setFormData(prev => ({
       ...prev,
@@ -88,6 +131,7 @@ const EditProfileScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* 页面头部导航栏 */}
       <Appbar.Header>
         <Appbar.BackAction onPress={() => navigation.goBack()} />
         <Appbar.Content title={t('settings.editProfile')} />
@@ -95,12 +139,14 @@ const EditProfileScreen = ({ navigation }) => {
       </Appbar.Header>
       
       <ScrollView style={styles.scrollView}>
+        {/* 基本信息编辑卡片 */}
         <Card style={styles.card}>
           <Card.Content>
             <Text variant="titleMedium" style={styles.sectionTitle}>
               基本信息
             </Text>
             
+            {/* 姓名字段 */}
             <TextInput
               label="姓"
               value={formData.firstName}
@@ -117,6 +163,7 @@ const EditProfileScreen = ({ navigation }) => {
               mode="outlined"
             />
             
+            {/* 联系信息字段 */}
             <TextInput
               label="邮箱"
               value={formData.email}
@@ -135,6 +182,7 @@ const EditProfileScreen = ({ navigation }) => {
               keyboardType="phone-pad"
             />
             
+            {/* 地址和日期字段 */}
             <TextInput
               label="地址"
               value={formData.address}
@@ -154,6 +202,7 @@ const EditProfileScreen = ({ navigation }) => {
               placeholder="YYYY-MM-DD"
             />
             
+            {/* 紧急联系人字段 */}
             <TextInput
               label={t('profile.emergencyContact')}
               value={formData.emergencyContact}
@@ -165,6 +214,7 @@ const EditProfileScreen = ({ navigation }) => {
         </Card>
       </ScrollView>
 
+      {/* 保存确认对话框 */}
       <Portal>
         <Dialog visible={saveDialogVisible} onDismiss={() => setSaveDialogVisible(false)}>
           <Dialog.Title>{t('profile.saveChanges')}</Dialog.Title>
@@ -183,6 +233,16 @@ const EditProfileScreen = ({ navigation }) => {
   );
 };
 
+/**
+ * 样式定义
+ * 包含编辑个人资料页面的所有UI样式
+ * 
+ * 主要样式组：
+ * - 容器和布局样式
+ * - 卡片样式
+ * - 表单输入样式
+ * - 按钮样式
+ */
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -205,4 +265,8 @@ const styles = StyleSheet.create({
   },
 });
 
+/**
+ * 导出编辑个人资料页面组件
+ * 作为默认导出，供其他模块使用
+ */
 export default EditProfileScreen; 

@@ -1,3 +1,19 @@
+/**
+ * 医生告警管理页面组件
+ * 
+ * 功能特性：
+ * - 显示系统智能生成的健康告警
+ * - 支持告警状态管理（待处理、已处理、已忽略）
+ * - 按优先级和状态筛选告警
+ * - 告警统计图表和趋势分析
+ * - 支持告警处理操作
+ * - 多语言国际化支持
+ * - 实时数据刷新和降级处理
+ * 
+ * @author 医疗测试应用开发团队
+ * @version 1.0.0
+ */
+
 import React, { useState, useEffect } from 'react';
 import { 
   View, 
@@ -30,31 +46,43 @@ import StatsCard from '../../components/StatsCard';
 
 import { API_BASE_URL, messagesAPI } from '../../services/api';
 
+/**
+ * 医生告警管理页面主组件
+ * 
+ * 主要功能：
+ * - 管理和显示健康告警信息
+ * - 处理告警状态变更
+ * - 提供告警统计和可视化
+ * - 支持告警搜索和筛选
+ * - 智能告警生成和管理
+ * - 告警跳转和导航处理
+ * 
+ * @param {Object} navigation - 导航对象，用于页面跳转
+ * @returns {JSX.Element} 医生告警管理页面组件
+ */
 const AlertsScreen = ({ navigation }) => {
   const { t, i18n } = useTranslation();
   const dispatch = useDispatch();
-  const [loading, setLoading] = useState(true);
   
-  // 获取认证信息和患者数据
+  // 界面状态管理
+  const [loading, setLoading] = useState(true);                    // 首次加载状态
+  const [refreshing, setRefreshing] = useState(false);             // 下拉刷新状态
+  const [searchQuery, setSearchQuery] = useState('');              // 搜索关键词
+  const [filterStatus, setFilterStatus] = useState('all');         // 状态筛选：all, pending, handled, dismissed
+  const [filterPriority, setFilterPriority] = useState('all');     // 优先级筛选：all, critical, high, medium, low
+  const [showStats, setShowStats] = useState(true);               // 是否显示统计信息
+  
+  // 从Redux store获取认证信息和患者数据
   const { isAuthenticated, user, role, token } = useSelector(state => state.auth);
   const { patientsList } = useSelector(state => state.patients);
-  const [refreshing, setRefreshing] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all'); // all, pending, handled, dismissed
-  const [filterPriority, setFilterPriority] = useState('all'); // all, critical, high, medium, low
-  const [showStats, setShowStats] = useState(true);
 
-
-
-
-
-
-
-
-
-
-
-  // 根据告警类型获取国际化的标题和消息
+  /**
+   * 根据告警类型获取国际化的标题和消息
+   * 支持多种告警类型的本地化显示
+   * 
+   * @param {Object} alert - 告警对象
+   * @returns {Object} 包含本地化标题和消息的对象
+   */
   const getLocalizedAlertContent = (alert) => {
     const type = alert?.type || '';
     const patientName = alert?.patientName || '';
@@ -339,22 +367,22 @@ const AlertsScreen = ({ navigation }) => {
 
   // 系统定期分析患者数据生成的告警
   const [alertsData, setAlertsData] = useState({
-    doctorId: null, // 当前登录医生ID
-    lastAnalysisTime: null, // 最后分析时间
-    analysisInterval: null, // 分析频率
-    dataRange: null, // 分析数据范围
+    doctorId: null,                    // 当前登录医生ID
+    lastAnalysisTime: null,            // 最后分析时间
+    analysisInterval: null,            // 分析频率
+    dataRange: null,                   // 分析数据范围
     stats: {
-      total: 0,
-      pending: 0, 
-      handled: 0,
-      dismissed: 0,
-      critical: 0,
-      high: 0,
-      medium: 0,
-      low: 0
+      total: 0,                        // 总告警数
+      pending: 0,                      // 待处理告警数
+      handled: 0,                      // 已处理告警数
+      dismissed: 0,                    // 已忽略告警数
+      critical: 0,                     // 严重告警数
+      high: 0,                         // 高优先级告警数
+      medium: 0,                       // 中优先级告警数
+      low: 0                           // 低优先级告警数
     },
-    alerts: [], // 告警列表，从后端动态获取
-    dataSource: null // 数据来源
+    alerts: [],                        // 告警列表，从后端动态获取
+    dataSource: null                   // 数据来源
   });
 
   useEffect(() => {

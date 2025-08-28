@@ -16,7 +16,7 @@ const safeNumber = (value, defaultValue = 0) => {
 };
 
 const PieChart = ({
-  data = [],
+  data = [],      //← 数据通过props传入，不是组件自己获取的
   width,
   height = 200,
   showLabels = true,

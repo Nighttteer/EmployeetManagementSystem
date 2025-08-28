@@ -1,26 +1,15 @@
 /**
  * 提醒详情弹窗组件
  * 用于显示单个提醒的详细信息和处理功能
+ * 1. 提醒详情展示
+显示提醒的标题、内容、时间等基本信息
+展示提醒的优先级和类型（通过不同颜色的标签）
+显示患者的基本信息（姓名、年龄、性别）
  */
 import React, { useState } from 'react';
-import {
-  View,
-  StyleSheet,
-  ScrollView,
-  Alert
-} from 'react-native';
-import {
-  Modal,
-  Portal,
-  Text,
-  Button,
-  Card,
-  TextInput,
-  Chip,
-  Divider
-} from 'react-native-paper';
+import {View,StyleSheet,ScrollView,Alert} from 'react-native';
+import {Modal,Portal,Text,Button,Card,TextInput,Chip,Divider} from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
-
 import intelligentAlertService from '../../services/intelligentAlertService';
 
 const AlertDetailModal = ({ 

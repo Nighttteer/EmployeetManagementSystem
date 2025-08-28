@@ -1,3 +1,20 @@
+/**
+ * 患者主页面组件
+ * 
+ * 功能特性：
+ * - 患者健康数据概览和统计
+ * - 今日用药提醒和计划
+ * - 健康指标趋势图表展示
+ * - 医生建议查看和管理
+ * - 快速导航到各功能模块
+ * - 实时数据刷新和同步
+ * - 多语言国际化支持
+ * - 用户友好的主界面设计
+ * 
+ * @author 医疗测试应用开发团队
+ * @version 1.0.0
+ */
+
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert, Dimensions } from 'react-native';
 
@@ -30,22 +47,46 @@ import {
   getStatusText 
 } from '../../utils/dataModels';
 
+/**
+ * 患者主页面主组件
+ * 
+ * 主要功能：
+ * - 展示患者健康数据概览
+ * - 管理今日用药提醒
+ * - 显示健康趋势图表
+ * - 处理医生建议查看
+ * - 提供快速功能导航
+ * - 实时数据同步和更新
+ * 
+ * @param {Object} navigation - 导航对象，用于页面跳转
+ * @returns {JSX.Element} 患者主页面组件
+ */
 const PatientHomeScreen = ({ navigation }) => {
   const { t, i18n } = useTranslation();
   const dispatch = useDispatch();
+  
+  // 从Redux store获取用户和健康数据
   const { user, profile } = useSelector((state) => state.auth);
   const { healthMetrics, loading } = useSelector((state) => state.user);
   const { todayMedications } = useSelector((state) => state.medication);
   
-  const [refreshing, setRefreshing] = useState(false);
-  const [showDialog, setShowDialog] = useState(false);
-  const [adviceList, setAdviceList] = useState([]);
-  const [adviceDialogVisible, setAdviceDialogVisible] = useState(false);
+  // 界面状态管理
+  const [refreshing, setRefreshing] = useState(false);              // 下拉刷新状态
+  const [showDialog, setShowDialog] = useState(false);              // 对话框显示状态
+  const [adviceList, setAdviceList] = useState([]);                 // 医生建议列表
+  const [adviceDialogVisible, setAdviceDialogVisible] = useState(false); // 建议对话框显示状态
 
+  /**
+   * 组件加载时获取初始数据
+   */
   useEffect(() => {
     loadData();
   }, []);
 
+  /**
+   * 加载页面所需的所有数据
+   * 包括用户资料、健康趋势、今日用药和医生建议
+   */
   const loadData = async () => {
     try {
       await Promise.all([
@@ -66,6 +107,14 @@ const PatientHomeScreen = ({ navigation }) => {
       console.error('数据加载失败:', error);
     }
   };
+
+  /**
+   * 打开与医生的聊天
+   * 检查现有会话或创建新会话，然后导航到聊天界面
+   * 
+   * @param {string} doctorId - 医生ID
+   * @param {string} doctorName - 医生姓名
+   */
   const openChatWithDoctor = async (doctorId, doctorName) => {
     try {
       if (!doctorId) {
@@ -97,6 +146,10 @@ const PatientHomeScreen = ({ navigation }) => {
     }
   };
 
+  /**
+   * 下拉刷新处理
+   * 重新加载所有页面数据
+   */
   const onRefresh = async () => {
     setRefreshing(true);
     await loadData();

@@ -96,7 +96,7 @@ python manage.py runserver 0.0.0.0:8000
 #### **Frontend React Native Configuration**
 Set in `chronic-disease-app/src/services/api.js`:
 ```javascript
-const BASE_URL = 'http://192.168.1.100:8000/api';  // Replace with your local IP
+const BASE_URL = 'http://192.168.2.47:8000/api';  // Replace with your local IP
 ```
 
 #### **Get Local IP Address**
@@ -149,8 +149,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:8081",
     "http://localhost:19006",     # Expo Web port
     "http://127.0.0.1:19006",
-    "http://192.168.1.100:8081", # Your local IP:Expo port
-    "http://192.168.1.100:19006", # Your local IP:Expo Web port
+    "http://192.168.2.47:8081", # Your local IP:Expo port
+    "http://192.168.2.47:19006", # Your local IP:Expo Web port
 ]
 
 # Allow all sources in development environment
@@ -217,15 +217,15 @@ Create `.env` file:
 SECRET_KEY=your-secret-key-here
 DEBUG=True
 DATABASE_URL=sqlite:///db.sqlite3
-ALLOWED_HOSTS=localhost,127.0.0.1,192.168.1.100
+ALLOWED_HOSTS=localhost,127.0.0.1,192.168.2.47
 ```
 
 ### CORS Settings
 Default allowed ports:
 - `http://localhost:8081` (Expo)
 - `http://localhost:19006` (Expo Web)
-- `http://192.168.1.100:8081` (Local IP:Expo)
-- `http://192.168.1.100:19006` (Local IP:Expo Web)
+- `http://192.168.2.47:8081` (Local IP:Expo)
+- `http://192.168.2.47:19006` (Local IP:Expo Web)
 
 ### JWT Settings
 - Access Token validity: 1 day
@@ -244,7 +244,7 @@ This backend API is designed for React Native applications, supporting:
 ### Mobile End Configuration Example
 ```javascript
 // chronic-disease-app/src/services/api.js
-const BASE_URL = 'http://192.168.1.100:8000/api';  // Your local IP
+const BASE_URL = 'http://192.168.2.47:8000/api';  // Your local IP
 
 const apiClient = axios.create({
   baseURL: BASE_URL,

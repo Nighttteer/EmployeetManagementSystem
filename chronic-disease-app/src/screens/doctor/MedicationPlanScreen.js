@@ -1,3 +1,19 @@
+/**
+ * 用药计划管理页面组件
+ * 
+ * 功能特性：
+ * - 显示患者当前用药计划
+ * - 支持用药计划状态管理（进行中、暂停、停止）
+ * - 用药依从性统计和趋势分析
+ * - 用药历史记录查看
+ * - 支持添加和编辑用药计划
+ * - 多语言国际化支持
+ * - 实时数据刷新和状态更新
+ * 
+ * @author 医疗测试应用开发团队
+ * @version 1.0.0
+ */
+
 import React, { useState, useEffect } from 'react';
 import { 
   View, 
@@ -30,52 +46,90 @@ import PieChart from '../../components/Charts/PieChart';
 import StatsCard from '../../components/StatsCard';
 import { medicationAPI } from '../../services/api';
 
+/**
+ * 用药计划管理页面主组件
+ * 
+ * 主要功能：
+ * - 管理和显示患者用药计划
+ * - 处理用药计划状态变更
+ * - 提供用药依从性分析
+ * - 支持用药计划操作（添加、编辑、删除）
+ * - 用药历史和统计分析
+ * - 实时数据同步和更新
+ * 
+ * @param {Object} route - 路由参数对象
+ * @param {Object} route.params.patient - 患者信息对象
+ * @param {Object} navigation - 导航对象
+ * @returns {JSX.Element} 用药计划管理页面组件
+ */
 const MedicationPlanScreen = ({ route, navigation }) => {
   const { patient } = route.params || {};
   const { t } = useTranslation();
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState('current'); // current, history, analytics
   
-  // 用药计划数据
-  const [medicationPlans, setMedicationPlans] = useState([]);
-  const [medicationStats, setMedicationStats] = useState({});
-  const [medicationHistory, setMedicationHistory] = useState([]);
+  // 界面状态管理
+  const [loading, setLoading] = useState(true);                    // 首次加载状态
+  const [refreshing, setRefreshing] = useState(false);             // 下拉刷新状态
+  const [activeTab, setActiveTab] = useState('current');           // 当前标签页：current, history, analytics
   
-  // 频次选项
+  // 用药计划数据状态
+  const [medicationPlans, setMedicationPlans] = useState([]);      // 用药计划列表
+  const [medicationStats, setMedicationStats] = useState({});     // 用药统计数据
+  const [medicationHistory, setMedicationHistory] = useState([]);  // 用药历史记录
+  
+  // 用药频次选项配置
   const frequencyOptions = [
-    { value: 'QD', label: t('medication.frequency.onceDaily') },
-    { value: 'BID', label: t('medication.frequency.twiceDaily') },
-    { value: 'TID', label: t('medication.frequency.threeTimesDaily') },
-    { value: 'QID', label: t('medication.frequency.fourTimesDaily') },
-    { value: 'Q12H', label: t('medication.frequency.every12Hours') },
-    { value: 'Q8H', label: t('medication.frequency.every8Hours') },
-    { value: 'Q6H', label: t('medication.frequency.every6Hours') },
-    { value: 'PRN', label: t('medication.frequency.asNeeded') }
+    { value: 'QD', label: t('medication.frequency.onceDaily') },           // 每日一次
+    { value: 'BID', label: t('medication.frequency.twiceDaily') },         // 每日两次
+    { value: 'TID', label: t('medication.frequency.threeTimesDaily') },    // 每日三次
+    { value: 'QID', label: t('medication.frequency.fourTimesDaily') },     // 每日四次
+    { value: 'Q12H', label: t('medication.frequency.every12Hours') },      // 每12小时一次
+    { value: 'Q8H', label: t('medication.frequency.every8Hours') },        // 每8小时一次
+    { value: 'Q6H', label: t('medication.frequency.every6Hours') },        // 每6小时一次
+    { value: 'PRN', label: t('medication.frequency.asNeeded') }            // 按需服用
   ];
 
-  // 显示文本映射
+  /**
+   * 获取药品分类的显示名称
+   * 将英文分类代码转换为用户友好的显示名称
+   * 
+   * @param {string} category - 药品分类代码
+   * @returns {string} 分类显示名称
+   */
   const getCategoryDisplay = (category) => {
     if (!category) return t('medication.uncategorized');
     const categoryMap = {
-      'antihypertensive': t('medication.category.antihypertensive'),
-      'hypoglycemic': t('medication.category.hypoglycemic'),
-      'lipid_lowering': t('medication.category.lipidLowering'),
-      'anticoagulant': t('medication.category.anticoagulant'),
-      'diuretic': t('medication.category.diuretic'),
-      'beta_blocker': t('medication.category.betaBlocker'),
-      'ace_inhibitor': t('medication.category.aceInhibitor'),
-      'other': t('medication.category.other')
+      'antihypertensive': t('medication.category.antihypertensive'),      // 降压药
+      'hypoglycemic': t('medication.category.hypoglycemic'),             // 降糖药
+      'lipid_lowering': t('medication.category.lipidLowering'),          // 降脂药
+      'anticoagulant': t('medication.category.anticoagulant'),           // 抗凝药
+      'diuretic': t('medication.category.diuretic'),                     // 利尿剂
+      'beta_blocker': t('medication.category.betaBlocker'),              // β受体阻滞剂
+      'ace_inhibitor': t('medication.category.aceInhibitor'),            // ACE抑制剂
+      'other': t('medication.category.other')                            // 其他
     };
     return categoryMap[category] || category;
   };
 
+  /**
+   * 获取用药频次的显示名称
+   * 将频次代码转换为用户友好的显示文本
+   * 
+   * @param {string} frequency - 用药频次代码
+   * @returns {string} 频次显示名称
+   */
   const getFrequencyDisplay = (frequency) => {
     if (!frequency) return t('medication.notSet');
     const freq = frequencyOptions.find(f => f.value === frequency);
     return freq ? freq.label : frequency;
   };
 
+  /**
+   * 获取用药时间的显示名称
+   * 处理时间数组和字符串格式
+   * 
+   * @param {string|Array} time - 用药时间
+   * @returns {string} 时间显示名称
+   */
   const getTimeDisplay = (time) => {
     if (!time) return t('medication.notSet');
     
@@ -92,7 +146,10 @@ const MedicationPlanScreen = ({ route, navigation }) => {
     return t('medication.notSet');
   };
 
-  // 数据加载函数
+  /**
+   * 加载用药计划数据
+   * 获取患者的用药计划和统计数据
+   */
   const loadData = async () => {
     if (!patient?.id) return;
     
@@ -131,7 +188,10 @@ const MedicationPlanScreen = ({ route, navigation }) => {
     }
   };
 
-  // 加载用药历史
+  /**
+   * 加载用药历史记录
+   * 获取患者的用药历史数据
+   */
   const loadMedicationHistory = async () => {
     if (!patient?.id) return;
     
@@ -143,6 +203,10 @@ const MedicationPlanScreen = ({ route, navigation }) => {
     }
   };
 
+  /**
+   * 下拉刷新处理
+   * 重新加载用药计划数据
+   */
   const onRefresh = async () => {
     setRefreshing(true);
     await loadData();
@@ -153,18 +217,26 @@ const MedicationPlanScreen = ({ route, navigation }) => {
     setRefreshing(false);
   };
 
+  /**
+   * 组件加载时获取用药数据
+   */
   useEffect(() => {
     loadData();
   }, [patient?.id]);
 
-  // 当切换到历史标签页时，加载历史数据
+  /**
+   * 当切换到历史标签页时，加载历史数据
+   */
   useEffect(() => {
     if (activeTab === 'history' && medicationHistory.length === 0) {
       loadMedicationHistory();
     }
   }, [activeTab]);
 
-  // 导航到添加用药页面
+  /**
+   * 导航到添加用药页面
+   * 创建新的用药计划
+   */
   const navigateToAddMedication = () => {
     navigation.navigate('AddMedication', {
       patient: patient,
@@ -172,7 +244,12 @@ const MedicationPlanScreen = ({ route, navigation }) => {
     });
   };
 
-  // 导航到编辑用药页面
+  /**
+   * 导航到编辑用药页面
+   * 编辑现有的用药计划
+   * 
+   * @param {Object} plan - 要编辑的用药计划
+   */
   const navigateToEditMedication = (plan) => {
     navigation.navigate('AddMedication', {
       patient: patient,
@@ -180,6 +257,12 @@ const MedicationPlanScreen = ({ route, navigation }) => {
     });
   };
 
+  /**
+   * 删除用药计划
+   * 确认后删除指定的用药计划
+   * 
+   * @param {Object} plan - 要删除的用药计划
+   */
   const deleteMedicationPlan = (plan) => {
     Alert.alert(
       t('common.confirmDelete'),
