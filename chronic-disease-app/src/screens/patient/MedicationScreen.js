@@ -44,6 +44,132 @@ import { userAPI, medicationAPI } from '../../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /**
+ * 计算用药计划的依从性数据
+ * 提取为公共函数，避免重复计算逻辑
+ * 
+ * @param {Object} plan - 用药计划对象
+ * @returns {Object} 包含依从性信息的对象
+ */
+const calculateMedicationCompliance = (plan) => {
+  try {
+    // 使用工具函数获取时间数组和总剂量
+    const timeArray = getTimeArray(plan.time_of_day);
+    const totalDoses = timeArray.length;
+    
+    if (totalDoses === 0) {
+      return { 
+        compliance: 0, 
+        color: '#F44336', 
+        taken: 0, 
+        skipped: 0, 
+        missed: 0,
+        totalDoses: 0
+      };
+    }
+    
+    // 使用工具函数检查今天是否已经服用过
+    const hasTakenToday = isToday(plan.last_taken);
+    
+    // 如果今天没有服用过，依从性为0%
+    if (!hasTakenToday) {
+      return { 
+        compliance: 0, 
+        color: '#F44336', 
+        taken: 0, 
+        skipped: 0, 
+        missed: totalDoses,
+        totalDoses
+      };
+    }
+    
+    // 获取今天实际服用的次数和跳过的次数
+    const takenCountToday = plan.taken_count_today || 0;
+    const skippedCountToday = plan.skipped_count_today || 0;
+    
+    // 基于实际服用次数计算依从性（不包括跳过的）
+    if (takenCountToday > 0) {
+      const compliance = Math.round((takenCountToday / totalDoses) * 100);
+      const color = getComplianceColor(compliance);
+      
+      return {
+        compliance: Math.min(100, compliance),
+        color,
+        taken: takenCountToday,
+        skipped: skippedCountToday,
+        missed: Math.max(0, totalDoses - takenCountToday - skippedCountToday),
+        totalDoses
+      };
+    }
+    
+    return { 
+      compliance: 0, 
+      color: '#F44336', 
+      taken: 0, 
+      skipped: skippedCountToday, 
+      missed: totalDoses,
+      totalDoses
+    };
+  } catch (error) {
+    console.error('计算依从性失败:', error);
+    return { 
+      compliance: 0, 
+      color: '#F44336', 
+      taken: 0, 
+      skipped: 0, 
+      missed: 0,
+      totalDoses: 0
+    };
+  }
+};
+
+/**
+ * 获取依从性对应的颜色
+ * 
+ * @param {number} compliance - 依从性百分比
+ * @returns {string} 颜色代码
+ */
+const getComplianceColor = (compliance) => {
+  if (compliance >= 90) return '#4CAF50';
+  if (compliance >= 80) return '#FF9800';
+  if (compliance >= 70) return '#F57C00';
+  return '#F44336';
+};
+
+/**
+ * 获取今天的日期字符串
+ * 
+ * @returns {string} 今天的日期字符串 (YYYY-MM-DD)
+ */
+const getTodayString = () => {
+  return new Date().toISOString().split('T')[0];
+};
+
+/**
+ * 检查日期是否为今天
+ * 
+ * @param {string|Date} date - 要检查的日期
+ * @returns {boolean} 是否为今天
+ */
+const isToday = (date) => {
+  if (!date) return false;
+  const dateStr = new Date(date).toISOString().split('T')[0];
+  return dateStr === getTodayString();
+};
+
+/**
+ * 安全地获取时间数组
+ * 
+ * @param {Array|string} timeOfDay - 时间数据
+ * @returns {Array} 时间数组
+ */
+const getTimeArray = (timeOfDay) => {
+  if (Array.isArray(timeOfDay)) {
+    return timeOfDay;
+  }
+  return timeOfDay ? [timeOfDay] : [];
+};
+
+/**
  * 患者用药管理页面主组件
  * 
  * 主要功能：
@@ -531,7 +657,7 @@ const MedicationScreen = ({ navigation }) => {
   // 为单个用药计划设置提醒
   const schedulePlanReminders = async (plan) => {
     try {
-      const times = Array.isArray(plan.time_of_day) ? plan.time_of_day : [plan.time_of_day];
+      const times = getTimeArray(plan.time_of_day);
       
       // 获取药物名称
       const medicationName = plan.medication?.name || plan.medication_name || '药物';
@@ -690,18 +816,18 @@ const MedicationScreen = ({ navigation }) => {
       const currentHour = now.getHours();
       const currentMinute = now.getMinutes();
       
-      // 检查是否到了用药时间（前后15分钟）
-      const shouldUpdate = medicationData.medicationPlans?.some(plan => {
-        if (!plan.time_of_day || plan.status !== 'active') return false;
-        
-        const times = Array.isArray(plan.time_of_day) ? plan.time_of_day : [plan.time_of_day];
-        return times.some(timeStr => {
-          if (!timeStr) return false;
-          const [hour, minute] = timeStr.split(':').map(Number);
-          const timeDiff = Math.abs((currentHour * 60 + currentMinute) - (hour * 60 + minute));
-          return timeDiff <= 15; // 前后15分钟内需要更新
+              // 检查是否到了用药时间（前后15分钟）
+        const shouldUpdate = medicationData.medicationPlans?.some(plan => {
+          if (!plan.time_of_day || plan.status !== 'active') return false;
+          
+          const times = getTimeArray(plan.time_of_day);
+          return times.some(timeStr => {
+            if (!timeStr) return false;
+            const [hour, minute] = timeStr.split(':').map(Number);
+            const timeDiff = Math.abs((currentHour * 60 + currentMinute) - (hour * 60 + minute));
+            return timeDiff <= 15; // 前后15分钟内需要更新
+          });
         });
-      });
       
       if (shouldUpdate) {
         console.log('⏰ 检测到用药时间，自动更新界面');
@@ -714,7 +840,7 @@ const MedicationScreen = ({ navigation }) => {
   
   // 每日自动重置计数器
   const checkAndResetDailyCounters = useCallback(() => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getTodayString();
     
     setMedicationData(prev => {
       let hasChanges = false;
@@ -770,7 +896,7 @@ const MedicationScreen = ({ navigation }) => {
   const checkAndAutoSkip = useCallback((plan) => {
     if (!plan.time_of_day || plan.status !== 'active') return plan;
     
-    const times = Array.isArray(plan.time_of_day) ? plan.time_of_day : [plan.time_of_day];
+    const times = getTimeArray(plan.time_of_day);
     const now = new Date();
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
@@ -806,7 +932,7 @@ const MedicationScreen = ({ navigation }) => {
   const getCurrentTimeSlot = useCallback((plan) => {
     if (!plan.time_of_day || plan.status !== 'active') return null;
     
-    const times = Array.isArray(plan.time_of_day) ? plan.time_of_day : [plan.time_of_day];
+    const times = getTimeArray(plan.time_of_day);
     const now = new Date();
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
@@ -847,7 +973,7 @@ const MedicationScreen = ({ navigation }) => {
   const getNextTimeSlot = useCallback((plan, currentSlot) => {
     if (!plan.time_of_day || !currentSlot) return null;
     
-    const times = Array.isArray(plan.time_of_day) ? plan.time_of_day : [plan.time_of_day];
+    const times = getTimeArray(plan.time_of_day);
     const nextIndex = (currentSlot.index + 1) % times.length;
     
     if (nextIndex === 0) {
@@ -876,7 +1002,7 @@ const MedicationScreen = ({ navigation }) => {
               
               // 获取当前时间点信息
               const currentTimeSlot = getCurrentTimeSlot(plan);
-              const timeArray = Array.isArray(plan.time_of_day) ? plan.time_of_day : [plan.time_of_day];
+              const timeArray = getTimeArray(plan.time_of_day);
               
               console.log('🔍 当前时间点信息:', {
                 currentTimeSlot,
@@ -1116,7 +1242,7 @@ const MedicationScreen = ({ navigation }) => {
     }
     
     // 检查是否达到最大点击数
-    const totalDoses = Array.isArray(plan.time_of_day) ? plan.time_of_day.length : 1;
+    const totalDoses = getTimeArray(plan.time_of_day).length;
     const takenCount = plan.taken_count_today || 0;
     const skippedCount = plan.skipped_count_today || 0;
     const isCompleted = (takenCount + skippedCount) >= totalDoses;
@@ -1170,7 +1296,7 @@ const MedicationScreen = ({ navigation }) => {
 
   // 检查今天的用药计划状态
   const getTodayPlanStatus = (plan) => {
-    const timeArray = Array.isArray(plan.time_of_day) ? plan.time_of_day : [plan.time_of_day];
+    const timeArray = getTimeArray(plan.time_of_day);
     const totalDoses = timeArray.length;
     const takenCountToday = plan.taken_count_today || 0;
     const skippedCountToday = plan.skipped_count_today || 0;
@@ -1207,57 +1333,10 @@ const MedicationScreen = ({ navigation }) => {
     return status.status === 'completed';
   };
 
-  // 计算用药计划的依从性
+  // 使用公共函数计算依从性（已提取到文件顶部）
   const calculateCompliance = (plan) => {
-    try {
-      // 获取今天的日期
-      const today = new Date();
-      const todayStr = today.toISOString().split('T')[0];
-      
-      // 计算今天应该服用的次数
-      const timeArray = Array.isArray(plan.time_of_day) ? plan.time_of_day : [plan.time_of_day];
-      const totalDoses = timeArray.length;
-      
-      if (totalDoses === 0) return 0;
-      
-      // 检查今天是否已经服用过
-      const hasTakenToday = plan.last_taken && 
-        new Date(plan.last_taken).toISOString().split('T')[0] === todayStr;
-      
-      // 如果今天没有服用过，依从性为0%
-      if (!hasTakenToday) {
-        return 0;
-      }
-      
-      // 获取今天实际服用的次数和跳过的次数
-      const takenCountToday = plan.taken_count_today || 0;
-      const skippedCountToday = plan.skipped_count_today || 0;
-      
-      // 计算已处理的次数（服用 + 跳过）
-      const processedCount = takenCountToday + skippedCountToday;
-      
-      // 基于实际服用次数计算依从性（不包括跳过的）
-      if (takenCountToday > 0) {
-        const compliance = Math.round((takenCountToday / totalDoses) * 100);
-        // 减少日志输出，避免重复打印
-        if (Math.random() < 0.1) { // 只输出10%的日志，减少噪音
-          console.log(`📊 依从性计算: ${takenCountToday}/${totalDoses} = ${compliance}%`);
-        }
-        return Math.min(100, compliance); // 确保不超过100%
-      }
-      
-      return 0;
-    } catch (error) {
-      console.error('计算依从性失败:', error);
-      return 0;
-    }
-  };
-
-  const getComplianceColor = (compliance) => {
-    if (compliance >= 90) return '#4CAF50';
-    if (compliance >= 80) return '#FF9800';
-    if (compliance >= 70) return '#F57C00';
-    return '#F44336';
+    const complianceData = calculateMedicationCompliance(plan);
+    return complianceData.compliance;
   };
 
   const renderTodayMedications = () => (
@@ -1475,26 +1554,27 @@ const MedicationScreen = ({ navigation }) => {
                     {plan.medication?.name || plan.medication_name || plan.name || '未知药物'}
                 </Text>
                 <Text style={styles.planDetails}>
-                    {plan.dosage || '未知剂量'} · {plan.frequency || '未知频次'} · {(() => {
-                      if (Array.isArray(plan.time_of_day)) {
+                    {plan.dosage || '未知剂量'} · {plan.frequency || '未知频次'} ·                     {(() => {
+                      const timeArray = getTimeArray(plan.time_of_day);
+                      if (timeArray.length > 0) {
                         // 显示当前时间点和剩余时间点
                         if (plan.current_time_slot) {
                           const currentIndex = plan.current_time_slot.index;
-                          const remainingTimes = plan.time_of_day.slice(currentIndex);
+                          const remainingTimes = timeArray.slice(currentIndex);
                           console.log('🔍 Medication Plans 时间显示:', {
                             planName: plan.medication?.name,
                             currentTimeSlot: plan.current_time_slot,
                             currentIndex,
                             remainingTimes,
-                            allTimes: plan.time_of_day
+                            allTimes: timeArray
                           });
                           return remainingTimes.join(', ');
                         } else {
-                          console.log('🔍 Medication Plans 没有当前时间点，显示所有时间:', plan.time_of_day);
-                          return plan.time_of_day.join(', ');
+                          console.log('🔍 Medication Plans 没有当前时间点，显示所有时间:', timeArray);
+                          return timeArray.join(', ');
                         }
                       } else {
-                        return plan.time_of_day || '未知时间';
+                        return '未知时间';
                       }
                     })()}
                 </Text>
@@ -1892,62 +1972,13 @@ const styles = StyleSheet.create({
   },
 });
 
-// 依从性显示组件 - 避免重复计算
+// 依从性显示组件 - 使用公共函数避免重复计算
 const ComplianceDisplay = React.memo(({ plan }) => {
   const { t } = useTranslation();
   
-  // 缓存计算结果
+  // 使用公共函数计算依从性数据
   const complianceData = React.useMemo(() => {
-    try {
-      // 获取今天的日期
-      const today = new Date();
-      const todayStr = today.toISOString().split('T')[0];
-      
-      // 计算今天应该服用的次数
-      const timeArray = Array.isArray(plan.time_of_day) ? plan.time_of_day : [plan.time_of_day];
-      const totalDoses = timeArray.length;
-      
-      if (totalDoses === 0) return { compliance: 0, color: '#F44336', taken: 0, skipped: 0, missed: 0 };
-      
-      // 检查今天是否已经服用过
-      const hasTakenToday = plan.last_taken && 
-        new Date(plan.last_taken).toISOString().split('T')[0] === todayStr;
-      
-      // 如果今天没有服用过，依从性为0%
-      if (!hasTakenToday) {
-        return { compliance: 0, color: '#F44336', taken: 0, skipped: 0, missed: totalDoses };
-      }
-      
-      // 获取今天实际服用的次数和跳过的次数
-      const takenCountToday = plan.taken_count_today || 0;
-      const skippedCountToday = plan.skipped_count_today || 0;
-      
-      // 基于实际服用次数计算依从性（不包括跳过的）
-      if (takenCountToday > 0) {
-        const compliance = Math.round((takenCountToday / totalDoses) * 100);
-        const color = compliance >= 90 ? '#4CAF50' : 
-                     compliance >= 80 ? '#FF9800' : 
-                     compliance >= 70 ? '#F57C00' : '#F44336';
-        
-        // 只在必要时输出日志，减少噪音
-        if (Math.random() < 0.05) { // 只输出5%的日志
-          console.log(`📊 依从性计算: ${takenCountToday}/${totalDoses} = ${compliance}%`);
-        }
-        
-        return {
-          compliance: Math.min(100, compliance),
-          color,
-          taken: takenCountToday,
-          skipped: skippedCountToday,
-          missed: Math.max(0, totalDoses - takenCountToday - skippedCountToday)
-        };
-      }
-      
-      return { compliance: 0, color: '#F44336', taken: 0, skipped: skippedCountToday, missed: totalDoses };
-    } catch (error) {
-      console.error('计算依从性失败:', error);
-      return { compliance: 0, color: '#F44336', taken: 0, skipped: 0, missed: 0 };
-    }
+    return calculateMedicationCompliance(plan);
   }, [plan.time_of_day, plan.last_taken, plan.taken_count_today, plan.skipped_count_today]);
   
   return (
@@ -1967,7 +1998,7 @@ const ComplianceDisplay = React.memo(({ plan }) => {
         />
       </View>
       <Text style={styles.complianceDetails}>
-        {t('medication.taken')}: {complianceData.taken}/{Array.isArray(plan.time_of_day) ? plan.time_of_day.length : 1} · {t('medication.skipped')}: {complianceData.skipped} · {t('medication.missed')}: {complianceData.missed}
+                          {t('medication.taken')}: {complianceData.taken}/{complianceData.totalDoses} · {t('medication.skipped')}: {complianceData.skipped} · {t('medication.missed')}: {complianceData.missed}
       </Text>
     </>
   );
