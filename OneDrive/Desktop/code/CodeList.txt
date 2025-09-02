@@ -1,0 +1,86 @@
+# Chronic Disease Management System - Code Module List
+
+## Predominantly user written
+
+| Module | Description |
+|--------|-------------|
+| `accounts/models.py` | User data model design and business logic |
+| `health/models.py` | Health data models and medical history management |
+| `medication/models.py` | Medication management and prescription models |
+| `accounts/sms_service.py` | SMS verification service with design patterns |
+| `chronic_disease_backend/settings.py` | Django project configuration management |
+| `src/navigation/AppNavigator.js` | Application navigation architecture |
+| `src/navigation/PatientNavigator.js` | Patient navigation structure |
+| `src/navigation/DoctorNavigator.js` | Doctor navigation structure |
+| `src/navigation/AuthNavigator.js` | Authentication navigation flow |
+| `src/store/store.js` | Redux state management configuration |
+| `src/store/slices/authSlice.js` | Authentication state management |
+| `src/store/slices/userSlice.js` | User profile state management |
+| `src/store/slices/medicationSlice.js` | Medication state management |
+| `src/store/slices/patientsSlice.js` | Patient data state management |
+| `src/services/api.js` | API service layer design and configuration |
+| `src/services/intelligentAlertService.js` | Intelligent alert service logic |
+| `src/services/medicationReminder.js` | Medication reminder service |
+| `src/services/notifications.js` | Push notification service |
+| `src/services/reportService.js` | Health report generation service |
+| `src/config/i18n.js` | Internationalization configuration |
+| `src/utils/dataModels.js` | Data models and business logic constants |
+| `src/utils/helpers.js` | Utility functions and helpers |
+| `src/utils/riskUtils.js` | Health risk calculation utilities |
+| `src/utils/serializationHelpers.js` | Data serialization utilities |
+| `src/hooks/useSafeTranslation.js` | Custom translation hook |
+| `src/screens/patient/PatientHomeScreen.js` | Patient dashboard and overview |
+| `src/screens/patient/HealthDataScreen.js` | Health data display and entry |
+| `src/screens/patient/MedicationScreen.js` | Medication management interface |
+| `src/screens/patient/DataEntryScreen.js` | Health data input forms |
+| `src/screens/patient/HealthTrendsScreen.js` | Health trends and charts |
+| `src/screens/patient/ProfileScreen.js` | Patient profile management |
+| `src/screens/patient/MessagesScreen.js` | Patient messaging interface |
+| `src/screens/doctor/DashboardScreen.js` | Doctor dashboard and statistics |
+| `src/screens/doctor/PatientsListScreen.js` | Patient list and management |
+| `src/screens/doctor/PatientDetailsScreen.js` | Individual patient details |
+| `src/screens/doctor/AlertsScreen.js` | Health alerts management |
+| `src/screens/doctor/MedicationPlanScreen.js` | Medication plan creation |
+| `src/screens/doctor/DoctorMessagesScreen.js` | Doctor messaging interface |
+| `src/components/CustomButton.js` | Custom button component |
+| `src/components/CustomCard.js` | Custom card component |
+| `src/components/StatsCard.js` | Statistics display card |
+| `src/components/Charts/LineChart.js` | Line chart component |
+| `src/components/Charts/BarChart.js` | Bar chart component |
+| `src/components/Charts/PieChart.js` | Pie chart component |
+| `survey_data_preparation/unified_test_data_manager.py` | Intelligent test data generation system |
+
+## Predominantly AI Assisted
+
+| Module | Description |
+|--------|-------------|
+| `accounts/views.py` | User authentication API views |
+| `accounts/serializers.py` | User data serialization |
+| `accounts/urls.py` | User authentication URL routing |
+| `health/views.py` | Health data CRUD operations |
+| `health/serializers.py` | Health data serialization |
+| `health/urls.py` | Health module URL routing |
+| `medication/views.py` | Medication management API views |
+| `medication/serializers.py` | Medication data serialization |
+| `medication/urls.py` | Medication module URL routing |
+| `communication/views.py` | Message and communication API views |
+| `communication/serializers.py` | Communication data serialization |
+| `communication/urls.py` | Communication module URL routing |
+| `src/screens/auth/LoginScreen.js` | User login interface |
+| `src/screens/auth/RegisterScreen.js` | User registration interface |
+| `src/screens/auth/WelcomeScreen.js` | Welcome and onboarding screen |
+| `src/screens/auth/ForgotPasswordScreen.js` | Password recovery interface |
+| `src/screens/common/ChatScreen.js` | Real-time chat interface |
+| `src/screens/common/ConversationListScreen.js` | Chat conversation list |
+| `src/screens/common/EditProfileScreen.js` | Profile editing interface |
+| `src/screens/common/UserSearchScreen.js` | User search functionality |
+| `src/components/ImagePreviewModal.js` | Image preview modal |
+| `src/components/CountryCodePicker.js` | Country code selection |
+| `src/locales/en.json` | English language translations |
+| `src/locales/zh.json` | Chinese language translations |
+| `src/screens/LoadingScreen.js` | Application loading screen |
+| `requirements.txt` | Python package dependencies |
+| `package.json` | Frontend dependencies and scripts |
+| `manage.py` | Django management commands |
+| `App.js` | Main application entry point |
+| `app.json` | Expo application configuration |
