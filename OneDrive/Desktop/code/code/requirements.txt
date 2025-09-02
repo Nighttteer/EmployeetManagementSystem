@@ -1,0 +1,45 @@
+# Core Django Framework
+Django==5.2.3
+djangorestframework==3.16.0
+djangorestframework-simplejwt==5.5.0
+django-cors-headers==4.7.0
+
+# Configuration and Environment
+python-decouple==3.8
+
+# Image Processing
+Pillow==11.2.1
+
+# HTTP Requests
+requests==2.32.3
+
+# Testing and Development
+pytest==8.3.5
+pytest-django==4.9.0
+pytest-asyncio==0.24.0
+coverage==7.5.1
+
+# Database (Optional - for production)
+# psycopg2-binary==2.9.12  # PostgreSQL support
+# mysqlclient==2.2.4       # MySQL support
+
+# Caching and Sessions (Optional - for production)
+# redis==5.2.1
+# django-redis==5.4.0
+
+# Production Server (Optional - for deployment)
+# gunicorn==22.0.0
+# whitenoise==6.8.0
+
+# Background Tasks (Optional - for async processing)
+# celery==5.4.0
+
+# Security (Optional - for production)
+# django-ratelimit==4.1.0
+# django-axes==6.4.0
+
+# Monitoring and Logging (Optional - for production)
+# sentry-sdk==2.17.0
+# django-extensions==3.2.3
+
+ 

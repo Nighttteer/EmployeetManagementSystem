@@ -1,0 +1,59 @@
+# Software Prerequisites - Chronic Disease Management System
+
+## Overall software stack
+
+| Component | Technology |
+|-----------|------------|
+| Project Type | Django Backend API + React Native Mobile App |
+| IDE | Visual Studio Code |
+| Backend Language | Python 3.8+ |
+| Frontend Language | JavaScript/TypeScript |
+| Backend Framework | Django 5.2.3 |
+| Frontend Framework | React Native 0.79.5 + Expo 53.0.12 |
+| Database | SQLite3 (development) |
+| Authentication | JWT Token + SMS verification |
+| State Management | Redux Toolkit |
+
+## Key Supporting Packages / Libraries
+
+| Package | Version |
+|---------|---------|
+| Django | 5.2.3 |
+| djangorestframework | 3.16.0 |
+| djangorestframework-simplejwt | 5.5.0 |
+| django-cors-headers | 4.7.0 |
+| python-decouple | 3.8 |
+| Pillow | 11.2.1 |
+| requests | 2.32.3 |
+| pytest | 8.3.5 |
+| pytest-django | 4.9.0 |
+| pytest-asyncio | 0.24.0 |
+| coverage | 7.5.1 |
+| expo | ~53.0.12 |
+| react | 19.0.0 |
+| react-native | 0.79.5 |
+| @react-navigation/native | ^7.1.13 |
+| @react-navigation/native-stack | ^7.3.18 |
+| @react-navigation/bottom-tabs | ^7.3.17 |
+| @reduxjs/toolkit | ^2.8.2 |
+| react-redux | ^9.2.0 |
+| react-native-paper | ^5.14.5 |
+| @expo/vector-icons | ^14.1.0 |
+| expo-av | ^15.1.7 |
+| expo-device | ^7.1.4 |
+| expo-file-system | ^18.1.11 |
+| expo-image-picker | ^16.1.4 |
+| expo-localization | ^16.1.6 |
+| expo-media-library | ^17.1.7 |
+| expo-notifications | ^0.31.3 |
+| expo-secure-store | ^14.2.3 |
+| expo-sharing | ^13.1.5 |
+| expo-status-bar | ~2.2.3 |
+| expo-updates | ~0.28.17 |
+| axios | ^1.10.0 |
+| i18next | ^25.3.2 |
+| react-i18next | ^15.6.1 |
+| @react-native-async-storage/async-storage | 2.1.2 |
+| react-native-gifted-chat | ^2.8.1 |
+| @babel/core | ^7.20.0 |
+| eslint | ^8.57.0 |
